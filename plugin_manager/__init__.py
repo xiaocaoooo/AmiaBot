@@ -15,8 +15,9 @@ from amia import Amia
 # 定义项目接口，供插件调用
 class ProjectInterface:
     """Interface for plugins to interact with the main project."""
+
     _instance = None
-    bot:Amia|None = None
+    bot: Amia | None = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -45,7 +46,7 @@ class PluginManager:
     """Manages the lifecycle of plugins, including loading, unloading, and execution."""
 
     _instance = None
-    
+
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -165,6 +166,11 @@ class PluginManager:
             return False
 
         return await self._load_plugin(zip_path)
+    
+    async def reload_all_plugins(self):
+        """Reloads all loaded plugins."""
+        for plugin_id in list(self.loaded_plugins.keys()):
+            await self.reload_plugin(plugin_id)
 
     async def unload_plugin(self, plugin_id: str) -> bool:
         """
@@ -251,3 +257,74 @@ class PluginManager:
                 f"Error calling function '{function_name}' in plugin '{plugin_id}': {e}"
             )
             return None
+
+    async def get_all_plugins_status(self) -> Dict[str, Any]:
+        """
+        获取所有插件的信息和状态。
+
+        Returns:
+            Dict[str, Dict[str, Any]]: 包含所有插件信息的字典，键为插件ID，值为插件的详细信息和状态。
+        """
+        plugins_status = {}
+        enabled_count = len(list(self.plugins_directory.glob("*.plugin")))
+        plugins_count = enabled_count + len(
+            list(self.plugins_directory.glob("*.plugin.disabled"))
+        )
+
+        # 扫描插件目录中的所有插件文件
+        enabled_plugins = list(self.plugins_directory.glob("*.plugin"))
+        disabled_plugins = list(self.plugins_directory.glob("*.plugin.disabled"))
+
+        # 处理所有插件
+        for plugin_file in enabled_plugins + disabled_plugins:
+            is_enabled = plugin_file.suffix == ".plugin"
+            plugin_id = None
+            plugin_info = {}
+
+            try:
+                # 尝试从插件文件中提取信息
+                with zipfile.ZipFile(plugin_file, "r") as zip_ref:
+                    if "info.json" in zip_ref.namelist():
+                        plugin_info_string = zip_ref.read("info.json").decode("utf-8")
+                        plugin_info = json.loads(plugin_info_string)
+                        plugin_id = plugin_info["id"]
+            except Exception as e:
+                # 如果无法读取info.json，尝试从文件名推断插件ID
+                logging.warning(f"无法读取插件文件 '{plugin_file.name}' 的信息: {e}")
+                plugin_id = plugin_file.stem.replace(".plugin", "").replace(
+                    ".disabled", ""
+                )
+
+            if plugin_id:
+                # 收集插件状态
+                plugins_status[plugin_id] = {
+                    **plugin_info,
+                    "enabled": is_enabled,
+                    "loaded": plugin_id in self.loaded_plugins,
+                    "file_name": plugin_file.name,
+                    "file_path": str(plugin_file),
+                }
+
+        # 确保已加载但可能不在插件目录中的插件也被包含
+        for loaded_plugin_id in self.loaded_plugins:
+            if loaded_plugin_id not in plugins_status:
+                plugins_status[loaded_plugin_id] = {
+                    "id": loaded_plugin_id,
+                    "enabled": False,
+                    "loaded": True,
+                    "file_name": self.plugin_file_mapping.get(loaded_plugin_id, "未知"),
+                    "file_path": (
+                        str(
+                            self.plugins_directory
+                            / self.plugin_file_mapping.get(loaded_plugin_id, "未知")
+                        )
+                        if loaded_plugin_id in self.plugin_file_mapping
+                        else "未知"
+                    ),
+                }
+
+        return {
+            "plugins_count": plugins_count,
+            "enabled_count": enabled_count,
+            "plugins": plugins_status,
+        }

@@ -113,7 +113,7 @@ async def get_system_info(request):
         # 初始化磁盘信息总和
         total_disk_total = 0
         total_disk_used = 0
-        
+
         # 根据操作系统类型获取磁盘信息
         if platform.system() == "Windows":
             # 在Windows中获取所有逻辑驱动器
@@ -124,25 +124,31 @@ async def get_system_info(request):
                 # 提取所有唯一的驱动器字母
                 drive_letters = set()
                 for partition in partitions:
-                    if partition.mountpoint and len(partition.mountpoint) >= 2 and partition.mountpoint[1] == ":":
-                        drive_letter = partition.mountpoint[:2]  # 获取驱动器字母，如 "C:""
+                    if (
+                        partition.mountpoint
+                        and len(partition.mountpoint) >= 2
+                        and partition.mountpoint[1] == ":"
+                    ):
+                        drive_letter = partition.mountpoint[
+                            :2
+                        ]  # 获取驱动器字母，如 "C:""
                         drive_letters.add(drive_letter)
-                
+
                 # 也尝试通过os.environ获取环境变量中的驱动器
                 if "SystemDrive" in os.environ:
                     system_drive = os.environ["SystemDrive"]
                     drive_letters.add(system_drive)
-                
+
                 # 转换为列表
                 drives = list(drive_letters)
-                
+
                 # 如果没有找到驱动器，添加一些常见的驱动器字母作为备选
                 if not drives:
                     drives = ["C:", "D:", "E:"]
             except:
                 # 如果出现异常，使用默认驱动器列表
                 drives = ["C:", "D:", "E:"]
-            
+
             # 获取每个驱动器的磁盘使用情况并累加
             for drive in drives:
                 try:
@@ -181,8 +187,14 @@ async def get_system_info(request):
             "uptime": uptime_seconds,  # 返回原始秒数
             "os": os_info,
             "python_version": python_version,
-            "project_memory": psutil.Process(os.getpid()).memory_info().rss,  # 获取当前Python进程的内存占用（单位：字节）
-            "qq_memory": sum(process.memory_info().rss for process in psutil.process_iter(['name']) if process.info['name'] and 'qq.exe' in process.info['name'].lower())  # 获取所有qq.exe进程的内存占用总和（单位：字节）
+            "project_memory": psutil.Process(os.getpid())
+            .memory_info()
+            .rss,  # 获取当前Python进程的内存占用（单位：字节）
+            "qq_memory": sum(
+                process.memory_info().rss
+                for process in psutil.process_iter(["name"])
+                if process.info["name"] and "qq.exe" in process.info["name"].lower()
+            ),  # 获取所有qq.exe进程的内存占用总和（单位：字节）
         }
 
         return web.json_response(system_info)
@@ -191,11 +203,35 @@ async def get_system_info(request):
         return web.json_response({"error": str(e)}, status=500)
 
 
+async def get_all_plugins_status(request):
+    """获取所有插件状态"""
+    try:
+        plugins_status = await plugin_manager.get_all_plugins_status()
+        return web.json_response({"code": 0, "data": plugins_status})
+    except Exception as e:
+        logger.error(f"Error getting plugins status: {e}")
+        return web.json_response({"code": -1, "message": str(e)}, status=500)
+
+
+async def reload_all_plugins(request):
+    """重载所有插件"""
+    try:
+        await plugin_manager.reload_all_plugins()
+        return web.json_response(
+            {"code": 0, "data": {"message": "Plugins reloaded successfully"}}
+        )
+    except Exception as e:
+        logger.error(f"Error reloading plugins: {e}")
+        return web.json_response({"code": -1, "message": str(e)}, status=500)
+
+
 # 注册路由
 app.router.add_get("/", index)
 app.router.add_get("/webui/{tail:.*}", webui_handler)
 app.router.add_get("/api/self", get_self)
 app.router.add_get("/api/system-info", get_system_info)
+app.router.add_get("/api/plugins/status", get_all_plugins_status)
+app.router.add_post("/api/plugins/reload-all", reload_all_plugins)
 
 # 添加静态文件目录
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")

@@ -1,6 +1,6 @@
 /**
  * 用户信息管理类
- * 负责从 /api/self 接口获取用户信息并更新页面显示，同时获取一言数据和系统信息
+ * 负责从 /api/self 接口获取用户信息并更新页面显示，同时获取一言数据、系统信息和插件信息
  */
 class UserInfoManager {
   // 定义用户信息的接口类型
@@ -25,6 +25,12 @@ class UserInfoManager {
   private uptimeElement: HTMLElement | null = null;
   private osElement: HTMLElement | null = null;
   private pythonVersionElement: HTMLElement | null = null;
+
+  // 插件信息相关元素引用
+  private pluginInfoElement: HTMLElement | null = null;
+  private pluginsCountElement: HTMLElement | null = null;
+  private enabledPluginsCountElement: HTMLElement | null = null;
+  private reloadPluginsButton: HTMLButtonElement | null = null;
 
   /**
    * 构造函数，初始化用户信息管理器
@@ -52,6 +58,12 @@ class UserInfoManager {
     this.osElement = document.getElementById('os');
     this.pythonVersionElement = document.getElementById('python-version');
 
+    // 获取插件信息元素引用
+    this.pluginInfoElement = document.getElementById('plugin-info');
+    this.pluginsCountElement = document.getElementById('plugins-count');
+    this.enabledPluginsCountElement = document.getElementById('enabled-plugins-count');
+    this.reloadPluginsButton = document.getElementById('reload-plugins-button') as HTMLButtonElement;
+
     // 页面加载时获取用户信息
     this.fetchUserInfo();
 
@@ -61,6 +73,15 @@ class UserInfoManager {
     // 获取系统信息并设置定时器定期更新
     this.fetchSystemInfo();
     setInterval(() => this.fetchSystemInfo(), 1000);
+
+    // 设置重载插件按钮点击事件
+    if (this.reloadPluginsButton) {
+      this.reloadPluginsButton.addEventListener('click', () => this.reloadPlugins());
+    }
+
+    // 获取插件信息并设置定时器定期更新
+    this.fetchPluginInfo();
+    setInterval(() => this.fetchPluginInfo(), 5000); // 每5秒更新一次插件信息
   }
 
   /**
@@ -225,6 +246,92 @@ class UserInfoManager {
   }
 
   /**
+   * 从 /api/plugins/status 接口获取插件信息
+   */
+  private async fetchPluginInfo(): Promise<void> {
+    try {
+      const response = await fetch('/api/plugins/status');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const pluginsData = await response.json() as PluginInfoResponse;
+      this.updatePluginInfoDisplay(pluginsData);
+    } catch (error) {
+      console.error('Failed to fetch plugin info:', error);
+      // 使用模拟数据
+      this.updatePluginInfoDisplay({
+        code: 0,
+        data: {
+          plugins_count: 1,
+          enabled_count: 1,
+          plugins: {}
+        }
+      });
+    }
+  }
+
+  /**
+   * 更新页面上的插件信息显示
+   * @param pluginsData 插件数据
+   */
+  private updatePluginInfoDisplay(pluginsData: PluginInfoResponse): void {
+    if (!pluginsData || !pluginsData.data) return;
+
+    // 更新插件总数
+    if (this.pluginsCountElement) {
+      this.pluginsCountElement.textContent = `${pluginsData.data.plugins_count}`;
+    }
+
+    // 更新启用插件数量
+    if (this.enabledPluginsCountElement) {
+      this.enabledPluginsCountElement.textContent = `${pluginsData.data.enabled_count}`;
+    }
+  }
+
+  /**
+   * 重载所有插件
+   */
+  private async reloadPlugins(): Promise<void> {
+    if (!this.reloadPluginsButton) return;
+    
+    // 禁用按钮并显示加载状态
+    const originalText = this.reloadPluginsButton.textContent;
+    this.reloadPluginsButton.disabled = true;
+    this.reloadPluginsButton.textContent = '重载中...';
+    
+    try {
+      // 调用重载插件的API路由
+      const response = await fetch('/api/plugins/reload-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.code === 0) {
+        alert('插件重载成功！');
+        // 重载成功后重新获取插件信息
+        this.fetchPluginInfo();
+      } else {
+        throw new Error(result.message || '插件重载失败');
+      }
+    } catch (error) {
+      console.error('Failed to reload plugins:', error);
+      alert(`插件重载失败：${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      // 恢复按钮状态
+      this.reloadPluginsButton.disabled = false;
+      this.reloadPluginsButton.textContent = originalText;
+    }
+  }
+
+  /**
    * 更新系统信息显示
    * @param systemInfo 系统信息数据
    */
@@ -324,6 +431,32 @@ if (document.readyState === 'loading') {
 } else {
   // 如果DOM已经加载完成，则直接初始化
   new UserInfoManager();
+}
+
+/**
+ * 插件信息接口类型定义
+ */
+interface Plugin {
+  id: string;
+  pluginName?: string;
+  pluginDescription?: string;
+  enabled: boolean;
+  loaded: boolean;
+  file_name: string;
+  file_path: string;
+}
+
+/**
+ * 插件信息响应接口类型定义
+ */
+interface PluginInfoResponse {
+  code: number;
+  data: {
+    plugins_count: number;
+    enabled_count: number;
+    plugins: Record<string, Plugin>;
+  };
+  message?: string;
 }
 
 /**
