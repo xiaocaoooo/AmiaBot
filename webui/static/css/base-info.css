@@ -1,8 +1,17 @@
+#page {
+    display              : grid;
+    grid-gap             : 12px;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows   : repeat(2, auto);
+}
+
 #user-info {
-    padding         : 12px;
-    overflow        : hidden;
-    height          : 72px;
-    border-radius   : 72px;
+    grid-column  : 1 / 3;
+    grid-row     : 1 / 2;
+    padding      : 12px;
+    overflow     : hidden;
+    height       : 72px;
+    border-radius: 72px;
 }
 
 #user-avatar,
@@ -22,7 +31,78 @@
     margin-left    : 12px;
 }
 
-#user-id{
-    color: var(--color-primary);
+#user-id {
+    color    : var(--color-primary);
     font-size: .8em;
+}
+
+/* 系统信息样式 */
+.system-info-grid {
+    display              : grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap                  : 16px;
+    margin-top           : 12px;
+}
+
+.system-info-item {
+    display       : flex;
+    flex-direction: column;
+    gap           : 8px;
+}
+
+.system-info-label {
+    font-size: 14px;
+    opacity  : 0.8;
+}
+
+.system-info-value {
+    font-size  : 16px;
+    font-weight: 500;
+}
+
+.system-info-bar {
+    position        : relative;
+    height          : 8px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius   : 4px;
+    overflow        : hidden;
+}
+
+.system-info-bar-fill {
+    position        : absolute;
+    left            : 0;
+    top             : 0;
+    height          : 100%;
+    background-color: var(--color-primary);
+    border-radius   : 4px;
+    transition      : width 0.3s ease;
+}
+.system-info-bar-fill.secondary{
+    background-color: var(--color-primary-container);
+}
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .system-info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+#hitokoto {
+    grid-column: 1 / 3;
+    grid-row   : 3 / 4;
+}
+
+#hitokoto-source {
+    display        : flex;
+    justify-content: end;
+    flex-direction : row;
+}
+
+#hitokoto-source::before {
+    content: '——';
+}
+
+#hitokoto-source * {
+    margin-left: 8px;
 }

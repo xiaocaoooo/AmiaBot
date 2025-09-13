@@ -8,4 +8,59 @@
         <div id="user-id"></div>
     </div>
 </div>
+<div id="system-info" class="secondary-container">
+    <div class="system-info-grid">
+        <!-- CPU信息 -->
+        <div class="system-info-item">
+            <div class="system-info-label">CPU使用率</div>
+            <div id="cpu-usage" class="system-info-value"></div>
+            <div class="system-info-bar">
+                <div id="cpu-usage-bar" class="system-info-bar-fill"></div>
+            </div>
+        </div>
+
+        <!-- 内存信息 -->
+        <div class="system-info-item">
+            <div class="system-info-label">内存使用</div>
+            <div id="memory-usage" class="system-info-value"></div>
+            <div class="system-info-bar">
+                <div id="memory-usage-bar" class="system-info-bar-fill"></div>
+            </div>
+        </div>
+
+        <!-- 磁盘信息 -->
+        <div class="system-info-item">
+            <div class="system-info-label">磁盘空间</div>
+            <div id="disk-usage" class="system-info-value"></div>
+            <div class="system-info-bar">
+                <div id="disk-usage-bar" class="system-info-bar-fill"></div>
+            </div>
+        </div>
+
+        <!-- 运行时间 -->
+        <div class="system-info-item">
+            <div class="system-info-label">运行时间</div>
+            <div id="uptime" class="system-info-value"></div>
+        </div>
+
+        <!-- 操作系统 -->
+        <div class="system-info-item">
+            <div class="system-info-label">操作系统</div>
+            <div id="os" class="system-info-value"></div>
+        </div>
+
+        <!-- Python版本 -->
+        <div class="system-info-item">
+            <div class="system-info-label">Python 版本</div>
+            <div id="python-version" class="system-info-value"></div>
+        </div>
+    </div>
+</div>
+<div id="hitokoto" class="secondary-container">
+    <div id="hitokoto-content"></div>
+    <div id="hitokoto-source">
+        <div id="hitokoto-from"></div>
+        <div id="hitokoto-author"></div>
+    </div>
+</div>
 <script src="/static/js/base-info.js"></script>

@@ -56,4 +56,5 @@ dist/
 # WebUI临时文件
 webui/static/cache/
 
-node_modules
+node_modules/
+webui/static/js/

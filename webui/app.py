@@ -1,12 +1,16 @@
 import sys
 import os
+import sys
 import logging
 import json
+import platform
+import time
 from pathlib import Path
 import asyncio
 from aiohttp import web
 from datetime import datetime
 import jinja2
+import psutil
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -97,10 +101,101 @@ async def get_self(request):
         return web.json_response({"error": str(e)}, status=500)
 
 
+async def get_system_info(request):
+    """获取服务器系统信息"""
+    try:
+        # 获取内存信息
+        memory = psutil.virtual_memory()
+
+        # 获取CPU使用率
+        cpu_usage = round(psutil.cpu_percent(interval=0.1), 1)
+
+        # 初始化磁盘信息总和
+        total_disk_total = 0
+        total_disk_used = 0
+        
+        # 根据操作系统类型获取磁盘信息
+        if platform.system() == "Windows":
+            # 在Windows中获取所有逻辑驱动器
+            drives = []
+            # 尝试通过psutil获取所有分区
+            try:
+                partitions = psutil.disk_partitions(all=True)
+                # 提取所有唯一的驱动器字母
+                drive_letters = set()
+                for partition in partitions:
+                    if partition.mountpoint and len(partition.mountpoint) >= 2 and partition.mountpoint[1] == ":":
+                        drive_letter = partition.mountpoint[:2]  # 获取驱动器字母，如 "C:""
+                        drive_letters.add(drive_letter)
+                
+                # 也尝试通过os.environ获取环境变量中的驱动器
+                if "SystemDrive" in os.environ:
+                    system_drive = os.environ["SystemDrive"]
+                    drive_letters.add(system_drive)
+                
+                # 转换为列表
+                drives = list(drive_letters)
+                
+                # 如果没有找到驱动器，添加一些常见的驱动器字母作为备选
+                if not drives:
+                    drives = ["C:", "D:", "E:"]
+            except:
+                # 如果出现异常，使用默认驱动器列表
+                drives = ["C:", "D:", "E:"]
+            
+            # 获取每个驱动器的磁盘使用情况并累加
+            for drive in drives:
+                try:
+                    disk = psutil.disk_usage(drive)
+                    total_disk_total += disk.total
+                    total_disk_used += disk.used
+                except (PermissionError, OSError):
+                    # 忽略无法访问的驱动器
+                    continue
+        else:
+            # 非Windows系统，使用原来的方法
+            disk = psutil.disk_usage("/")
+            total_disk_total = disk.total
+            total_disk_used = disk.used
+
+        # 获取系统运行时间
+        uptime_seconds = int(time.time() - psutil.boot_time())
+
+        # 获取操作系统信息
+        os_info = platform.platform()
+
+        # 获取Python版本
+        python_version = platform.python_version()
+
+        # 构建系统信息响应 - 返回原始数据，由前端进行格式化
+        system_info = {
+            "memory": {
+                "total": memory.total,
+                "used": memory.used,
+            },
+            "cpu": {"usage": cpu_usage},
+            "disk": {
+                "total": total_disk_total,
+                "used": total_disk_used,
+            },
+            "uptime": uptime_seconds,  # 返回原始秒数
+            "os": os_info,
+            "python_version": python_version,
+            "project_memory": psutil.Process(os.getpid()).memory_info().rss,  # 获取当前Python进程的内存占用（单位：字节）
+            "qq_memory": sum(process.memory_info().rss for process in psutil.process_iter(['name']) if process.info['name'] and 'qq.exe' in process.info['name'].lower())  # 获取所有qq.exe进程的内存占用总和（单位：字节）
+        }
+
+        return web.json_response(system_info)
+    except Exception as e:
+        logger.error(f"Error getting system info: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
+
 # 注册路由
 app.router.add_get("/", index)
-app.router.add_get("/webui/", webui_handler)
+app.router.add_get("/webui/{tail:.*}", webui_handler)
 app.router.add_get("/api/self", get_self)
+app.router.add_get("/api/system-info", get_system_info)
 
 # 添加静态文件目录
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")

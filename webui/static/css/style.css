@@ -173,21 +173,33 @@ ul {
 .primary-container {
     background-color: var(--color-primary-container);
     color           : var(--color-on-primary-container);
+    padding         : 12px;
+    border-radius   : 24px;
+    overflow        : hidden;
 }
 
 .secondary-container {
     background-color: var(--color-secondary-container);
     color           : var(--color-on-secondary-container);
+    padding         : 12px;
+    border-radius   : 24px;
+    overflow        : hidden;
 }
 
 .tertiary-container {
     background-color: var(--color-tertiary-container);
     color           : var(--color-on-tertiary-container);
+    padding         : 12px;
+    border-radius   : 24px;
+    overflow        : hidden;
 }
 
 .error-container {
     background-color: var(--color-error-container);
     color           : var(--color-on-error-container);
+    padding         : 12px;
+    border-radius   : 24px;
+    overflow        : hidden;
 }
 
 html,
@@ -259,12 +271,4 @@ nav {
 
 #appbar #page-name {
     z-index: 100;
-}
-
-#content>.page {
-    display: none;
-}
-
-#content>.page.active {
-    display: block;
 }
