@@ -1,0 +1,1388 @@
+<html lang="zh" class="dark">
+
+<head>
+    <style id="react-aria-pressable-style">
+        @layer {
+            [data-react-aria-pressable] {
+                touch-action: pan-x pan-y pinch-zoom;
+            }
+        }
+    </style>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="/webui/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基础信息 - NapCat WebUI</title>
+    <title>NapCat WebUI</title>
+    <meta key="title" content="NapCat WebUI" property="og:title">
+    <meta content="NapCat WebUI，基于React+tailwind+NextUI" property="og:description">
+    <meta content="NapCat WebUI，基于React+tailwind+NextUI" name="description">
+    <meta key="viewport"
+        content="viewport-fit=cover, width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+        name="viewport">
+    <link href="/webui/favicon.ico" rel="icon">
+    <script type="module" crossorigin="" src="/webui/assets/index-BIkUjRPH.js"></script>
+    <link rel="modulepreload" crossorigin="" href="/webui/assets/react-dom-DoC2WAmd.js">
+    <link rel="modulepreload" crossorigin="" href="/webui/assets/monaco-editor-D-sLb42b.js">
+    <link rel="modulepreload" crossorigin="" href="/webui/assets/react-router-dom-BuK5Vxqh.js">
+    <link rel="modulepreload" crossorigin="" href="/webui/assets/react-hot-toast-LXUdLeap.js">
+    <link rel="modulepreload" crossorigin="" href="/webui/assets/react-icons-FgIH09Ic.js">
+    <link rel="stylesheet" crossorigin="" href="/webui/assets/monaco-editor-CXiN8hwR.css">
+    <link rel="stylesheet" crossorigin="" href="/webui/assets/index-BnRgq5iV.css">
+    <style id="_goober">
+        @keyframes go2264125279 {
+            from {
+                transform: scale(0) rotate(45deg);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1) rotate(45deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes go3020080000 {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes go463499852 {
+            from {
+                transform: scale(0) rotate(90deg);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1) rotate(90deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes go1268368563 {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes go1310225428 {
+            from {
+                transform: scale(0) rotate(45deg);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1) rotate(45deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes go651618207 {
+            0% {
+                height: 0;
+                width: 0;
+                opacity: 0;
+            }
+
+            40% {
+                height: 0;
+                width: 6px;
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 1;
+                height: 10px;
+            }
+        }
+
+        @keyframes go901347462 {
+            from {
+                transform: scale(0.6);
+                opacity: 0.4;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .go4109123758 {
+            z-index: 9999;
+        }
+
+        .go4109123758>* {
+            pointer-events: auto;
+        }
+
+        .go2072408551 {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            color: #363636;
+            line-height: 1.3;
+            will-change: transform;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1), 0 3px 3px rgba(0, 0, 0, 0.05);
+            max-width: 350px;
+            pointer-events: auto;
+            padding: 8px 10px;
+            border-radius: 8px;
+        }
+
+        .go685806154 {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-width: 20px;
+            min-height: 20px;
+        }
+
+        .go1858758034 {
+            width: 12px;
+            height: 12px;
+            box-sizing: border-box;
+            border: 2px solid;
+            border-radius: 100%;
+            border-color: #e0e0e0;
+            border-right-color: #616161;
+            animation: go1268368563 1s linear infinite;
+        }
+
+        .go1579819456 {
+            position: absolute;
+        }
+
+        .go2344853693 {
+            width: 20px;
+            opacity: 0;
+            height: 20px;
+            border-radius: 10px;
+            background: #61d345;
+            position: relative;
+            transform: rotate(45deg);
+            animation: go1310225428 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            animation-delay: 100ms;
+        }
+
+        .go2344853693:after {
+            content: '';
+            box-sizing: border-box;
+            animation: go651618207 0.2s ease-out forwards;
+            opacity: 0;
+            animation-delay: 200ms;
+            position: absolute;
+            border-right: 2px solid;
+            border-bottom: 2px solid;
+            border-color: #fff;
+            bottom: 6px;
+            left: 6px;
+            height: 10px;
+            width: 6px;
+        }
+
+        .go3958317564 {
+            display: flex;
+            justify-content: center;
+            margin: 4px 10px;
+            color: inherit;
+            flex: 1 1 auto;
+            white-space: pre-line;
+        }
+
+        @keyframes go3223188581 {
+            0% {
+                transform: translate3d(0, -200%, 0) scale(.6);
+                opacity: .5;
+            }
+
+            100% {
+                transform: translate3d(0, 0, 0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes go502128938 {
+            0% {
+                transform: translate3d(0, 0, -1px) scale(1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate3d(0, -150%, -1px) scale(.6);
+                opacity: 0;
+            }
+        }
+    </style>
+    <style>
+        :root,
+        .light,
+        [data-theme="light"] {
+            --heroui-background: 0 0% 100%;
+            --heroui-foreground-50: 240 5.88% 95%;
+            --heroui-foreground-100: 240 3.7% 90%;
+            --heroui-foreground-200: 240 5.26% 80%;
+            --heroui-foreground-300: 240 5.2% 70%;
+            --heroui-foreground-400: 240 3.83% 60%;
+            --heroui-foreground-500: 240 5.03% 50%;
+            --heroui-foreground-600: 240 4.88% 40%;
+            --heroui-foreground-700: 240 5.88% 30%;
+            --heroui-foreground-800: 240 4.76% 20%;
+            --heroui-foreground-900: 0 0% 10%;
+            --heroui-foreground: 210 5.56% 7.06%;
+            --heroui-focus: 212.01999999999998 100% 53.33%;
+            --heroui-overlay: 0 0% 100%;
+            --heroui-divider: 0 0% 0%;
+            --heroui-divider-opacity: 0.85;
+            --heroui-content1: 240 5.88% 95%;
+            --heroui-content1-foreground: 0 0% 10%;
+            --heroui-content2: 240 3.7% 90%;
+            --heroui-content2-foreground: 240 4.76% 20%;
+            --heroui-content3: 240 5.26% 80%;
+            --heroui-content3-foreground: 240 5.88% 30%;
+            --heroui-content4: 240 5.2% 70%;
+            --heroui-content4-foreground: 240 4.88% 40%;
+            --heroui-default-50: 240 5.88% 95%;
+            --heroui-default-100: 240 3.7% 90%;
+            --heroui-default-200: 240 5.26% 80%;
+            --heroui-default-300: 240 5.2% 70%;
+            --heroui-default-400: 240 3.83% 60%;
+            --heroui-default-500: 240 5.03% 50%;
+            --heroui-default-600: 240 4.88% 40%;
+            --heroui-default-700: 240 5.88% 30%;
+            --heroui-default-800: 240 4.76% 20%;
+            --heroui-default-900: 0 0% 10%;
+            --heroui-default-foreground: 0 0% 0%;
+            --heroui-default: 240 5.26% 80%;
+            --heroui-danger-50: 324 90.91% 95.69%;
+            --heroui-danger-100: 350.53 90.48% 91.76%;
+            --heroui-danger-200: 343.42 90.48% 83.53%;
+            --heroui-danger-300: 337.84 83.46% 73.92%;
+            --heroui-danger-400: 331.82 75% 65.49%;
+            --heroui-danger-500: 325.82 69.62% 53.53%;
+            --heroui-danger-600: 319.73 65.64% 44.51%;
+            --heroui-danger-700: 313.85 70.65% 36.08%;
+            --heroui-danger-800: 308.18 76.39% 28.24%;
+            --heroui-danger-900: 301.89 82.61% 22.55%;
+            --heroui-danger-foreground: 0 0% 100%;
+            --heroui-danger: 325.82 69.62% 53.53%;
+            --heroui-primary-50: 339.13 92% 95.1%;
+            --heroui-primary-100: 340 91.84% 90.39%;
+            --heroui-primary-200: 339.33 90% 80.39%;
+            --heroui-primary-300: 339.11 90.6% 70.78%;
+            --heroui-primary-400: 339 90% 60.78%;
+            --heroui-primary-500: 339.2 90.36% 51.18%;
+            --heroui-primary-600: 339 86.54% 40.78%;
+            --heroui-primary-700: 339.11 85.99% 30.78%;
+            --heroui-primary-800: 339.33 86.54% 20.39%;
+            --heroui-primary-900: 340 84.91% 10.39%;
+            --heroui-primary-foreground: 0 0% 100%;
+            --heroui-primary: 339.2 90.36% 51.18%;
+            --heroui-secondary-50: 270 61.54% 94.9%;
+            --heroui-secondary-100: 270 59.26% 89.41%;
+            --heroui-secondary-200: 270 59.26% 78.82%;
+            --heroui-secondary-300: 270 59.26% 68.24%;
+            --heroui-secondary-400: 270 59.26% 57.65%;
+            --heroui-secondary-500: 270 66.67% 47.06%;
+            --heroui-secondary-600: 270 66.67% 37.65%;
+            --heroui-secondary-700: 270 66.67% 28.24%;
+            --heroui-secondary-800: 270 66.67% 18.82%;
+            --heroui-secondary-900: 270 66.67% 9.41%;
+            --heroui-secondary-foreground: 0 0% 100%;
+            --heroui-secondary: 270 66.67% 47.06%;
+            --heroui-success-50: 146.67 64.29% 94.51%;
+            --heroui-success-100: 145.71 61.4% 88.82%;
+            --heroui-success-200: 146.2 61.74% 77.45%;
+            --heroui-success-300: 145.79 62.57% 66.47%;
+            --heroui-success-400: 146.01 62.45% 55.1%;
+            --heroui-success-500: 145.96 79.46% 43.92%;
+            --heroui-success-600: 146.01 79.89% 35.1%;
+            --heroui-success-700: 145.79 79.26% 26.47%;
+            --heroui-success-800: 146.2 79.78% 17.45%;
+            --heroui-success-900: 145.71 77.78% 8.82%;
+            --heroui-success-foreground: 0 0% 0%;
+            --heroui-success: 145.96 79.46% 43.92%;
+            --heroui-warning-50: 54.55 91.67% 95.29%;
+            --heroui-warning-100: 37.14 91.3% 90.98%;
+            --heroui-warning-200: 37.14 91.3% 81.96%;
+            --heroui-warning-300: 36.96 91.24% 73.14%;
+            --heroui-warning-400: 37.01 91.26% 64.12%;
+            --heroui-warning-500: 37.03 91.27% 55.1%;
+            --heroui-warning-600: 37.01 74.22% 44.12%;
+            --heroui-warning-700: 36.96 73.96% 33.14%;
+            --heroui-warning-800: 37.14 75% 21.96%;
+            --heroui-warning-900: 37.14 75% 10.98%;
+            --heroui-warning-foreground: 0 0% 0%;
+            --heroui-warning: 37.03 91.27% 55.1%;
+            --heroui-code-background: 221.25 17.39% 18.04%;
+            --heroui-strong: 316.95 100% 65.29%;
+            --heroui-code-mdx: 316.95 100% 65.29%;
+            --heroui-divider-weight: 1px;
+            --heroui-disabled-opacity: .5;
+            --heroui-font-size-tiny: 0.75rem;
+            --heroui-font-size-small: 0.875rem;
+            --heroui-font-size-medium: 1rem;
+            --heroui-font-size-large: 1.125rem;
+            --heroui-line-height-tiny: 1rem;
+            --heroui-line-height-small: 1.25rem;
+            --heroui-line-height-medium: 1.5rem;
+            --heroui-line-height-large: 1.75rem;
+            --heroui-radius-small: 8px;
+            --heroui-radius-medium: 12px;
+            --heroui-radius-large: 14px;
+            --heroui-border-width-small: 1px;
+            --heroui-border-width-medium: 2px;
+            --heroui-border-width-large: 3px;
+            --heroui-box-shadow-small: 0px 0px 5px 0px rgba(0, 0, 0, .02), 0px 2px 10px 0px rgba(0, 0, 0, .06), 0px 0px 1px 0px rgba(0, 0, 0, .3);
+            --heroui-box-shadow-medium: 0px 0px 15px 0px rgba(0, 0, 0, .03), 0px 2px 30px 0px rgba(0, 0, 0, .08), 0px 0px 1px 0px rgba(0, 0, 0, .3);
+            --heroui-box-shadow-large: 0px 0px 30px 0px rgba(0, 0, 0, .04), 0px 30px 60px 0px rgba(0, 0, 0, .12), 0px 0px 1px 0px rgba(0, 0, 0, .3);
+            --heroui-hover-opacity: .8;
+        }
+
+        .dark,
+        [data-theme="dark"] {
+            --heroui-background: 0 0% 0%;
+            --heroui-foreground-50: 240 5.88% 10%;
+            --heroui-foreground-100: 240 3.7% 15.88%;
+            --heroui-foreground-200: 240 5.26% 26.08%;
+            --heroui-foreground-300: 240 5.2% 33.92%;
+            --heroui-foreground-400: 240 3.83% 46.08%;
+            --heroui-foreground-500: 240 5.03% 64.9%;
+            --heroui-foreground-600: 240 4.88% 83.92%;
+            --heroui-foreground-700: 240 5.88% 90%;
+            --heroui-foreground-800: 240 4.76% 95.88%;
+            --heroui-foreground-900: 0 0% 98.04%;
+            --heroui-foreground: 210 5.56% 92.94%;
+            --heroui-focus: 212.01999999999998 100% 46.67%;
+            --heroui-overlay: 0 0% 0%;
+            --heroui-divider: 0 0% 100%;
+            --heroui-divider-opacity: 0.15;
+            --heroui-content1: 240 5.88% 10%;
+            --heroui-content1-foreground: 0 0% 98.04%;
+            --heroui-content2: 240 3.7% 15.88%;
+            --heroui-content2-foreground: 240 4.76% 95.88%;
+            --heroui-content3: 240 5.26% 26.08%;
+            --heroui-content3-foreground: 240 5.88% 90%;
+            --heroui-content4: 240 5.2% 33.92%;
+            --heroui-content4-foreground: 240 4.88% 83.92%;
+            --heroui-default-50: 240 5.88% 10%;
+            --heroui-default-100: 240 3.7% 15.88%;
+            --heroui-default-200: 240 5.26% 26.08%;
+            --heroui-default-300: 240 5.2% 33.92%;
+            --heroui-default-400: 240 3.83% 46.08%;
+            --heroui-default-500: 240 5.03% 64.9%;
+            --heroui-default-600: 240 4.88% 83.92%;
+            --heroui-default-700: 240 5.88% 90%;
+            --heroui-default-800: 240 4.76% 95.88%;
+            --heroui-default-900: 0 0% 98.04%;
+            --heroui-default-foreground: 0 0% 100%;
+            --heroui-default: 240 5.26% 26.08%;
+            --heroui-danger-50: 301.89 82.61% 22.55%;
+            --heroui-danger-100: 308.18 76.39% 28.24%;
+            --heroui-danger-200: 313.85 70.65% 36.08%;
+            --heroui-danger-300: 319.73 65.64% 44.51%;
+            --heroui-danger-400: 325.82 69.62% 53.53%;
+            --heroui-danger-500: 331.82 75% 65.49%;
+            --heroui-danger-600: 337.84 83.46% 73.92%;
+            --heroui-danger-700: 343.42 90.48% 83.53%;
+            --heroui-danger-800: 350.53 90.48% 91.76%;
+            --heroui-danger-900: 324 90.91% 95.69%;
+            --heroui-danger-foreground: 0 0% 100%;
+            --heroui-danger: 325.82 69.62% 53.53%;
+            --heroui-primary-50: 340 84.91% 10.39%;
+            --heroui-primary-100: 339.33 86.54% 20.39%;
+            --heroui-primary-200: 339.11 85.99% 30.78%;
+            --heroui-primary-300: 339 86.54% 40.78%;
+            --heroui-primary-400: 339.2 90.36% 51.18%;
+            --heroui-primary-500: 339 90% 60.78%;
+            --heroui-primary-600: 339.11 90.6% 70.78%;
+            --heroui-primary-700: 339.33 90% 80.39%;
+            --heroui-primary-800: 340 91.84% 90.39%;
+            --heroui-primary-900: 339.13 92% 95.1%;
+            --heroui-primary-foreground: 0 0% 100%;
+            --heroui-primary: 339.2 90.36% 51.18%;
+            --heroui-secondary-50: 270 66.67% 9.41%;
+            --heroui-secondary-100: 270 66.67% 18.82%;
+            --heroui-secondary-200: 270 66.67% 28.24%;
+            --heroui-secondary-300: 270 66.67% 37.65%;
+            --heroui-secondary-400: 270 66.67% 47.06%;
+            --heroui-secondary-500: 270 59.26% 57.65%;
+            --heroui-secondary-600: 270 59.26% 68.24%;
+            --heroui-secondary-700: 270 59.26% 78.82%;
+            --heroui-secondary-800: 270 59.26% 89.41%;
+            --heroui-secondary-900: 270 61.54% 94.9%;
+            --heroui-secondary-foreground: 0 0% 100%;
+            --heroui-secondary: 270 59.26% 57.65%;
+            --heroui-success-50: 145.71 77.78% 8.82%;
+            --heroui-success-100: 146.2 79.78% 17.45%;
+            --heroui-success-200: 145.79 79.26% 26.47%;
+            --heroui-success-300: 146.01 79.89% 35.1%;
+            --heroui-success-400: 145.96 79.46% 43.92%;
+            --heroui-success-500: 146.01 62.45% 55.1%;
+            --heroui-success-600: 145.79 62.57% 66.47%;
+            --heroui-success-700: 146.2 61.74% 77.45%;
+            --heroui-success-800: 145.71 61.4% 88.82%;
+            --heroui-success-900: 146.67 64.29% 94.51%;
+            --heroui-success-foreground: 0 0% 0%;
+            --heroui-success: 145.96 79.46% 43.92%;
+            --heroui-warning-50: 37.14 75% 10.98%;
+            --heroui-warning-100: 37.14 75% 21.96%;
+            --heroui-warning-200: 36.96 73.96% 33.14%;
+            --heroui-warning-300: 37.01 74.22% 44.12%;
+            --heroui-warning-400: 37.03 91.27% 55.1%;
+            --heroui-warning-500: 37.01 91.26% 64.12%;
+            --heroui-warning-600: 36.96 91.24% 73.14%;
+            --heroui-warning-700: 37.14 91.3% 81.96%;
+            --heroui-warning-800: 37.14 91.3% 90.98%;
+            --heroui-warning-900: 54.55 91.67% 95.29%;
+            --heroui-warning-foreground: 0 0% 0%;
+            --heroui-warning: 37.03 91.27% 55.1%;
+            --heroui-code-background: 240 5.56% 7.06%;
+            --heroui-strong: 190.14 94.67% 44.12%;
+            --heroui-code-mdx: 190.14 94.67% 44.12%;
+            --heroui-divider-weight: 1px;
+            --heroui-disabled-opacity: .5;
+            --heroui-font-size-tiny: 0.75rem;
+            --heroui-font-size-small: 0.875rem;
+            --heroui-font-size-medium: 1rem;
+            --heroui-font-size-large: 1.125rem;
+            --heroui-line-height-tiny: 1rem;
+            --heroui-line-height-small: 1.25rem;
+            --heroui-line-height-medium: 1.5rem;
+            --heroui-line-height-large: 1.75rem;
+            --heroui-radius-small: 8px;
+            --heroui-radius-medium: 12px;
+            --heroui-radius-large: 14px;
+            --heroui-border-width-small: 1px;
+            --heroui-border-width-medium: 2px;
+            --heroui-border-width-large: 3px;
+            --heroui-box-shadow-small: 0px 0px 5px 0px rgba(0, 0, 0, .05), 0px 2px 10px 0px rgba(0, 0, 0, .2), inset 0px 0px 1px 0px hsla(0, 0%, 100%, .15);
+            --heroui-box-shadow-medium: 0px 0px 15px 0px rgba(0, 0, 0, .06), 0px 2px 30px 0px rgba(0, 0, 0, .22), inset 0px 0px 1px 0px hsla(0, 0%, 100%, .15);
+            --heroui-box-shadow-large: 0px 0px 30px 0px rgba(0, 0, 0, .07), 0px 30px 60px 0px rgba(0, 0, 0, .26), inset 0px 0px 1px 0px hsla(0, 0%, 100%, .15);
+            --heroui-hover-opacity: .9;
+        }
+    </style>
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/index-BlcTO0sc.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/chunk-B75B6XQK-DSqU3ufV.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/openLink-XP9n6iPX.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/usePress-BnjC9uko.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/index-DQn0RI8C.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/qq_manager-BrRqRUrL.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/use-dialog-Dtx2304T.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/logo-juTWEVZj.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/proxy-RXOVlgJj.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/site-CJlpQQvc.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/index-B7kT-RLB.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/index-B3rFn1zy.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/useRequest-CFl-KGmM.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/index-CYXW7ZCx.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/primitives-D092zWiZ.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/index-BW41MP6H.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/index-CrlUKyvM.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/chunk-NAV3ZXLI-C04jKQm8.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/use-config-BVfe14G5.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/web_login-D9WefDq4.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/chunk-2QAN2V2R-CjVlwoz4.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/chunk-SLABUSGS-DkeN9i-y.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/pure-C6jfBtzY.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/chunk-EN4B57RQ-Cce4LRBf.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/useToggle-DfSUDUcI.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/chunk-OPTZHMJX-Dicyno9n.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/qq_login-C-uXKEPC.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/chunk-ML27DD5T-C_MqYeMd.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/index-CokAva9Y.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/useListState-Ctg8JCSo.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/SelectionManager-CuS6FoLE.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/features-animation-BJRrQp3n.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/chunk-SXMLSBOY-CH0QeN95.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/chunk-KVDW62ZT-BXKpXh3N.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/chunk-O4OUNAUT-CDvYvYEf.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/index-BRloxJGb.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/index-BIkUjRPH.js">
+    <link rel="modulepreload" as="script" crossorigin="" href="/webui/assets/index-zVO9tnCe.js">
+</head>
+
+<body>
+    <div id="root">
+        <div data-overlay-container="true">
+            <div class="fixed w-full h-full -z-[0] flex justify-end opacity-80">
+                <div class="relative shadow-black/5 shadow-none rounded-large" style="max-width: fit-content;"> <img
+                        class="opacity-0 shadow-black/5 data-[loaded=true]:opacity-100 shadow-none transition-transform-opacity motion-reduce:transition-none !duration-300 rounded-large overflow-hidden object-contain -top-42 h-[160%] -right-[30%] -rotate-45 pointer-events-none select-none -z-10 relative"
+                        src="/webui/assets/bkg-color-B4CNv_CD.png" data-loaded="true"></div>
+            </div>
+            <div class="fixed w-full h-full overflow-hidden -z-[0] hue-rotate-90 flex justify-start opacity-80">
+                <div class="relative shadow-black/5 shadow-none rounded-large" style="max-width: fit-content;"> <img
+                        class="opacity-0 shadow-black/5 data-[loaded=true]:opacity-100 shadow-none transition-transform-opacity motion-reduce:transition-none !duration-300 rounded-large relative h-[180%] object-contain pointer-events-none rotate-90 select-none -z-10 top-44"
+                        src="/webui/assets/bkg-color-B4CNv_CD.png" data-loaded="true"></div>
+            </div>
+            <div id="_rht_toaster" style="position: fixed; z-index: 9999; inset: 16px; pointer-events: none;"></div>
+            <div class="h-screen relative flex bg-primary-50 dark:bg-black items-stretch"
+                style="background-image: url(&quot;&quot;); background-size: cover;">
+                <div class="overflow-hidden fixed top-0 left-0 h-full z-50 bg-background md:bg-transparent md:static shadow-md md:shadow-none rounded-r-md md:rounded-none"
+                    style="overflow: hidden; width: 16rem;">
+                    <div
+                        class="w-64 flex flex-col items-stretch h-full transition-transform duration-300 ease-in-out z-30 relative float-right">
+                        <div class="flex justify-center items-center my-2 gap-2">
+                            <div class="relative shadow-black/5 shadow-none rounded-none"
+                                style="max-width: fit-content;"> <img
+                                    class="relative z-10 opacity-0 shadow-black/5 data-[loaded=true]:opacity-100 shadow-none transition-transform-opacity motion-reduce:transition-none !duration-300 rounded-none mb-2"
+                                    height="40" src="/webui/assets/logo-C2MGgWT2.png" style="height: 40px;"
+                                    data-loaded="true"></div>
+                            <div class="flex items-center font-bold !text-2xl shiny-text">NapCat</div>
+                        </div>
+                        <div class="overflow-y-auto flex flex-col flex-1 px-4">
+                            <div class="flex flex-col justify-content-center flex-1 gap-2">
+                                <div><button
+                                        class="z-0 group relative box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 px-4 min-w-20 h-10 text-small gap-2 rounded-full [&amp;&gt;svg]:max-w-[theme(spacing.8)] transition-transform-colors-opacity motion-reduce:transition-none shadow-lg shadow-primary/40 bg-primary text-primary-foreground data-[hover=true]:opacity-hover flex items-center w-full text-left justify-start dark:text-white bg-opacity-60"
+                                        type="button">
+                                        <div class="w-5 h-5" aria-hidden="true" focusable="false" tabindex="-1"><svg
+                                                fill="#000000" id="Layer_1" version="1.1" viewBox="0 0 512.001 512.001"
+                                                xml:space="preserve" xmlns="http://www.w3.org/2000/svg">
+                                                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                                <g id="SVGRepo_tracerCarrier" stroke-linecap="round"
+                                                    stroke-linejoin="round"></g>
+                                                <g id="SVGRepo_iconCarrier">
+                                                    <rect height="250.203" width="85.716" x="203.993" y="209.443"
+                                                        style="fill: rgb(255, 185, 105);"></rect>
+                                                    <rect height="47.627" width="85.716" x="203.993" y="209.443"
+                                                        style="opacity: 0.1;"></rect>
+                                                    <polygon
+                                                        points="503.759,127.641 413.472,224.104 36.108,224.104 36.108,31.177 413.472,31.177 "
+                                                        style="fill: rgb(255, 193, 122);"></polygon>
+                                                    <path
+                                                        d="M192.161,194.777c17.474-3.12,33.484-19.622,27.849-51.187 c-5.635-31.564-28.645-53.205-45.935-50.119c-17.289,3.087-31.39,31.352-25.754,62.917 C153.956,187.953,174.687,197.896,192.161,194.777z"
+                                                        style="fill: rgb(255, 215, 122);"></path>
+                                                    <path
+                                                        d="M294.957,194.777c-17.474-3.12-33.484-19.622-27.849-51.187s28.645-53.205,45.935-50.119 c17.289,3.087,31.39,31.352,25.754,62.917C333.162,187.953,312.431,197.896,294.957,194.777z"
+                                                        style="fill: rgb(255, 160, 193);"></path>
+                                                    <path
+                                                        d="M243.559,196.676c17.75,0,36.412-13.432,36.412-45.495S261.122,93.77,243.559,93.77 s-36.412,25.348-36.412,57.411S225.809,196.676,243.559,196.676z"
+                                                        style="fill: rgb(97, 204, 255);"></path>
+                                                    <path
+                                                        d="M468.901,480.823c1.578-20.514,16.57-56.019,16.57-56.019c-37.872-3.945-63.12,24.459-63.12,24.459 c3.156-16.57,22.881-55.23,22.881-55.23c-43.395-3.945-71.799,43.395-71.799,43.395c2.367-33.138,18.936-77.322,18.936-77.322 c-55.23,7.101-78.9,63.12-78.9,63.12c3.945-36.294,18.148-88.369,18.148-88.369c-75.744,13.413-84.759,97.047-84.759,97.047 s-9.014-83.635-84.759-97.047c0,0,14.202,52.075,18.148,88.369c0,0-23.67-56.019-78.9-63.12c0,0,16.57,44.184,18.936,77.322 c0,0-28.404-47.34-71.799-43.395c0,0,19.725,38.661,22.881,55.23c0,0-25.248-28.404-63.12-24.459c0,0,14.991,35.505,16.57,56.019 H468.901z"
+                                                        style="fill: rgb(148, 215, 127);"></path>
+                                                    <circle cx="243.555" cy="58.32" r="10.318"></circle>
+                                                    <path
+                                                        d="M16.593,481.455c0.331,4.295,3.911,7.61,8.218,7.61H468.9c4.307,0,7.887-3.315,8.218-7.609 c1.457-18.928,15.801-53.104,15.946-53.446c1.014-2.406,0.83-5.152-0.499-7.399s-3.643-3.733-6.241-4.004 c-2.678-0.278-5.392-0.42-8.068-0.42c-15.606,0-28.884,4.681-39.11,10.191c4.889-11.345,10.509-22.88,13.426-28.599 c1.243-2.437,1.197-5.332-0.125-7.727c-1.321-2.396-3.745-3.979-6.47-4.226c-1.951-0.178-3.93-0.267-5.881-0.267 c-22.684,0-41.049,11.794-53.781,23.652c5.5-23.985,13.656-45.904,13.771-46.212c1.014-2.706,0.536-5.746-1.258-8.011 c-1.795-2.266-4.657-3.423-7.51-3.056c-28.879,3.712-49.657,19.395-63.49,34.784c5.304-25.979,11.644-49.343,11.739-49.689 c0.744-2.724,0.04-5.64-1.864-7.725c-1.904-2.085-4.741-3.051-7.524-2.558c-11.629,2.059-22.407,5.807-32.219,11.147v-40.889 c0-4.552-3.69-8.242-8.242-8.242s-8.242,3.69-8.242,8.242v52.08c-4.965,4.157-9.543,8.824-13.672,13.812 c-0.023,0.027-0.046,0.055-0.069,0.083c-9.889,11.971-16.507,24.997-20.877,36.428c-4.372-11.433-10.99-24.463-20.883-36.435 c-0.019-0.022-0.036-0.044-0.055-0.066c-4.158-4.977-8.707-9.657-13.682-13.823V232.346h69.238v31.686 c0,4.552,3.69,8.242,8.242,8.242s8.242-3.69,8.242-8.242v-31.686H413.47c2.28,0,4.459-0.945,6.018-2.61l32.458-34.679 c3.111-3.323,2.939-8.54-0.386-11.65c-3.323-3.112-8.54-2.937-11.65,0.386l-30.015,32.068H289.717h-85.721H44.35V39.419h26.69 c4.552,0,8.242-3.69,8.242-8.242s-3.69-8.242-8.242-8.242H36.108c-4.552,0-8.242,3.69-8.242,8.242v192.927 c0,4.552,3.69,8.242,8.242,8.242h159.645v105.543c-9.812-5.34-20.59-9.088-32.218-11.147c-2.78-0.493-5.619,0.474-7.524,2.558 c-1.903,2.086-2.608,5.001-1.865,7.725c0.095,0.346,6.435,23.706,11.741,49.691c-13.834-15.388-34.613-31.073-63.491-34.785 c-2.867-0.369-5.717,0.791-7.51,3.056c-1.795,2.265-2.271,5.305-1.258,8.011c0.115,0.307,8.273,22.229,13.773,46.214 c-12.734-11.86-31.102-23.655-53.783-23.655c-1.951,0-3.929,0.09-5.881,0.267c-2.724,0.247-5.148,1.832-6.47,4.226 c-1.322,2.395-1.368,5.29-0.125,7.727c2.918,5.72,8.539,17.253,13.428,28.602c-10.225-5.511-23.505-10.194-39.111-10.194 c-2.677,0-5.391,0.142-8.068,0.42c-2.597,0.27-4.912,1.756-6.241,4.004c-1.329,2.247-1.513,4.992-0.499,7.399 C0.793,428.352,15.138,462.529,16.593,481.455z M65.202,454.738c2.464,2.77,6.475,3.556,9.8,1.919 c3.326-1.637,5.151-5.293,4.456-8.936c-2.182-11.457-11.262-31.793-17.517-44.95c30.658,5.364,51.058,38.544,51.271,38.897 c1.963,3.27,5.912,4.767,9.549,3.619c3.637-1.148,6.011-4.643,5.74-8.446c-1.611-22.551-9.357-49.473-14.578-65.544 c40.213,12.791,58.535,54.682,58.73,55.137c1.592,3.767,5.704,5.798,9.663,4.769c3.958-1.027,6.565-4.802,6.122-8.867 c-2.775-25.53-10.369-58.123-14.889-76.163c9.231,3,17.603,7.397,25.119,13.128c0.099,0.085,0.191,0.176,0.296,0.256 c34.116,26.301,39.648,72.781,39.699,73.234c0.026,0.245,0.066,0.486,0.113,0.724c0.003,0.015,0.004,0.031,0.008,0.046 c0.03,0.143,0.07,0.281,0.107,0.421c0.027,0.108,0.051,0.219,0.082,0.324c0.01,0.034,0.024,0.065,0.035,0.098 c1.065,3.354,4.196,5.731,7.839,5.737c0.004,0,0.009,0,0.013,0c3.08,0,5.796-1.708,7.209-4.263c0.031-0.057,0.067-0.11,0.098-0.167 c0.056-0.109,0.103-0.222,0.155-0.333c0.054-0.115,0.113-0.229,0.162-0.347c0.035-0.086,0.062-0.175,0.093-0.26 c0.056-0.151,0.114-0.299,0.162-0.453c0.021-0.069,0.035-0.141,0.054-0.21c0.049-0.177,0.099-0.353,0.136-0.533 c0.002-0.011,0.003-0.022,0.005-0.032c0.049-0.242,0.089-0.487,0.118-0.736c0.052-0.467,5.585-46.947,39.7-73.248 c0.102-0.079,0.193-0.169,0.291-0.253c7.518-5.731,15.892-10.13,25.125-13.13c-4.52,18.04-12.115,50.632-14.89,76.163 c-0.441,4.059,2.159,7.823,6.111,8.857c3.953,1.033,8.066-0.989,9.669-4.745c0.2-0.467,18.522-42.359,58.735-55.151 c-5.221,16.071-12.967,42.993-14.578,65.544c-0.271,3.8,2.099,7.285,5.73,8.438c3.631,1.154,7.581-0.339,9.551-3.598 c0.221-0.364,20.618-33.545,51.279-38.91c-6.255,13.159-15.335,33.493-17.517,44.951c-0.692,3.633,1.129,7.272,4.442,8.916 c3.311,1.643,7.322,0.87,9.798-1.879c0.188-0.208,18.061-19.727,44.935-21.893c-3.935,10.482-9.397,26.41-11.745,39.717H32.03 c-2.348-13.307-7.809-29.236-11.745-39.717C47.156,435.03,65.03,454.548,65.202,454.738z">
+                                                    </path>
+                                                    <path
+                                                        d="M462.822,171.379c1.589,1.488,3.612,2.224,5.63,2.224c2.201,0,4.397-0.876,6.02-2.61l35.305-37.721 c2.966-3.169,2.966-8.096,0-11.264l-90.287-96.463c-1.558-1.665-3.736-2.61-6.018-2.61H117.663c-4.552,0-8.242,3.69-8.242,8.242 s3.69,8.242,8.242,8.242h292.234l82.574,88.221l-30.034,32.089C459.326,163.052,459.498,168.268,462.822,171.379z">
+                                                    </path>
+                                                    <path
+                                                        d="M212.185,105.435c-9.864-12.763-22.6-20.497-34.747-20.497c-1.629,0-3.247,0.142-4.812,0.421 c-23.417,4.181-38.566,38.05-32.419,72.479c6.019,33.713,27.615,45.725,45.82,45.726h0.002c2.528,0,5.078-0.226,7.579-0.674 c7.739-1.381,14.74-4.763,20.448-9.767c8.241,7.997,18.89,11.795,29.502,11.795c10.611,0,21.261-3.798,29.502-11.795 c5.708,5.005,12.709,8.386,20.448,9.767c2.502,0.447,5.053,0.674,7.581,0.674h0.001c18.204,0,39.801-12.015,45.821-45.727 c6.145-34.43-9.005-68.298-32.42-72.479c-1.565-0.279-3.184-0.421-4.812-0.421c-12.146,0-24.883,7.734-34.746,20.498 c-8.201-12.152-19.418-19.908-31.374-19.908C231.603,85.528,220.386,93.283,212.185,105.435z M190.713,186.664 c-1.548,0.276-3.124,0.416-4.685,0.416c-14.938-0.001-26.002-12.017-29.594-32.14c-5.195-29.098,8.05-51.383,19.089-53.355 c0.611-0.11,1.256-0.164,1.915-0.164c7.119,0,18.074,6.592,26.31,20.987c-0.078,0.223-0.145,0.452-0.221,0.676 c-0.102,0.3-0.198,0.606-0.297,0.909c-4.048,12.34-5.353,25.562-3.562,38.437c0.024,0.175,0.048,0.349,0.075,0.524 c0.914,6.236,2.554,11.739,4.768,16.529C200.821,183.207,196.057,185.709,190.713,186.664z M288.173,147.681 c-0.32-8.067-1.787-16.101-4.301-23.738c-0.092-0.28-0.18-0.565-0.276-0.843c-0.078-0.229-0.146-0.464-0.226-0.691 c8.235-14.395,19.192-20.987,26.309-20.987c0.66,0,1.304,0.055,1.914,0.164c11.04,1.97,24.284,24.257,19.09,53.355 c-3.593,20.126-14.656,32.14-29.594,32.14c-1.56,0-3.136-0.141-4.686-0.416c-5.344-0.954-10.108-3.456-13.798-7.183 c2.214-4.789,3.854-10.293,4.768-16.529c0.025-0.174,0.049-0.348,0.075-0.523C288.135,157.557,288.369,152.613,288.173,147.681z M220.71,124.087c5.912-13.835,15.583-22.075,22.849-22.075s16.938,8.241,22.85,22.078c0.082,0.286,0.18,0.569,0.293,0.847 c3.757,9.175,5.435,19.284,4.951,29.184c-0.806,16.452-8.478,34.314-28.094,34.314s-27.288-17.862-28.094-34.313 c-0.484-9.88,1.206-20.027,4.951-29.183C220.53,124.658,220.628,124.375,220.71,124.087z">
+                                                    </path>
+                                                </g>
+                                            </svg></div>基础信息<div
+                                            class="w-3 h-1.5 rounded-full ml-auto shadow-lg bg-primary-500 animate-spinner-ease-spin"
+                                            aria-hidden="true" focusable="false" tabindex="-1"></div>
+                                    </button>
+                                    <div class="ml-4 overflow-hidden transition-all duration-300" style="height: 0px;">
+                                    </div>
+                                </div>
+                                <div><button
+                                        class="z-0 group relative box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 px-4 min-w-20 h-10 text-small gap-2 rounded-full [&amp;&gt;svg]:max-w-[theme(spacing.8)] transition-transform-colors-opacity motion-reduce:transition-none bg-transparent text-primary data-[hover=true]:bg-primary/20 flex items-center w-full text-left justify-start dark:text-white"
+                                        type="button">
+                                        <div class="w-5 h-5" aria-hidden="true" focusable="false" tabindex="-1"><svg
+                                                fill="#000000" id="Layer_1" version="1.1" viewBox="0 0 392.436 392.436"
+                                                xml:space="preserve" xmlns="http://www.w3.org/2000/svg">
+                                                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                                <g id="SVGRepo_tracerCarrier" stroke-linecap="round"
+                                                    stroke-linejoin="round"></g>
+                                                <g id="SVGRepo_iconCarrier">
+                                                    <polygon points="149.543,370.909 249.616,370.909 199.515,214.465 "
+                                                        style="fill: rgb(255, 193, 13);"></polygon>
+                                                    <g>
+                                                        <path
+                                                            d="M128.404,212.008c4.008,4.396,12.024,3.879,15.451,0c4.267-4.267,4.267-11.119,0-15.451 c-14.61-14.61-22.626-33.939-22.626-54.562s8.016-40.016,22.626-54.562c4.267-4.267,4.267-11.119,0-15.451 c-4.267-4.267-11.119-4.267-15.451,0c-18.683,18.683-28.962,43.572-28.962,70.012S109.657,193.261,128.404,212.008z"
+                                                            style="fill: rgb(25, 79, 130);"></path>
+                                                        <path
+                                                            d="M104.679,50.457c4.267-4.267,4.267-11.119,0-15.451c-4.267-4.267-11.119-4.267-15.451,0 c-58.958,58.958-58.958,154.958,0,213.915c4.719,4.396,10.925,4.202,15.451,0c4.267-4.267,4.267-11.119,0-15.451 C54.19,183.111,54.19,100.945,104.679,50.457z"
+                                                            style="fill: rgb(25, 79, 130);"></path>
+                                                        <path
+                                                            d="M72.808,18.651c4.267-4.267,4.267-11.119,0-15.451c-4.267-4.267-11.119-4.267-15.451,0 c-76.477,76.477-76.477,201.051,0,277.592c4.461,4.267,11.119,4.008,15.451,0c4.267-4.267,4.267-11.119,0-15.451 C4.8,197.398,4.8,86.659,72.808,18.651z"
+                                                            style="fill: rgb(25, 79, 130);"></path>
+                                                        <path
+                                                            d="M271.273,141.996c0,20.622-8.016,40.016-22.626,54.562c-4.267,4.267-4.267,11.119,0,15.451 c3.426,3.879,11.442,4.396,15.451,0c18.683-18.683,28.962-43.572,28.962-70.012s-10.279-51.329-28.962-70.012 c-4.267-4.267-11.119-4.267-15.451,0c-4.267,4.267-4.267,11.119,0,15.451C263.192,102.044,271.273,121.438,271.273,141.996z"
+                                                            style="fill: rgb(25, 79, 130);"></path>
+                                                        <path
+                                                            d="M303.273,35.006c-4.267-4.267-11.119-4.267-15.451,0c-4.267,4.267-4.267,11.119,0,15.451 c50.489,50.489,50.489,132.59,0,183.079c-4.267,4.267-4.267,11.119,0,15.451c4.59,4.202,10.667,4.396,15.451,0 C362.23,189.964,362.23,94.093,303.273,35.006z"
+                                                            style="fill: rgb(25, 79, 130);"></path>
+                                                        <path
+                                                            d="M335.079,3.2c-4.267-4.267-11.119-4.267-15.451,0c-4.267,4.267-4.267,11.119,0,15.451 c68.008,68.008,68.008,178.747,0,246.756c-4.267,4.267-4.267,11.119,0,15.451c4.331,4.008,10.99,4.267,15.451,0 C411.556,204.251,411.556,79.741,335.079,3.2z"
+                                                            style="fill: rgb(25, 79, 130);"></path>
+                                                        <path
+                                                            d="M213.737,186.925c18.683-6.4,32.129-24.113,32.129-44.994c0-26.246-21.333-47.58-47.58-47.58 s-47.58,21.333-47.58,47.58c0,21.721,14.545,39.952,34.457,45.64l-60.962,190.642c-2.457,6.206,2.78,14.222,10.343,14.222H264.42 c7.499,0,12.606-7.24,10.343-14.222L213.737,186.925z M172.558,141.996c0-14.222,11.507-25.794,25.794-25.794 c14.287,0,25.794,11.507,25.794,25.794c0,14.287-11.507,25.794-25.794,25.794C184.065,167.79,172.558,156.283,172.558,141.996z M149.608,370.78l6.012-18.747h26.828c6.012,0,10.925-4.848,10.925-10.925c0-6.012-4.848-10.925-10.925-10.925h-19.846 l6.982-21.786h34.715c6.012,0,10.925-4.848,10.925-10.925c0-6.012-4.848-10.925-10.925-10.925h-27.733l23.079-72.145 l49.972,156.444H149.608V370.78z"
+                                                            style="fill: rgb(25, 79, 130);"></path>
+                                                    </g>
+                                                    <circle cx="198.352" cy="141.996" r="25.794"
+                                                        style="fill: rgb(86, 172, 224);"></circle>
+                                                </g>
+                                            </svg></div>网络配置<div
+                                            class="w-3 h-1.5 rounded-full ml-auto shadow-lg bg-primary-200 dark:bg-white"
+                                            aria-hidden="true" focusable="false" tabindex="-1"></div>
+                                    </button>
+                                    <div class="ml-4 overflow-hidden transition-all duration-300" style="height: 0px;">
+                                    </div>
+                                </div>
+                                <div><button
+                                        class="z-0 group relative box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 px-4 min-w-20 h-10 text-small gap-2 rounded-full [&amp;&gt;svg]:max-w-[theme(spacing.8)] transition-transform-colors-opacity motion-reduce:transition-none bg-transparent text-primary data-[hover=true]:bg-primary/20 flex items-center w-full text-left justify-start dark:text-white"
+                                        type="button">
+                                        <div class="w-5 h-5" aria-hidden="true" focusable="false" tabindex="-1"><svg
+                                                fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                                <g id="SVGRepo_tracerCarrier" stroke-linecap="round"
+                                                    stroke-linejoin="round"></g>
+                                                <g id="SVGRepo_iconCarrier">
+                                                    <rect fill="white" fill-opacity="0.01" height="48" width="48">
+                                                    </rect>
+                                                    <path
+                                                        d="M18.2838 43.1712C14.9327 42.1735 11.9498 40.3212 9.58787 37.8669C10.469 36.8226 11 35.4733 11 34C11 30.6863 8.31371 28 5 28C4.79955 28 4.60139 28.0098 4.40599 28.029C4.13979 26.7276 4 25.3801 4 24C4 21.9094 4.32077 19.8937 4.91579 17.9994C4.94381 17.9998 4.97188 18 5 18C8.31371 18 11 15.3137 11 12C11 11.0487 10.7786 10.1491 10.3846 9.34999C12.6975 7.19937 15.5205 5.5899 18.6521 4.72302C19.6444 6.66807 21.6667 8.00001 24 8.00001C26.3333 8.00001 28.3556 6.66807 29.3479 4.72302C32.4795 5.5899 35.3025 7.19937 37.6154 9.34999C37.2214 10.1491 37 11.0487 37 12C37 15.3137 39.6863 18 43 18C43.0281 18 43.0562 17.9998 43.0842 17.9994C43.6792 19.8937 44 21.9094 44 24C44 25.3801 43.8602 26.7276 43.594 28.029C43.3986 28.0098 43.2005 28 43 28C39.6863 28 37 30.6863 37 34C37 35.4733 37.531 36.8226 38.4121 37.8669C36.0502 40.3212 33.0673 42.1735 29.7162 43.1712C28.9428 40.7518 26.676 39 24 39C21.324 39 19.0572 40.7518 18.2838 43.1712Z"
+                                                        fill="#2F88FF" stroke="#000000" stroke-linejoin="round"
+                                                        stroke-width="4"></path>
+                                                    <path
+                                                        d="M24 31C27.866 31 31 27.866 31 24C31 20.134 27.866 17 24 17C20.134 17 17 20.134 17 24C17 27.866 20.134 31 24 31Z"
+                                                        fill="#43CCF8" stroke="white" stroke-linejoin="round"
+                                                        stroke-width="4"></path>
+                                                </g>
+                                            </svg></div>其他配置<div
+                                            class="w-3 h-1.5 rounded-full ml-auto shadow-lg bg-primary-200 dark:bg-white"
+                                            aria-hidden="true" focusable="false" tabindex="-1"></div>
+                                    </button>
+                                    <div class="ml-4 overflow-hidden transition-all duration-300" style="height: 0px;">
+                                    </div>
+                                </div>
+                                <div><button
+                                        class="z-0 group relative box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 px-4 min-w-20 h-10 text-small gap-2 rounded-full [&amp;&gt;svg]:max-w-[theme(spacing.8)] transition-transform-colors-opacity motion-reduce:transition-none bg-transparent text-primary data-[hover=true]:bg-primary/20 flex items-center w-full text-left justify-start dark:text-white"
+                                        type="button">
+                                        <div class="w-5 h-5" aria-hidden="true" focusable="false" tabindex="-1"><svg
+                                                viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                                <g id="SVGRepo_tracerCarrier" stroke-linecap="round"
+                                                    stroke-linejoin="round"></g>
+                                                <g id="SVGRepo_iconCarrier">
+                                                    <rect width="48" height="48" fill="white" fill-opacity="0.01">
+                                                    </rect>
+                                                    <rect x="13" y="10" width="28" height="34" fill="#2F88FF"
+                                                        stroke="#000000" stroke-width="4" stroke-linejoin="round">
+                                                    </rect>
+                                                    <path d="M35 10V4H8C7.44772 4 7 4.44772 7 5V38H13" stroke="#000000"
+                                                        stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                                                    </path>
+                                                    <path d="M21 22H33" stroke="white" stroke-width="4"
+                                                        stroke-linecap="round" stroke-linejoin="round"></path>
+                                                    <path d="M21 30H33" stroke="white" stroke-width="4"
+                                                        stroke-linecap="round" stroke-linejoin="round"></path>
+                                                </g>
+                                            </svg></div>猫猫日志<div
+                                            class="w-3 h-1.5 rounded-full ml-auto shadow-lg bg-primary-200 dark:bg-white"
+                                            aria-hidden="true" focusable="false" tabindex="-1"></div>
+                                    </button>
+                                    <div class="ml-4 overflow-hidden transition-all duration-300" style="height: 0px;">
+                                    </div>
+                                </div>
+                                <div><button
+                                        class="z-0 group relative box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 px-4 min-w-20 h-10 text-small gap-2 rounded-full [&amp;&gt;svg]:max-w-[theme(spacing.8)] transition-transform-colors-opacity motion-reduce:transition-none bg-transparent text-primary data-[hover=true]:bg-primary/20 flex items-center w-full text-left justify-start dark:text-white"
+                                        type="button">
+                                        <div class="w-5 h-5" aria-hidden="true" focusable="false" tabindex="-1"><svg
+                                                viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"
+                                                aria-hidden="true" role="img" preserveAspectRatio="xMidYMid meet">
+                                                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                                <g id="SVGRepo_tracerCarrier" stroke-linecap="round"
+                                                    stroke-linejoin="round"></g>
+                                                <g id="SVGRepo_iconCarrier">
+                                                    <g fill="#3e4347">
+                                                        <path
+                                                            d="M52.4 57.6c-1.5-1.5-.9-3.4.1-4.4c1-1 2.9-1.6 4.4-.1c1.5 1.5 2.1 4.5 1 5.5c-1 1.1-4 .5-5.5-1">
+                                                        </path>
+                                                        <path
+                                                            d="M55.9 43.4c-1.5-1.5-.9-3.4.1-4.4c1-1 2.9-1.6 4.4-.1c1.5 1.5 2.1 4.5 1 5.6c-1 1-4 .4-5.5-1.1">
+                                                        </path>
+                                                    </g>
+                                                    <path
+                                                        d="M12.9 57.6C8.3 57.6 2 56.5 2 51.7c0-5.3 5.2-10.3 10.9-10.3v16.2z"
+                                                        fill="#5b7f32"></path>
+                                                    <path
+                                                        d="M23.9 47.9c0 9-6.3 9.8-10.9 9.8s-9.2-2.1-9.2-5.9c0-4.5 4.6-10.3 9.2-10.3c4.5 0 10.9 1.9 10.9 6.4"
+                                                        fill="#94d82a"></path>
+                                                    <path d="M21.2 57.6c-15.9 0-16-19.1.3-19.1l-.3 19.1" fill="#5b7f32">
+                                                    </path>
+                                                    <path
+                                                        d="M31.1 46.1c0 10.6-5.6 11.6-10 11.6c-14.4 0-14-19.1.3-19.1c4.5-.1 9.7 2.2 9.7 7.5"
+                                                        fill="#94d82a"></path>
+                                                    <path d="M30.8 57.6c-17.1 0-16.4-20 0-20v20" fill="#5b7f32"></path>
+                                                    <path
+                                                        d="M42.4 45.5c0 11.1-6.5 12.1-11.6 12.1c-14.1 0-14.1-20 0-20c5 0 11.6 2.4 11.6 7.9"
+                                                        fill="#94d82a"></path>
+                                                    <path d="M44.7 57.6c-21.4 0-19.4-23-1.5-23l1.5 23" fill="#5b7f32">
+                                                    </path>
+                                                    <path
+                                                        d="M57.7 45.2c0 11.1-7.1 12.5-13 12.5c-18 0-18-23.4 0-23.4c5.9-.1 13 5.3 13 10.9"
+                                                        fill="#94d82a"></path>
+                                                    <path
+                                                        d="M57.4 43.3s-3.6 4.4-9.1 5.1c-5.6.7-20-3.2-11-15.7l20.1 10.6"
+                                                        fill="#5b7f32"></path>
+                                                    <path
+                                                        d="M59.7 38.2c0 5.7-6.6 8.2-12.1 8.2s-12.1-2.5-12.1-8.2c0-5.7 6.6-12.5 12.1-12.5c5.6 0 12.1 6.8 12.1 12.5"
+                                                        fill="#94d82a"></path>
+                                                    <g fill="#3e4347">
+                                                        <path
+                                                            d="M31.9 54.8c2.1-2.1 4.2-1.8 5.3-.7c1 1 1.4 3.2-.7 5.3c-2.1 2.1-5.8 3.3-6.9 2.3c-1.1-1.1.2-4.8 2.3-6.9">
+                                                        </path>
+                                                        <path
+                                                            d="M34 33.6c2.1 2.1 1.8 4.2.7 5.3c-1 1-3.2 1.4-5.3-.7s-3.3-5.8-2.3-6.8c1.1-1.1 4.8.1 6.9 2.2">
+                                                        </path>
+                                                        <path
+                                                            d="M20.8 55.3c1.8-1.8 3.6-1.5 4.4-.6c.9.9 1.2 2.7-.6 4.4c-1.8 1.8-4.9 2.8-5.8 1.9c-.8-.8.2-4 2-5.7">
+                                                        </path>
+                                                        <path
+                                                            d="M12 55.6c1.5-1.5 3-1.3 3.8-.5c.7.7 1 2.3-.5 3.8s-4.2 2.4-4.9 1.6c-.8-.7.1-3.4 1.6-4.9">
+                                                        </path>
+                                                    </g>
+                                                    <g fill="#5b7f32">
+                                                        <path d="M28.4 40l-1 1l1 1l.9-1z"> </path>
+                                                        <path d="M25.4 46.1l-.9 1l.9 1l1-1z"> </path>
+                                                        <path d="M15.6 41l-1 1l1 .9l1-.9z"> </path>
+                                                        <path d="M8.1 45.2l-.9.9l.9 1l1-1z"> </path>
+                                                        <path d="M6.5 47.4l-1 1l1 1l1-1z"> </path>
+                                                        <path d="M34.6 44.5l-1 1l1 1l1-1z"> </path>
+                                                        <path d="M37.1 47.6l-1 1l1 .9l1-.9z"> </path>
+                                                        <path d="M55 47.1l-1 1l1 .9l.9-.9z"> </path>
+                                                        <path d="M54.3 39.1l-1 .9l1 1l.9-1z"> </path>
+                                                        <path d="M40.3 36.3l-1 .9l1 1l.9-1z"> </path>
+                                                        <path d="M24.5 40.5l-2 1.9l2 2l1.9-2z"> </path>
+                                                        <path d="M56.2 34.3l-1.9 2l1.9 1.9l1.9-1.9z"> </path>
+                                                        <path d="M14.6 43.7l-1.9 2l1.9 1.9l2-1.9z"> </path>
+                                                    </g>
+                                                    <g fill="#3e4347">
+                                                        <path
+                                                            d="M40.5 10.3l-.9-.1c.1-1.9-1.3-4.3-3.8-5l.2-.9c2.7.8 4.7 3.4 4.5 6">
+                                                        </path>
+                                                        <path
+                                                            d="M37.6 3.4c.8.9.7 2.3-.2 3.1c-.9.8-2.3.7-3.1-.2c-.8-.9-.7-2.3.2-3.1c.9-.9 2.3-.8 3.1.2">
+                                                        </path>
+                                                        <path
+                                                            d="M49.2 9.8l-.1-.9c1.9-.2 3.9-2.2 4.1-4.7l.9.1c-.2 2.7-2.4 5.2-4.9 5.5">
+                                                        </path>
+                                                        <path
+                                                            d="M55.4 5.6c-.7 1-2.1 1.1-3.1.4c-1-.8-1.1-2.1-.4-3.1c.7-1 2.1-1.1 3.1-.4c.9.7 1.1 2.1.4 3.1">
+                                                        </path>
+                                                    </g>
+                                                    <path d="M55.7 29.7c-2.4 7.5-16.4 7.9-18.3 3l18.3-3" fill="#5b7f32">
+                                                    </path>
+                                                    <path
+                                                        d="M59.2 22.4c.5 10.4-20.7 17.5-26.9 5.2C27.6 18.2 35 8.4 42.8 7.5C55.6 6 59 17.4 59.2 22.4z"
+                                                        fill="#94d82a"></path>
+                                                    <g fill="#3e4347">
+                                                        <path
+                                                            d="M51.3 18.3c0 1.7-.9 3-2 3s-2-1.3-2-3s.9-3 2-3s2 1.4 2 3">
+                                                        </path>
+                                                        <ellipse cx="37.4" cy="18.3" rx="2" ry="3"></ellipse>
+                                                        <path
+                                                            d="M43.3 29.3c-2.4 0-4.5-.9-4.5-1.8c0-.1 0-.2.1-.3c.1-.1.2-.1.4-.1s.3.1.6.2c.6.2 1.7.7 3.5.7s2.9-.5 3.4-.7c.3-.1.4-.2.6-.2c.2 0 .4.1.4.4c0 .9-2.1 1.8-4.5 1.8">
+                                                        </path>
+                                                    </g>
+                                                    <g opacity=".7" fill="#ea83a3">
+                                                        <ellipse cx="53.7" cy="23.8" rx="3.2" ry="2.5"></ellipse>
+                                                        <ellipse cx="34.4" cy="23.7" rx="2.6" ry="1.8"></ellipse>
+                                                    </g>
+                                                </g>
+                                            </svg></div>接口调试<div
+                                            class="ml-auto relative w-3 h-3 transition-transform text-primary-200 dark:text-white before:rounded-full before:content-[&quot;&quot;] before:block before:absolute before:w-3 before:h-[4.5px] before:bg-current before:top-1/2 before:-left-[3px] before:transform before:-translate-y-1/2 before:rotate-45 after:rounded-full after:content-[&quot;&quot;] after:block after:absolute after:w-3 after:h-[4.5px] after:bg-current after:top-1/2 after:left-[3px] after:transform after:-translate-y-1/2 after:-rotate-45"
+                                            aria-hidden="true" focusable="false" tabindex="-1"></div>
+                                    </button>
+                                    <div class="ml-4 overflow-hidden transition-all duration-300" style="height: 0px;">
+                                        <div><button
+                                                class="z-0 group relative box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 px-4 min-w-20 h-10 text-small gap-2 rounded-full [&amp;&gt;svg]:max-w-[theme(spacing.8)] transition-transform-colors-opacity motion-reduce:transition-none bg-transparent text-primary data-[hover=true]:bg-primary/20 flex items-center w-full text-left justify-start dark:text-white"
+                                                type="button">HTTP<div
+                                                    class="w-3 h-1.5 rounded-full ml-auto shadow-lg bg-primary-200 dark:bg-white"
+                                                    aria-hidden="true" focusable="false" tabindex="-1"></div></button>
+                                            <div class="ml-4 overflow-hidden transition-all duration-300"
+                                                style="height: 0px;"></div>
+                                        </div>
+                                        <div><button
+                                                class="z-0 group relative box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 px-4 min-w-20 h-10 text-small gap-2 rounded-full [&amp;&gt;svg]:max-w-[theme(spacing.8)] transition-transform-colors-opacity motion-reduce:transition-none bg-transparent text-primary data-[hover=true]:bg-primary/20 flex items-center w-full text-left justify-start dark:text-white"
+                                                type="button">Websocket<div
+                                                    class="w-3 h-1.5 rounded-full ml-auto shadow-lg bg-primary-200 dark:bg-white"
+                                                    aria-hidden="true" focusable="false" tabindex="-1"></div></button>
+                                            <div class="ml-4 overflow-hidden transition-all duration-300"
+                                                style="height: 0px;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div><button
+                                        class="z-0 group relative box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 px-4 min-w-20 h-10 text-small gap-2 rounded-full [&amp;&gt;svg]:max-w-[theme(spacing.8)] transition-transform-colors-opacity motion-reduce:transition-none bg-transparent text-primary data-[hover=true]:bg-primary/20 flex items-center w-full text-left justify-start dark:text-white"
+                                        type="button">
+                                        <div class="w-5 h-5" aria-hidden="true" focusable="false" tabindex="-1"><svg
+                                                version="1.1" id="_x36_" xmlns="http://www.w3.org/2000/svg"
+                                                xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512"
+                                                xml:space="preserve">
+                                                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                                <g id="SVGRepo_tracerCarrier" stroke-linecap="round"
+                                                    stroke-linejoin="round"></g>
+                                                <g id="SVGRepo_iconCarrier">
+                                                    <g>
+                                                        <path
+                                                            d="M441.853,393.794H70.147C31.566,393.794,0,362.228,0,323.647V106.969 c0-38.581,31.566-70.147,70.147-70.147h371.706c38.581,0,70.147,31.566,70.147,70.147v216.678 C512,362.228,480.434,393.794,441.853,393.794z"
+                                                            style="fill: rgb(212, 180, 118);"></path>
+                                                        <path
+                                                            d="M199.884,249.574H70.147C31.566,249.574,0,218.008,0,179.427V70.147C0,31.566,31.566,0,70.147,0 h129.737c38.581,0,70.147,31.566,70.147,70.147v109.28C270.031,218.008,238.465,249.574,199.884,249.574z"
+                                                            style="fill: rgb(212, 180, 118);"></path>
+                                                        <polygon
+                                                            points="485.439,329.388 87.357,347.774 78.653,130.095 476.734,111.709 "
+                                                            style="fill: rgb(240, 239, 239);"></polygon>
+                                                        <defs>
+                                                            <filter id="Adobe_OpacityMaskFilter"
+                                                                filterUnits="userSpaceOnUse" x="34.381" y="60.216"
+                                                                width="416.68" height="259.557">
+                                                                <feFlood result="back"
+                                                                    style="flood-color: white; flood-opacity: 1;">
+                                                                </feFlood>
+                                                                <feBlend in="SourceGraphic" in2="back" mode="normal">
+                                                                </feBlend>
+                                                            </filter>
+                                                        </defs>
+                                                        <mask maskUnits="userSpaceOnUse" x="34.381" y="60.216"
+                                                            width="416.68" height="259.557" id="SVGID_1_">
+                                                            <g
+                                                                style="filter: url(&quot;#Adobe_OpacityMaskFilter&quot;);">
+                                                                <defs>
+                                                                    <filter id="Adobe_OpacityMaskFilter_1_"
+                                                                        filterUnits="userSpaceOnUse" x="34.381"
+                                                                        y="60.216" width="416.68" height="259.557">
+                                                                        <feFlood result="back"
+                                                                            style="flood-color: white; flood-opacity: 1;">
+                                                                        </feFlood>
+                                                                        <feBlend in="SourceGraphic" in2="back"
+                                                                            mode="normal"></feBlend>
+                                                                    </filter>
+                                                                </defs>
+                                                                <mask maskUnits="userSpaceOnUse" x="34.381" y="60.216"
+                                                                    width="416.68" height="259.557" id="SVGID_1_">
+                                                                    <g
+                                                                        style="filter: url(&quot;#Adobe_OpacityMaskFilter_1_&quot;);">
+                                                                    </g>
+                                                                </mask>
+                                                                <linearGradient id="SVGID_2_"
+                                                                    gradientUnits="userSpaceOnUse" x1="34.3814"
+                                                                    y1="189.9944" x2="451.061" y2="189.9944">
+                                                                    <stop offset="0.57"
+                                                                        style="stop-color: rgb(246, 246, 246);"></stop>
+                                                                    <stop offset="0.6039"
+                                                                        style="stop-color: rgb(246, 246, 246);"></stop>
+                                                                </linearGradient>
+                                                                <polygon
+                                                                    points="451.061,277.073 54.598,319.773 34.381,102.916 430.845,60.216 "
+                                                                    style="mask: url(&quot;#SVGID_1_&quot;); fill: url(&quot;#SVGID_2_&quot;);">
+                                                                </polygon>
+                                                            </g>
+                                                        </mask>
+                                                        <linearGradient id="SVGID_3_" gradientUnits="userSpaceOnUse"
+                                                            x1="34.3814" y1="189.9944" x2="451.061" y2="189.9944">
+                                                            <stop offset="0.57" style="stop-color: rgb(255, 255, 255);">
+                                                            </stop>
+                                                            <stop offset="0.6039"
+                                                                style="stop-color: rgb(240, 240, 240);"></stop>
+                                                        </linearGradient>
+                                                        <polygon
+                                                            points="451.061,277.073 54.598,319.773 34.381,102.916 430.845,60.216 "
+                                                            style="fill: url(&quot;#SVGID_3_&quot;);"></polygon>
+                                                        <path
+                                                            d="M441.853,417.32H70.147C31.566,417.32,0,385.754,0,347.173V168.515h512v178.658 C512,385.754,480.434,417.32,441.853,417.32z"
+                                                            style="fill: rgb(105, 160, 146);"></path>
+                                                        <path
+                                                            d="M441.853,429.594H70.147C31.566,429.594,0,398.028,0,359.447V189.995h512v169.453 C512,398.028,480.434,429.594,441.853,429.594z"
+                                                            style="fill: rgb(212, 180, 118);"></path>
+                                                        <g>
+                                                            <g>
+                                                                <path
+                                                                    d="M41.051,330.321h28.918h7.581c0.686,0,1.357,0,2.012,0c0.655,0,1.171,0.126,1.545,0.375 c0.499,0.312,0.795,0.764,0.889,1.357c0.094,0.594,0.141,1.296,0.141,2.106c0,0.312,0.014,0.608,0.047,0.888 c0.031,0.281-0.016,0.547-0.14,0.796c-0.25,0.998-0.796,1.543-1.638,1.638c-0.843,0.094-1.888,0.14-3.136,0.14h-9.733H53.778 c-0.998,0-2.058-0.015-3.182-0.047c-1.122-0.03-1.965,0.173-2.526,0.608c-0.563,0.375-0.858,1.03-0.89,1.965 c-0.032,0.937-0.047,1.873-0.047,2.808v9.265c0,0.5-0.015,1.123-0.046,1.872c-0.033,0.749,0.014,1.373,0.139,1.871v0.748 c0.125,0.375,0.235,0.735,0.328,1.077c0.093,0.344,0.295,0.608,0.608,0.796c0.562,0.374,1.436,0.547,2.621,0.514 c1.184-0.03,2.214-0.047,3.088-0.047h16.845c0.561,0,1.171-0.014,1.825-0.046c0.655-0.031,1.31-0.031,1.965,0 c0.655,0.032,1.248,0.109,1.779,0.234c0.529,0.126,0.889,0.344,1.076,0.655c0.311,0.375,0.467,0.843,0.467,1.404 c0,0.56,0,1.186,0,1.871c0,0.375,0,0.719,0,1.03c0,0.313-0.062,0.594-0.186,0.842c-0.25,0.625-0.595,0.969-1.03,1.03 c-0.25,0.125-0.485,0.186-0.702,0.186c-0.219,0-0.483,0.033-0.796,0.094c-0.25,0.063-0.514,0.079-0.796,0.047 c-0.281-0.03-0.546-0.047-0.794-0.047h-3.277H54.433c-0.999,0-2.168-0.014-3.51-0.047c-1.342-0.03-2.292,0.172-2.853,0.609 c-0.314,0.25-0.547,0.64-0.702,1.169c-0.156,0.531-0.25,1.14-0.281,1.825c-0.033,0.687-0.033,1.389,0,2.106 c0.03,0.717,0.046,1.357,0.046,1.918v16.096c0,1.062,0.032,2.217,0.094,3.463c0.062,1.249-0.156,2.185-0.655,2.807 c-0.186,0.25-0.469,0.391-0.842,0.422c-0.374,0.032-0.749,0.109-1.123,0.234h-1.779c-0.875,0-1.684-0.03-2.433-0.093 c-0.749-0.062-1.279-0.375-1.59-0.937c-0.25-0.374-0.375-0.888-0.375-1.543c0-0.656,0-1.326,0-2.013v-7.488v-39.119v-10.107 c0-0.686-0.016-1.45-0.047-2.292c-0.032-0.842,0.107-1.512,0.422-2.012c0.249-0.374,0.715-0.685,1.404-0.935 c0.124-0.062,0.264-0.077,0.42-0.047C40.785,330.4,40.925,330.383,41.051,330.321z"
+                                                                    style="fill: rgb(203, 188, 137);"></path>
+                                                                <path
+                                                                    d="M96.895,330.508c0.436,0,0.935-0.014,1.496-0.046c0.563-0.032,1.108-0.032,1.639,0 c0.529,0.032,1.013,0.109,1.45,0.234c0.437,0.125,0.749,0.312,0.937,0.561c0.374,0.438,0.576,1.046,0.608,1.825 c0.03,0.78,0.047,1.576,0.047,2.386v9.079v36.124v10.949c0,0.811,0,1.669,0,2.574c0,0.905-0.156,1.606-0.468,2.105 c-0.25,0.314-0.547,0.5-0.889,0.563c-0.344,0.062-0.765,0.156-1.264,0.28h-1.777c-0.874,0-1.684-0.034-2.433-0.094 c-0.749-0.061-1.28-0.374-1.592-0.935c-0.25-0.374-0.375-0.89-0.375-1.545c0-0.655,0-1.325,0-2.012v-7.487V345.95v-10.107 c0-0.686-0.015-1.451-0.045-2.292c-0.034-0.843,0.108-1.514,0.42-2.013c0.249-0.436,0.748-0.748,1.497-0.936 c0.125-0.061,0.25-0.077,0.375-0.047C96.645,330.587,96.769,330.571,96.895,330.508z"
+                                                                    style="fill: rgb(203, 188, 137);"></path>
+                                                                <path
+                                                                    d="M126.093,330.321c0.436,0,0.935-0.015,1.498-0.047c0.561-0.03,1.107-0.03,1.638,0 c0.529,0.032,1.012,0.109,1.451,0.234c0.436,0.125,0.748,0.313,0.936,0.562c0.374,0.5,0.56,1.155,0.56,1.965 c0,0.811,0,1.654,0,2.528v9.826v30.042v8.609c0,0.687,0,1.436,0,2.245c0,0.813,0.094,1.468,0.281,1.967 c0.188,0.436,0.529,0.811,1.03,1.122c0.313,0.125,0.717,0.203,1.217,0.235c0.499,0.032,0.998,0.046,1.498,0.046h4.772h16.845 h5.24c0.436,0,0.89-0.014,1.359-0.046c0.467-0.032,0.888,0.016,1.263,0.139c0.81,0.25,1.34,0.594,1.591,1.03 c0.062,0.188,0.124,0.5,0.188,0.937c0.061,0.436,0.107,0.889,0.139,1.357c0.03,0.467,0.015,0.935-0.047,1.402 c-0.062,0.469-0.126,0.829-0.187,1.077c-0.126,0.437-0.406,0.782-0.843,1.029c-0.313,0.25-0.765,0.375-1.357,0.375 c-0.593,0-1.169,0-1.731,0h-6.177H133.58h-6.083c-0.874,0-1.623-0.047-2.246-0.139c-0.624-0.094-1.092-0.39-1.404-0.89 c-0.25-0.374-0.373-0.857-0.373-1.451c0-0.591,0-1.168,0-1.729v-6.74v-25.549v-20.308v-5.802c0-0.561,0.014-1.122,0.045-1.684 c0.032-0.561,0.141-0.998,0.328-1.31c0.249-0.374,0.717-0.685,1.404-0.935c0.124-0.062,0.265-0.077,0.422-0.047 C125.827,330.4,125.968,330.383,126.093,330.321z"
+                                                                    style="fill: rgb(203, 188, 137);"></path>
+                                                                <path
+                                                                    d="M187.883,330.321h30.602h8.049c0.686,0,1.372-0.015,2.059-0.047 c0.685-0.03,1.248,0.109,1.684,0.422c0.188,0.125,0.343,0.281,0.468,0.467c0.124,0.188,0.249,0.375,0.374,0.563 c0.125,0.436,0.187,1.138,0.187,2.105c0,0.967-0.062,1.701-0.187,2.199c-0.25,0.874-0.78,1.357-1.592,1.451 c-0.811,0.094-1.777,0.14-2.9,0.14h-9.359h-15.722c-0.998,0-2.169-0.015-3.51-0.047c-1.343-0.03-2.325,0.139-2.949,0.514 c-0.624,0.374-0.951,1.03-0.982,1.966c-0.032,0.936-0.048,1.904-0.048,2.901v9.546c0,0.688-0.015,1.498-0.045,2.433 c-0.034,0.937,0.014,1.686,0.139,2.246c0.188,0.749,0.562,1.249,1.123,1.498c0.249,0.125,0.686,0.25,1.31,0.373h0.935 c0.249,0.063,0.515,0.08,0.796,0.047c0.281-0.03,0.577-0.047,0.89-0.047h3.181h18.343c0.561,0,1.184-0.014,1.872-0.046 c0.685-0.031,1.387-0.031,2.104,0c0.717,0.032,1.372,0.093,1.967,0.187c0.591,0.094,1.044,0.233,1.357,0.421 c0.186,0.126,0.341,0.407,0.467,0.842c0.125,0.438,0.218,0.905,0.282,1.404c0.061,0.5,0.077,1.016,0.045,1.545 c-0.031,0.531-0.109,0.983-0.233,1.357c-0.126,0.561-0.406,0.967-0.842,1.217c-0.127,0.126-0.297,0.203-0.515,0.235 c-0.22,0.032-0.422,0.079-0.608,0.139h-0.563c-0.312,0.063-0.623,0.079-0.935,0.047c-0.313-0.03-0.624-0.047-0.935-0.047h-3.463 h-19.747c-0.747,0-1.482-0.014-2.199-0.047c-0.719-0.03-1.39,0-2.012,0.094c-0.624,0.094-1.171,0.267-1.639,0.515 c-0.467,0.25-0.794,0.687-0.982,1.31c-0.126,0.375-0.173,0.811-0.139,1.31c0.03,0.5,0.045,0.999,0.045,1.498v5.239v8.892 c0,0.873,0.032,1.669,0.094,2.386c0.062,0.718,0.312,1.233,0.749,1.544c0.435,0.313,0.935,0.483,1.497,0.515 c0.561,0.032,1.185,0.046,1.871,0.046h5.99h17.314h5.334c0.499,0,0.998-0.014,1.497-0.046c0.498-0.032,0.936,0.016,1.31,0.139 c0.749,0.25,1.248,0.594,1.498,1.03c0.123,0.188,0.217,0.5,0.281,0.937c0.061,0.436,0.108,0.889,0.14,1.357 c0.03,0.467,0.015,0.935-0.047,1.402c-0.062,0.469-0.126,0.829-0.187,1.077c-0.25,0.5-0.531,0.842-0.842,1.029 c-0.375,0.25-0.858,0.375-1.45,0.375c-0.594,0-1.171,0-1.731,0h-6.552h-24.894h-6.551c-0.874,0-1.623-0.047-2.245-0.139 c-0.624-0.094-1.093-0.39-1.404-0.89c-0.25-0.374-0.374-0.857-0.374-1.451c0-0.591,0-1.168,0-1.729v-6.551v-25.082v-20.964 v-5.802c0-0.561,0-1.122,0-1.684c0-0.561,0.124-0.998,0.374-1.31c0.249-0.435,0.716-0.749,1.404-0.935 c0.125-0.062,0.248-0.077,0.375-0.047C187.632,330.4,187.756,330.383,187.883,330.321z"
+                                                                    style="fill: rgb(203, 188, 137);"></path>
+                                                            </g>
+                                                            <g>
+                                                                <path
+                                                                    d="M41.051,330.321h28.918h7.581c0.686,0,1.357,0,2.012,0c0.655,0,1.171,0.126,1.545,0.375 c0.499,0.312,0.795,0.764,0.889,1.357c0.094,0.594,0.141,1.296,0.141,2.106c0,0.312,0.014,0.608,0.047,0.888 c0.031,0.281-0.016,0.547-0.14,0.796c-0.25,0.998-0.796,1.543-1.638,1.638c-0.843,0.094-1.888,0.14-3.136,0.14h-9.733H53.778 c-0.998,0-2.058-0.015-3.182-0.047c-1.122-0.03-1.965,0.173-2.526,0.608c-0.563,0.375-0.858,1.03-0.89,1.965 c-0.032,0.937-0.047,1.873-0.047,2.808v9.265c0,0.5-0.015,1.123-0.046,1.872c-0.033,0.749,0.014,1.373,0.139,1.871v0.748 c0.125,0.375,0.235,0.735,0.328,1.077c0.093,0.344,0.295,0.608,0.608,0.796c0.562,0.374,1.436,0.547,2.621,0.514 c1.184-0.03,2.214-0.047,3.088-0.047h16.845c0.561,0,1.171-0.014,1.825-0.046c0.655-0.031,1.31-0.031,1.965,0 c0.655,0.032,1.248,0.109,1.779,0.234c0.529,0.126,0.889,0.344,1.076,0.655c0.311,0.375,0.467,0.843,0.467,1.404 c0,0.56,0,1.186,0,1.871c0,0.375,0,0.719,0,1.03c0,0.313-0.062,0.594-0.186,0.842c-0.25,0.625-0.595,0.969-1.03,1.03 c-0.25,0.125-0.485,0.186-0.702,0.186c-0.219,0-0.483,0.033-0.796,0.094c-0.25,0.063-0.514,0.079-0.796,0.047 c-0.281-0.03-0.546-0.047-0.794-0.047h-3.277H54.433c-0.999,0-2.168-0.014-3.51-0.047c-1.342-0.03-2.292,0.172-2.853,0.609 c-0.314,0.25-0.547,0.64-0.702,1.169c-0.156,0.531-0.25,1.14-0.281,1.825c-0.033,0.687-0.033,1.389,0,2.106 c0.03,0.717,0.046,1.357,0.046,1.918v16.096c0,1.062,0.032,2.217,0.094,3.463c0.062,1.249-0.156,2.185-0.655,2.807 c-0.186,0.25-0.469,0.391-0.842,0.422c-0.374,0.032-0.749,0.109-1.123,0.234h-1.779c-0.875,0-1.684-0.03-2.433-0.093 c-0.749-0.062-1.279-0.375-1.59-0.937c-0.25-0.374-0.375-0.888-0.375-1.543c0-0.656,0-1.326,0-2.013v-7.488v-39.119v-10.107 c0-0.686-0.016-1.45-0.047-2.292c-0.032-0.842,0.107-1.512,0.422-2.012c0.249-0.374,0.715-0.685,1.404-0.935 c0.124-0.062,0.264-0.077,0.42-0.047C40.785,330.4,40.925,330.383,41.051,330.321z"
+                                                                    style="fill: rgb(152, 128, 110);"></path>
+                                                                <path
+                                                                    d="M96.895,330.508c0.436,0,0.935-0.014,1.496-0.046c0.563-0.032,1.108-0.032,1.639,0 c0.529,0.032,1.013,0.109,1.45,0.234c0.437,0.125,0.749,0.312,0.937,0.561c0.374,0.438,0.576,1.046,0.608,1.825 c0.03,0.78,0.047,1.576,0.047,2.386v9.079v36.124v10.949c0,0.811,0,1.669,0,2.574c0,0.905-0.156,1.606-0.468,2.105 c-0.25,0.314-0.547,0.5-0.889,0.563c-0.344,0.062-0.765,0.156-1.264,0.28h-1.777c-0.874,0-1.684-0.034-2.433-0.094 c-0.749-0.061-1.28-0.374-1.592-0.935c-0.25-0.374-0.375-0.89-0.375-1.545c0-0.655,0-1.325,0-2.012v-7.487V345.95v-10.107 c0-0.686-0.015-1.451-0.045-2.292c-0.034-0.843,0.108-1.514,0.42-2.013c0.249-0.436,0.748-0.748,1.497-0.936 c0.125-0.061,0.25-0.077,0.375-0.047C96.645,330.587,96.769,330.571,96.895,330.508z"
+                                                                    style="fill: rgb(152, 128, 110);"></path>
+                                                                <path
+                                                                    d="M126.093,330.321c0.436,0,0.935-0.015,1.498-0.047c0.561-0.03,1.107-0.03,1.638,0 c0.529,0.032,1.012,0.109,1.451,0.234c0.436,0.125,0.748,0.313,0.936,0.562c0.374,0.5,0.56,1.155,0.56,1.965 c0,0.811,0,1.654,0,2.528v9.826v30.042v8.609c0,0.687,0,1.436,0,2.245c0,0.813,0.094,1.468,0.281,1.967 c0.188,0.436,0.529,0.811,1.03,1.122c0.313,0.125,0.717,0.203,1.217,0.235c0.499,0.032,0.998,0.046,1.498,0.046h4.772h16.845 h5.24c0.436,0,0.89-0.014,1.359-0.046c0.467-0.032,0.888,0.016,1.263,0.139c0.81,0.25,1.34,0.594,1.591,1.03 c0.062,0.188,0.124,0.5,0.188,0.937c0.061,0.436,0.107,0.889,0.139,1.357c0.03,0.467,0.015,0.935-0.047,1.402 c-0.062,0.469-0.126,0.829-0.187,1.077c-0.126,0.437-0.406,0.782-0.843,1.029c-0.313,0.25-0.765,0.375-1.357,0.375 c-0.593,0-1.169,0-1.731,0h-6.177H133.58h-6.083c-0.874,0-1.623-0.047-2.246-0.139c-0.624-0.094-1.092-0.39-1.404-0.89 c-0.25-0.374-0.373-0.857-0.373-1.451c0-0.591,0-1.168,0-1.729v-6.74v-25.549v-20.308v-5.802c0-0.561,0.014-1.122,0.045-1.684 c0.032-0.561,0.141-0.998,0.328-1.31c0.249-0.374,0.717-0.685,1.404-0.935c0.124-0.062,0.265-0.077,0.422-0.047 C125.827,330.4,125.968,330.383,126.093,330.321z"
+                                                                    style="fill: rgb(152, 128, 110);"></path>
+                                                                <path
+                                                                    d="M187.883,330.321h30.602h8.049c0.686,0,1.372-0.015,2.059-0.047 c0.685-0.03,1.248,0.109,1.684,0.422c0.188,0.125,0.343,0.281,0.468,0.467c0.124,0.188,0.249,0.375,0.374,0.563 c0.125,0.436,0.187,1.138,0.187,2.105c0,0.967-0.062,1.701-0.187,2.199c-0.25,0.874-0.78,1.357-1.592,1.451 c-0.811,0.094-1.777,0.14-2.9,0.14h-9.359h-15.722c-0.998,0-2.169-0.015-3.51-0.047c-1.343-0.03-2.325,0.139-2.949,0.514 c-0.624,0.374-0.951,1.03-0.982,1.966c-0.032,0.936-0.048,1.904-0.048,2.901v9.546c0,0.688-0.015,1.498-0.045,2.433 c-0.034,0.937,0.014,1.686,0.139,2.246c0.188,0.749,0.562,1.249,1.123,1.498c0.249,0.125,0.686,0.25,1.31,0.373h0.935 c0.249,0.063,0.515,0.08,0.796,0.047c0.281-0.03,0.577-0.047,0.89-0.047h3.181h18.343c0.561,0,1.184-0.014,1.872-0.046 c0.685-0.031,1.387-0.031,2.104,0c0.717,0.032,1.372,0.093,1.967,0.187c0.591,0.094,1.044,0.233,1.357,0.421 c0.186,0.126,0.341,0.407,0.467,0.842c0.125,0.438,0.218,0.905,0.282,1.404c0.061,0.5,0.077,1.016,0.045,1.545 c-0.031,0.531-0.109,0.983-0.233,1.357c-0.126,0.561-0.406,0.967-0.842,1.217c-0.127,0.126-0.297,0.203-0.515,0.235 c-0.22,0.032-0.422,0.079-0.608,0.139h-0.563c-0.312,0.063-0.623,0.079-0.935,0.047c-0.313-0.03-0.624-0.047-0.935-0.047h-3.463 h-19.747c-0.747,0-1.482-0.014-2.199-0.047c-0.719-0.03-1.39,0-2.012,0.094c-0.624,0.094-1.171,0.267-1.639,0.515 c-0.467,0.25-0.794,0.687-0.982,1.31c-0.126,0.375-0.173,0.811-0.139,1.31c0.03,0.5,0.045,0.999,0.045,1.498v5.239v8.892 c0,0.873,0.032,1.669,0.094,2.386c0.062,0.718,0.312,1.233,0.749,1.544c0.435,0.313,0.935,0.483,1.497,0.515 c0.561,0.032,1.185,0.046,1.871,0.046h5.99h17.314h5.334c0.499,0,0.998-0.014,1.497-0.046c0.498-0.032,0.936,0.016,1.31,0.139 c0.749,0.25,1.248,0.594,1.498,1.03c0.123,0.188,0.217,0.5,0.281,0.937c0.061,0.436,0.108,0.889,0.14,1.357 c0.03,0.467,0.015,0.935-0.047,1.402c-0.062,0.469-0.126,0.829-0.187,1.077c-0.25,0.5-0.531,0.842-0.842,1.029 c-0.375,0.25-0.858,0.375-1.45,0.375c-0.594,0-1.171,0-1.731,0h-6.552h-24.894h-6.551c-0.874,0-1.623-0.047-2.245-0.139 c-0.624-0.094-1.093-0.39-1.404-0.89c-0.25-0.374-0.374-0.857-0.374-1.451c0-0.591,0-1.168,0-1.729v-6.551v-25.082v-20.964 v-5.802c0-0.561,0-1.122,0-1.684c0-0.561,0.124-0.998,0.374-1.31c0.249-0.435,0.716-0.749,1.404-0.935 c0.125-0.062,0.248-0.077,0.375-0.047C187.632,330.4,187.756,330.383,187.883,330.321z"
+                                                                    style="fill: rgb(152, 128, 110);"></path>
+                                                            </g>
+                                                        </g>
+                                                        <polygon
+                                                            points="276.167,208.741 0,302.069 0,186.053 512,186.053 512,302.069 "
+                                                            style="fill: rgb(187, 175, 152);"></polygon>
+                                                    </g>
+                                                </g>
+                                            </svg></div>文件管理<div
+                                            class="w-3 h-1.5 rounded-full ml-auto shadow-lg bg-primary-200 dark:bg-white"
+                                            aria-hidden="true" focusable="false" tabindex="-1"></div>
+                                    </button>
+                                    <div class="ml-4 overflow-hidden transition-all duration-300" style="height: 0px;">
+                                    </div>
+                                </div>
+                                <div><button
+                                        class="z-0 group relative box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 px-4 min-w-20 h-10 text-small gap-2 rounded-full [&amp;&gt;svg]:max-w-[theme(spacing.8)] transition-transform-colors-opacity motion-reduce:transition-none bg-transparent text-primary data-[hover=true]:bg-primary/20 flex items-center w-full text-left justify-start dark:text-white"
+                                        type="button">
+                                        <div class="w-5 h-5" aria-hidden="true" focusable="false" tabindex="-1"><svg
+                                                fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                                <g id="SVGRepo_tracerCarrier" stroke-linecap="round"
+                                                    stroke-linejoin="round"></g>
+                                                <g id="SVGRepo_iconCarrier">
+                                                    <rect fill="white" fill-opacity="0.01" height="48" width="48">
+                                                    </rect>
+                                                    <rect fill="#2F88FF" height="32" rx="2" stroke="#000000"
+                                                        stroke-linejoin="round" stroke-width="4" width="40" x="4" y="8">
+                                                    </rect>
+                                                    <path d="M12 18L19 24L12 30" stroke="white" stroke-linecap="round"
+                                                        stroke-linejoin="round" stroke-width="4"></path>
+                                                    <path d="M23 32H36" stroke="white" stroke-linecap="round"
+                                                        stroke-linejoin="round" stroke-width="4"></path>
+                                                </g>
+                                            </svg></div>系统终端<div
+                                            class="w-3 h-1.5 rounded-full ml-auto shadow-lg bg-primary-200 dark:bg-white"
+                                            aria-hidden="true" focusable="false" tabindex="-1"></div>
+                                    </button>
+                                    <div class="ml-4 overflow-hidden transition-all duration-300" style="height: 0px;">
+                                    </div>
+                                </div>
+                                <div><button
+                                        class="z-0 group relative box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 px-4 min-w-20 h-10 text-small gap-2 rounded-full [&amp;&gt;svg]:max-w-[theme(spacing.8)] transition-transform-colors-opacity motion-reduce:transition-none bg-transparent text-primary data-[hover=true]:bg-primary/20 flex items-center w-full text-left justify-start dark:text-white"
+                                        type="button">
+                                        <div class="w-5 h-5" aria-hidden="true" focusable="false" tabindex="-1"><svg
+                                                class="icon flat-line" data-name="Flat Line" fill="#000000"
+                                                id="information-chat" viewBox="0 0 24 24"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                                <g id="SVGRepo_tracerCarrier" stroke-linecap="round"
+                                                    stroke-linejoin="round"></g>
+                                                <g id="SVGRepo_iconCarrier">
+                                                    <path
+                                                        d="M10.54,3.11A9,9,0,0,0,4,16.11l-.7,3.41A1,1,0,0,0,4.48,20.7L7.87,20h0A9,9,0,1,0,10.54,3.11Z"
+                                                        id="secondary"
+                                                        style="fill: rgb(44, 169, 188); stroke-width: 2;"></path>
+                                                    <line id="primary-upstroke" x1="12.05" x2="11.95" y1="8" y2="8"
+                                                        style="fill: none; stroke: rgb(0, 0, 0); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5;">
+                                                    </line>
+                                                    <path
+                                                        d="M12,13v3M10.54,3.11A9,9,0,0,0,4,16.11l-.7,3.41A1,1,0,0,0,4.48,20.7L7.87,20h0A9,9,0,1,0,10.54,3.11Z"
+                                                        id="primary"
+                                                        style="fill: none; stroke: rgb(0, 0, 0); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;">
+                                                    </path>
+                                                </g>
+                                            </svg></div>关于我们<div
+                                            class="w-3 h-1.5 rounded-full ml-auto shadow-lg bg-primary-200 dark:bg-white"
+                                            aria-hidden="true" focusable="false" tabindex="-1"></div>
+                                    </button>
+                                    <div class="ml-4 overflow-hidden transition-all duration-300" style="height: 0px;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-auto mb-10 md:mb-0"><button
+                                    class="z-0 group relative inline-flex items-center justify-center box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 px-4 min-w-20 h-10 text-small gap-2 rounded-full [&amp;&gt;svg]:max-w-[theme(spacing.8)] transition-transform-colors-opacity motion-reduce:transition-none bg-transparent text-primary data-[hover=true]:bg-primary/20 w-full"
+                                    type="button"><svg stroke="currentColor" fill="currentColor" stroke-width="0"
+                                        viewBox="0 0 24 24" aria-hidden="true" focusable="false" tabindex="-1"
+                                        height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                                        <path fill="none" d="M0 0h24v24H0z"></path>
+                                        <path
+                                            d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z">
+                                        </path>
+                                    </svg>切换主题</button><button
+                                    class="z-0 group relative inline-flex items-center justify-center box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 px-4 min-w-20 h-10 text-small gap-2 rounded-full [&amp;&gt;svg]:max-w-[theme(spacing.8)] transition-transform-colors-opacity motion-reduce:transition-none bg-transparent text-primary data-[hover=true]:bg-primary/20 w-full mb-2"
+                                    type="button"><svg stroke="currentColor" fill="currentColor" stroke-width="0"
+                                        viewBox="0 0 512 512" aria-hidden="true" focusable="false" tabindex="-1"
+                                        height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                                        <path
+                                            d="M192 277.4h189.7l-43.6 44.7L368 352l96-96-96-96-31 29.9 44.7 44.7H192v42.8z">
+                                        </path>
+                                        <path
+                                            d="M255.7 421.3c-44.1 0-85.5-17.2-116.7-48.4-31.2-31.2-48.3-72.7-48.3-116.9 0-44.1 17.2-85.7 48.3-116.9 31.2-31.2 72.6-48.4 116.7-48.4 44 0 85.3 17.1 116.5 48.2l30.3-30.3c-8.5-8.4-17.8-16.2-27.7-23.2C339.7 61 298.6 48 255.7 48 141.2 48 48 141.3 48 256s93.2 208 207.7 208c42.9 0 84-13 119-37.5 10-7 19.2-14.7 27.7-23.2l-30.2-30.2c-31.1 31.1-72.5 48.2-116.5 48.2zM448.004 256.847l-.849-.848.849-.849.848.849z">
+                                        </path>
+                                    </svg>退出登录</button></div>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    class="overflow-y-auto flex-1 rounded-md m-1 bg-content1 pb-10 md:pb-0 ml-0 shadow-inner overflow-x-hidden">
+                    <div
+                        class="h-10 flex items-center font-bold text-xl backdrop-blur-lg rounded-full dark:bg-background dark:shadow-primary-100 bg-background !bg-opacity-50 shadow-sm shadow-primary-50 z-30 m-2 mb-0 sticky top-2 left-0">
+                        <div class="mr-1 ease-in-out ml-0 md:relative pl-2 absolute md:!ml-0 md:pl-0"
+                            style="margin-left: 15rem;"><button
+                                class="z-0 group relative inline-flex items-center justify-center box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 text-small gap-2 rounded-full px-0 !gap-0 transition-transform-colors-opacity motion-reduce:transition-none bg-transparent text-default-foreground data-[hover=true]:bg-default/40 min-w-10 w-10 h-10"
+                                type="button"><svg stroke="currentColor" fill="currentColor" stroke-width="0"
+                                    viewBox="0 0 24 24" height="24" width="24" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill="none" d="M0 0h24v24H0V0z"></path>
+                                    <path
+                                        d="M3 18h13v-2H3v2zm0-5h10v-2H3v2zm0-7v2h13V6H3zm18 9.59L17.42 12 21 8.41 19.59 7l-5 5 5 5L21 15.59z">
+                                    </path>
+                                </svg></button></div>
+                        <nav data-slot="base" aria-label="导航栏">
+                            <ol data-slot="list" class="flex flex-wrap list-none rounded-small">
+                                <li data-slot="base" class="flex items-center"><span data-slot="item"
+                                        data-disabled="false" data-current="true"
+                                        class="flex gap-1 items-center whitespace-nowrap line-clamp-1 tap-highlight-transparent outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 text-medium no-underline cursor-default transition-opacity text-foreground"
+                                        aria-disabled="true" data-react-aria-pressable="true" role="link"
+                                        aria-current="page">
+                                        <div style="opacity: 1; transform: none;">基础信息</div>
+                                    </span></li>
+                            </ol>
+                        </nav>
+                    </div>
+                    <div style="opacity: 1; transform: none;">
+                        <section class="w-full p-2 md:p-4 md:max-w-[1000px] mx-auto">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
+                                <div class="flex flex-col gap-2">
+                                    <div class="flex flex-col h-auto text-foreground box-border outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 rounded-large transition-transform-background motion-reduce:transition-none relative bg-primary-100 bg-opacity-60 overflow-hidden flex-shrink-0 shadow-md shadow-primary-300 dark:shadow-primary-50"
+                                        tabindex="-1">
+                                        <div
+                                            class="absolute top-0 left-0 w-full h-full bg-zinc-500 bg-opacity-10 z-50 flex justify-center items-center backdrop-blur hidden">
+                                            <div aria-label="Loading"
+                                                class="relative inline-flex flex-col gap-2 items-center justify-center">
+                                                <div class="relative flex w-10 h-10"><i
+                                                        class="absolute w-full h-full rounded-full animate-spinner-ease-spin border-solid border-t-transparent border-l-transparent border-r-transparent border-3 border-b-primary"></i><i
+                                                        class="absolute w-full h-full rounded-full opacity-75 animate-spinner-linear-spin border-dotted border-t-transparent border-l-transparent border-r-transparent border-3 border-b-primary"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="flex w-full p-3 flex-auto place-content-inherit align-items-inherit h-auto break-words text-left subpixel-antialiased flex-row items-center gap-2 overflow-hidden relative">
+                                            <div class="absolute right-0 bottom-0 text-5xl text-primary-400"><svg
+                                                    stroke="currentColor" fill="currentColor" stroke-width="0"
+                                                    viewBox="0 0 16 16" height="1em" width="1em"
+                                                    xmlns="http://www.w3.org/2000/svg">
+                                                    <path
+                                                        d="M6.048 3.323c.022.277-.13.523-.338.55-.21.026-.397-.176-.419-.453s.13-.523.338-.55c.21-.026.397.176.42.453Zm2.265-.24c-.603-.146-.894.256-.936.333-.027.048-.008.117.037.15.045.035.092.025.119-.003.361-.39.751-.172.829-.129l.011.007c.053.024.147.028.193-.098.023-.063.017-.11-.006-.142-.016-.023-.089-.08-.247-.118">
+                                                    </path>
+                                                    <path
+                                                        d="M11.727 6.719c0-.022.01-.375.01-.557 0-3.07-1.45-6.156-5.015-6.156S1.708 3.092 1.708 6.162c0 .182.01.535.01.557l-.72 1.795a26 26 0 0 0-.534 1.508c-.68 2.187-.46 3.093-.292 3.113.36.044 1.401-1.647 1.401-1.647 0 .979.504 2.256 1.594 3.179-.408.126-.907.319-1.228.556-.29.213-.253.43-.201.518.228.386 3.92.246 4.985.126 1.065.12 4.756.26 4.984-.126.052-.088.088-.305-.2-.518-.322-.237-.822-.43-1.23-.557 1.09-.922 1.594-2.2 1.594-3.178 0 0 1.041 1.69 1.401 1.647.168-.02.388-.926-.292-3.113a26 26 0 0 0-.534-1.508l-.72-1.795ZM9.773 5.53a.1.1 0 0 1-.009.096c-.109.159-1.554.943-3.033.943h-.017c-1.48 0-2.925-.784-3.034-.943a.1.1 0 0 1-.018-.055q0-.022.01-.04c.13-.287 1.43-.606 3.042-.606h.017c1.611 0 2.912.319 3.042.605m-4.32-.989c-.483.022-.896-.529-.922-1.229s.344-1.286.828-1.308c.483-.022.896.529.922 1.23.027.7-.344 1.286-.827 1.307Zm2.538 0c-.484-.022-.854-.607-.828-1.308.027-.7.44-1.25.923-1.23.483.023.853.608.827 1.309-.026.7-.439 1.251-.922 1.23ZM2.928 8.99q.32.063.639.117v2.336s1.104.222 2.21.068V9.363q.49.027.937.023h.017c1.117.013 2.474-.136 3.786-.396.097.622.151 1.386.097 2.284-.146 2.45-1.6 3.99-3.846 4.012h-.091c-2.245-.023-3.7-1.562-3.846-4.011-.054-.9 0-1.663.097-2.285">
+                                                    </path>
+                                                </svg></div>
+                                            <div class="relative flex-shrink-0 z-10">
+                                                <div class="relative shadow-black/5 shadow-none rounded-large"
+                                                    style="max-width: fit-content;"> <img
+                                                        class="relative z-10 opacity-0 shadow-black/5 data-[loaded=true]:opacity-100 transition-transform-opacity motion-reduce:transition-none !duration-300 shadow-md rounded-full w-12 aspect-square"
+                                                        src="https://q1.qlogo.cn/g?b=qq&amp;nk=3381464350&amp;s=1"
+                                                        data-loaded="true"></div>
+                                                <div
+                                                    class="w-4 h-4 rounded-full absolute right-0.5 bottom-0 border-2 border-primary-100 z-10 bg-green-500">
+                                                </div>
+                                            </div>
+                                            <div class="flex-col justify-center">
+                                                <div class="text-lg truncate"></div>
+                                                <div class="text-primary-500 text-sm">3381464350</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col relative h-auto text-foreground box-border bg-content1 outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 rounded-large transition-transform-background motion-reduce:transition-none bg-opacity-60 shadow-sm shadow-primary-100 dark:shadow-primary-100 overflow-visible flex-1"
+                                        tabindex="-1">
+                                        <div
+                                            class="flex p-3 z-10 w-full justify-start shrink-0 overflow-inherit color-inherit subpixel-antialiased rounded-t-large pb-0 items-center gap-1 text-primary-500 font-extrabold">
+                                            <svg stroke="currentColor" fill="currentColor" stroke-width="0"
+                                                viewBox="0 0 512 512" class="text-lg" height="1em" width="1em"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path
+                                                    d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM216 336l24 0 0-64-24 0c-13.3 0-24-10.7-24-24s10.7-24 24-24l48 0c13.3 0 24 10.7 24 24l0 88 8 0c13.3 0 24 10.7 24 24s-10.7 24-24 24l-80 0c-13.3 0-24-10.7-24-24s10.7-24 24-24zm40-208a32 32 0 1 1 0 64 32 32 0 1 1 0-64z">
+                                                </path>
+                                            </svg><span>系统信息</span></div>
+                                        <div
+                                            class="relative flex w-full p-3 flex-col place-content-inherit align-items-inherit h-auto break-words text-left overflow-y-auto subpixel-antialiased flex-1">
+                                            <div class="flex flex-col justify-between h-full">
+                                                <div
+                                                    class="flex text-sm gap-1 p-2 items-center shadow-sm shadow-primary-100 dark:shadow-primary-100 rounded text-primary-400">
+                                                    <svg stroke="currentColor" fill="currentColor" stroke-width="0"
+                                                        viewBox="0 0 512 512" class="text-xl" height="1em" width="1em"
+                                                        xmlns="http://www.w3.org/2000/svg">
+                                                        <path
+                                                            d="M178.4 287.5c-9.1 0-16.9 4.2-23.2 12.8-6.3 8.5-9.4 19-9.4 31.4 0 12.5 3.2 23 9.4 31.5 6.3 8.5 14 12.8 23.2 12.8 8.5 0 15.9-4.3 22.1-12.8 6.3-8.5 9.4-19 9.4-31.5 0-12.4-3.2-22.9-9.4-31.4-6.3-8.6-13.6-12.8-22.1-12.8zM334.7 287.5c-9 0-16.9 4.2-23.2 12.8-6.3 8.5-9.4 19-9.4 31.4 0 12.5 3.2 23 9.4 31.5 6.3 8.5 14.1 12.8 23.2 12.8 8.5 0 15.9-4.3 22.2-12.8 6.3-8.5 9.4-19 9.4-31.5 0-12.4-3.2-22.9-9.4-31.4-6.3-8.6-13.6-12.8-22.2-12.8z">
+                                                        </path>
+                                                        <path
+                                                            d="M445.8 172c-.1 0 2.7-14.3.3-39.2-2.2-24.9-7.5-47.8-16.1-68.8 0 0-4.4.8-12.8 2.9s-22.1 6.3-40.9 14.8c-18.5 8.5-38 19.8-58.3 33.5-13.8-3.9-34.4-5.9-62-5.9-26.3 0-46.9 2-62 5.9-44.6-30.9-81.9-48-112.1-51.2-8.6 21-13.9 44-16 69-2.4 24.9.4 39.3.4 39.3C42 198.6 32 236.5 32 267.8c0 24.2.7 46.1 6.1 65.5 5.6 19.3 12.7 35.1 21.1 47.2 8.6 12.1 19 22.8 31.6 31.9 12.5 9.3 24 16 34.4 20.2 10.5 4.4 22.4 7.6 36 9.9 13.3 2.4 23.4 3.6 30.5 4 0 0 28 1.5 64.4 1.5s64.3-1.5 64.3-1.5c7-.4 17.1-1.6 30.5-4 13.5-2.3 25.5-5.6 35.9-9.9 10.4-4.3 21.9-10.9 34.5-20.2 12.5-9 22.9-19.7 31.5-31.9 8.4-12.1 15.5-27.9 21.1-47.2 5.5-19.4 6.1-41.4 6.1-65.6 0-30.3-10-68.7-34.2-95.7zm-65.4 233.6c-27.9 13.1-68.9 18.4-123.3 18.4H255c-54.4 0-95.4-5.2-122.8-18.4-27.5-13.1-41.3-40.1-41.3-80.7 0-24.3 8.6-44 25.5-59.1 7.4-6.5 16.4-11 27.6-13.7 11.1-2.6 21.4-2.8 31-2.5 9.4.4 22.6 2.2 39.3 3.5 16.8 1.3 29.3 3 41.8 3 11.7 0 27.2-2 52.1-4 25-2 43.5-3 55.5-1 12.3 2 23 6.2 32.1 14.7 17.7 15.8 26.6 35.5 26.6 59.1-.1 40.6-14.2 67.6-42 80.7z">
+                                                        </path>
+                                                    </svg>
+                                                    <div class="w-24">NapCat 版本</div>
+                                                    <div class="text-primary-200">4.8.111</div>
+                                                    <div class="ml-auto"></div>
+                                                </div>
+                                                <div
+                                                    class="flex text-sm gap-1 p-2 items-center shadow-sm shadow-primary-100 dark:shadow-primary-100 rounded text-primary-400">
+                                                    <svg stroke="currentColor" fill="currentColor" stroke-width="0"
+                                                        viewBox="0 0 448 512" class="text-lg" height="1em" width="1em"
+                                                        xmlns="http://www.w3.org/2000/svg">
+                                                        <path
+                                                            d="M433.754 420.445c-11.526 1.393-44.86-52.741-44.86-52.741 0 31.345-16.136 72.247-51.051 101.786 16.842 5.192 54.843 19.167 45.803 34.421-7.316 12.343-125.51 7.881-159.632 4.037-34.122 3.844-152.316 8.306-159.632-4.037-9.045-15.25 28.918-29.214 45.783-34.415-34.92-29.539-51.059-70.445-51.059-101.792 0 0-33.334 54.134-44.859 52.741-5.37-.65-12.424-29.644 9.347-99.704 10.261-33.024 21.995-60.478 40.144-105.779C60.683 98.063 108.982.006 224 0c113.737.006 163.156 96.133 160.264 214.963 18.118 45.223 29.912 72.85 40.144 105.778 21.768 70.06 14.716 99.053 9.346 99.704z">
+                                                        </path>
+                                                    </svg>
+                                                    <div class="w-24">QQ 版本</div>
+                                                    <div class="text-primary-200">9.9.19-35469</div>
+                                                    <div class="ml-auto"></div>
+                                                </div>
+                                                <div
+                                                    class="flex text-sm gap-1 p-2 items-center shadow-sm shadow-primary-100 dark:shadow-primary-100 rounded text-primary-400">
+                                                    <svg stroke="currentColor" fill="currentColor" stroke-width="0"
+                                                        viewBox="0 0 512 512" class="text-xl" height="1em" width="1em"
+                                                        xmlns="http://www.w3.org/2000/svg">
+                                                        <path
+                                                            d="M188.8 255.925c0 36.946 30.243 67.178 67.2 67.178s67.199-30.231 67.199-67.178c0-36.945-30.242-67.179-67.199-67.179s-67.2 30.234-67.2 67.179z">
+                                                        </path>
+                                                        <path
+                                                            d="M476.752 217.795c-.009.005-.016.038-.024.042-1.701-9.877-4.04-19.838-6.989-28.838h-.107c2.983 9 5.352 19 7.072 29h-.002c-1.719-10-4.088-20-7.07-29h-155.39c19.044 17 31.358 40.175 31.358 67.052 0 16.796-4.484 31.284-12.314 44.724L231.044 478.452s-.009.264-.014.264l-.01.284h.015l-.005-.262c8.203.92 16.531 1.262 24.97 1.262 6.842 0 13.609-.393 20.299-1.002a223.86 223.86 0 0 0 29.777-4.733C405.68 451.525 480 362.404 480 255.941c0-12.999-1.121-25.753-3.248-38.146z">
+                                                        </path>
+                                                        <path
+                                                            d="M256 345.496c-33.601 0-61.601-17.91-77.285-44.785L76.006 123.047l-.137-.236a223.516 223.516 0 0 0-25.903 45.123C38.407 194.945 32 224.686 32 255.925c0 62.695 25.784 119.36 67.316 160.009 29.342 28.719 66.545 49.433 108.088 58.619l.029-.051 77.683-134.604c-8.959 3.358-19.031 5.598-29.116 5.598z">
+                                                        </path>
+                                                        <path
+                                                            d="M91.292 104.575l77.35 133.25C176.483 197.513 212.315 166 256 166h205.172c-6.921-15-15.594-30.324-25.779-43.938.039.021.078.053.117.074C445.644 135.712 454.278 151 461.172 166h.172c-6.884-15-15.514-30.38-25.668-43.99-.115-.06-.229-.168-.342-.257C394.475 67.267 329.359 32 256 32c-26.372 0-51.673 4.569-75.172 12.936-34.615 12.327-65.303 32.917-89.687 59.406l.142.243.009-.01z">
+                                                        </path>
+                                                    </svg>
+                                                    <div class="w-24">WebUI 版本</div>
+                                                    <div class="text-primary-200">Next</div>
+                                                    <div class="ml-auto"></div>
+                                                </div>
+                                                <div
+                                                    class="flex text-sm gap-1 p-2 items-center shadow-sm shadow-primary-100 dark:shadow-primary-100 rounded text-primary-400">
+                                                    <svg stroke="currentColor" fill="currentColor" stroke-width="0"
+                                                        viewBox="0 0 24 24" class="text-xl" height="1em" width="1em"
+                                                        xmlns="http://www.w3.org/2000/svg">
+                                                        <path
+                                                            d="M14 18V20L16 21V22H8L7.99639 21.0036L10 20V18H2.9918C2.44405 18 2 17.5511 2 16.9925V4.00748C2 3.45107 2.45531 3 2.9918 3H21.0082C21.556 3 22 3.44892 22 4.00748V16.9925C22 17.5489 21.5447 18 21.0082 18H14ZM4 14V16H20V14H4Z">
+                                                        </path>
+                                                    </svg>
+                                                    <div class="w-24">系统版本</div>
+                                                    <div class="text-primary-200">win32 x64 10.0.27913</div>
+                                                    <div class="ml-auto"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col h-auto text-foreground box-border bg-content1 outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 rounded-large transition-transform-background motion-reduce:transition-none bg-opacity-60 shadow-sm shadow-primary-100 col-span-1 lg:col-span-2 relative overflow-hidden"
+                                    tabindex="-1">
+                                    <div class="absolute h-full right-0 top-0">
+                                        <div class="relative shadow-black/5 shadow-none rounded-large w-full h-full"
+                                            style="max-width: fit-content;"> <img
+                                                class="relative z-10 opacity-0 shadow-black/5 data-[loaded=true]:opacity-100 shadow-none transition-transform-opacity motion-reduce:transition-none !duration-300 rounded-large select-none pointer-events-none !opacity-30 object-contain w-full h-full"
+                                                alt="background"
+                                                src="/webui/assets/1AD934174C0107F14BAD8776D29C5F90-AKhWf6dl.png"
+                                                data-loaded="true"></div>
+                                    </div>
+                                    <div
+                                        class="relative flex w-full p-3 flex-auto flex-col place-content-inherit align-items-inherit h-auto break-words text-left subpixel-antialiased overflow-visible md:flex-row gap-4 items-center justify-stretch z-10">
+                                        <div class="flex-1 w-full md:max-w-96">
+                                            <h2 class="text-lg font-semibold flex items-center gap-1 text-primary-400">
+                                                <svg stroke="currentColor" fill="currentColor" stroke-width="0"
+                                                    viewBox="0 0 512 512" class="text-xl" height="1em" width="1em"
+                                                    xmlns="http://www.w3.org/2000/svg">
+                                                    <path
+                                                        d="M151 22v32h18V22h-18zm48 0v32h18V22h-18zm48 0v32h18V22h-18zm48 0v32h18V22h-18zm48 0v32h18V22h-18zM131.7 73L73 131.7v248.6l58.7 58.7h248.6l58.7-58.7V131.7L380.3 73H131.7zm60.3 46h128v18H192v-18zM22 151v18h32v-18H22zm436 0v18h32v-18h-32zm-339 32h274v146H119V183zm-97 16v18h32v-18H22zm436 0v18h32v-18h-32zm-321 2v110h238V201H137zM22 247v18h32v-18H22zm436 0v18h32v-18h-32zM22 295v18h32v-18H22zm436 0v18h32v-18h-32zM22 343v18h32v-18H22zm436 0v18h32v-18h-32zm-266 32h128v18H192v-18zm-41 83v32h18v-32h-18zm48 0v32h18v-32h-18zm48 0v32h18v-32h-18zm48 0v32h18v-32h-18zm48 0v32h18v-32h-18z">
+                                                    </path>
+                                                </svg><span>CPU</span></h2>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div
+                                                    class="shadow-sm shadow-primary-100 p-2 rounded-md text-sm bg-content1 bg-opacity-30 col-span-2">
+                                                    <div class="w-24">型号</div>
+                                                    <div class="text-default-400">Intel(R) Core(TM) i5-10400F CPU @
+                                                        2.90GHz</div>
+                                                </div>
+                                                <div
+                                                    class="shadow-sm shadow-primary-100 p-2 rounded-md text-sm bg-content1 bg-opacity-30 col-span-1 flex justify-between">
+                                                    <div class="w-24">内核数</div>
+                                                    <div class="text-default-400">12</div>
+                                                </div>
+                                                <div
+                                                    class="shadow-sm shadow-primary-100 p-2 rounded-md text-sm bg-content1 bg-opacity-30 col-span-1 flex justify-between">
+                                                    <div class="w-24">主频</div>
+                                                    <div class="text-default-400">2.90GHz</div>
+                                                </div>
+                                                <div
+                                                    class="shadow-sm shadow-primary-100 p-2 rounded-md text-sm bg-content1 bg-opacity-30 col-span-1 flex justify-between">
+                                                    <div class="w-24">使用率</div>
+                                                    <div class="text-default-400">76.67%</div>
+                                                </div>
+                                                <div
+                                                    class="shadow-sm shadow-primary-100 p-2 rounded-md text-sm bg-content1 bg-opacity-30 col-span-1 flex justify-between">
+                                                    <div class="w-24">QQ主线程</div>
+                                                    <div class="text-default-400">0.13%</div>
+                                                </div>
+                                            </div>
+                                            <h2
+                                                class="text-lg font-semibold flex items-center gap-1 text-primary-400 mt-2">
+                                                <svg stroke="currentColor" fill="currentColor" stroke-width="0"
+                                                    viewBox="0 0 24 24" class="text-xl" height="1em" width="1em"
+                                                    xmlns="http://www.w3.org/2000/svg">
+                                                    <path
+                                                        d="M15 2H6c-1.103 0-2 .897-2 2v16c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2V7l-5-5zm-6 8H7V6h2v4zm3 0h-2V6h2v4zm3 0h-2V6h2v4z">
+                                                    </path>
+                                                </svg><span>内存</span></h2>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div
+                                                    class="shadow-sm shadow-primary-100 p-2 rounded-md text-sm bg-content1 bg-opacity-30 col-span-2">
+                                                    <div class="w-24">总量</div>
+                                                    <div class="text-default-400">16253.38MB</div>
+                                                </div>
+                                                <div
+                                                    class="shadow-sm shadow-primary-100 p-2 rounded-md text-sm bg-content1 bg-opacity-30 col-span-1 flex justify-between">
+                                                    <div class="w-24">使用量</div>
+                                                    <div class="text-default-400">13568.26MB</div>
+                                                </div>
+                                                <div
+                                                    class="shadow-sm shadow-primary-100 p-2 rounded-md text-sm bg-content1 bg-opacity-30 col-span-1 flex justify-between">
+                                                    <div class="w-24">QQ主线程</div>
+                                                    <div class="text-default-400">37.43MB</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="flex flex-row md:flex-col gap-2 flex-shrink-0 w-full justify-center md:w-40 min-h-40 mt-4 md:mt-0 md:mx-auto">
+                                            <div class="w-36 h-36 flex-shrink-0" _echarts_instance_="ec_1757718944944"
+                                                style="user-select: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0); position: relative;">
+                                                <div
+                                                    style="position: relative; width: 144px; height: 144px; padding: 0px; margin: 0px; border-width: 0px;">
+                                                    <canvas data-zr-dom-id="zr_0" width="144" height="144"
+                                                        style="position: absolute; left: 0px; top: 0px; width: 144px; height: 144px; user-select: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0); padding: 0px; margin: 0px; border-width: 0px;"></canvas>
+                                                </div>
+                                                <div class=""></div>
+                                            </div>
+                                            <div class="w-36 h-36 flex-shrink-0" _echarts_instance_="ec_1757718944945"
+                                                style="user-select: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0); position: relative;">
+                                                <div
+                                                    style="position: relative; width: 144px; height: 144px; padding: 0px; margin: 0px; border-width: 0px;">
+                                                    <canvas data-zr-dom-id="zr_0" width="144" height="144"
+                                                        style="position: absolute; left: 0px; top: 0px; width: 144px; height: 144px; user-select: none; -webkit-tap-highlight-color: rgba(0, 0, 0, 0); padding: 0px; margin: 0px; border-width: 0px;"></canvas>
+                                                </div>
+                                                <div class=""></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div
+                                class="grid grid-cols-8 md:grid-cols-3 lg:grid-cols-6 gap-y-2 gap-x-1 md:gap-y-4 md:gap-x-4 py-5">
+                                <div class="flex flex-col relative overflow-hidden h-auto text-foreground box-border outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 rounded-large transition-transform-background motion-reduce:transition-none bg-opacity-60 shadow-sm md:rounded-3xl col-span-8 md:col-span-2 bg-primary-50 shadow-primary-100"
+                                    tabindex="-1">
+                                    <div
+                                        class="relative flex w-full flex-auto flex-col place-content-inherit align-items-inherit h-auto break-words text-left overflow-y-auto subpixel-antialiased items-center md:gap-1 p-1 md:p-2">
+                                        <div
+                                            class="flex-1 text-2xl md:text-3xl tracking-tight inline font-semibold from-[#FF72E1] to-[#F54C7A] text-[2.3rem] lg:text-5xl leading-9 bg-clip-text text-transparent bg-gradient-to-b">
+                                            0</div>
+                                        <div
+                                            class="whitespace-nowrap text-nowrap flex-shrink-0 text-sm md:text-base tracking-tight inline font-semibold from-[#FF72E1] to-[#F54C7A] lg:text-medium drop-shadow-md bg-clip-text text-transparent bg-gradient-to-b">
+                                            网络配置</div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col relative overflow-hidden h-auto text-foreground box-border outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 rounded-large transition-transform-background motion-reduce:transition-none bg-opacity-60 shadow-sm md:rounded-3xl col-span-2 md:col-span-1 bg-warning-100 shadow-warning-200"
+                                    tabindex="-1">
+                                    <div
+                                        class="relative flex w-full flex-auto flex-col place-content-inherit align-items-inherit h-auto break-words text-left overflow-y-auto subpixel-antialiased items-center md:gap-1 p-1 md:p-2">
+                                        <div
+                                            class="flex-1 text-xl md:text-2xl tracking-tight inline font-semibold from-[#FF705B] to-[#FFB457] text-3xl lg:text-4xl bg-clip-text text-transparent bg-gradient-to-b">
+                                            0</div>
+                                        <div
+                                            class="whitespace-nowrap text-nowrap flex-shrink-0 text-xs md:text-sm tracking-tight inline font-semibold from-[#FF705B] to-[#FFB457] lg:text-medium drop-shadow-md bg-clip-text text-transparent bg-gradient-to-b">
+                                            HTTP服务器</div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col relative overflow-hidden h-auto text-foreground box-border outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 rounded-large transition-transform-background motion-reduce:transition-none bg-opacity-60 shadow-sm md:rounded-3xl col-span-2 md:col-span-1 bg-warning-100 shadow-warning-200"
+                                    tabindex="-1">
+                                    <div
+                                        class="relative flex w-full flex-auto flex-col place-content-inherit align-items-inherit h-auto break-words text-left overflow-y-auto subpixel-antialiased items-center md:gap-1 p-1 md:p-2">
+                                        <div
+                                            class="flex-1 text-xl md:text-2xl tracking-tight inline font-semibold from-[#FF705B] to-[#FFB457] text-3xl lg:text-4xl bg-clip-text text-transparent bg-gradient-to-b">
+                                            0</div>
+                                        <div
+                                            class="whitespace-nowrap text-nowrap flex-shrink-0 text-xs md:text-sm tracking-tight inline font-semibold from-[#FF705B] to-[#FFB457] lg:text-medium drop-shadow-md bg-clip-text text-transparent bg-gradient-to-b">
+                                            HTTP客户端</div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col relative overflow-hidden h-auto text-foreground box-border outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 rounded-large transition-transform-background motion-reduce:transition-none bg-opacity-60 shadow-sm md:rounded-3xl col-span-2 md:col-span-1 bg-warning-100 shadow-warning-200"
+                                    tabindex="-1">
+                                    <div
+                                        class="relative flex w-full flex-auto flex-col place-content-inherit align-items-inherit h-auto break-words text-left overflow-y-auto subpixel-antialiased items-center md:gap-1 p-1 md:p-2">
+                                        <div
+                                            class="flex-1 text-xl md:text-2xl tracking-tight inline font-semibold from-[#FF705B] to-[#FFB457] text-3xl lg:text-4xl bg-clip-text text-transparent bg-gradient-to-b">
+                                            0</div>
+                                        <div
+                                            class="whitespace-nowrap text-nowrap flex-shrink-0 text-xs md:text-sm tracking-tight inline font-semibold from-[#FF705B] to-[#FFB457] lg:text-medium drop-shadow-md bg-clip-text text-transparent bg-gradient-to-b">
+                                            WS服务器</div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col relative overflow-hidden h-auto text-foreground box-border outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 rounded-large transition-transform-background motion-reduce:transition-none bg-opacity-60 shadow-sm md:rounded-3xl col-span-2 md:col-span-1 bg-warning-100 shadow-warning-200"
+                                    tabindex="-1">
+                                    <div
+                                        class="relative flex w-full flex-auto flex-col place-content-inherit align-items-inherit h-auto break-words text-left overflow-y-auto subpixel-antialiased items-center md:gap-1 p-1 md:p-2">
+                                        <div
+                                            class="flex-1 text-xl md:text-2xl tracking-tight inline font-semibold from-[#FF705B] to-[#FFB457] text-3xl lg:text-4xl bg-clip-text text-transparent bg-gradient-to-b">
+                                            0</div>
+                                        <div
+                                            class="whitespace-nowrap text-nowrap flex-shrink-0 text-xs md:text-sm tracking-tight inline font-semibold from-[#FF705B] to-[#FFB457] lg:text-medium drop-shadow-md bg-clip-text text-transparent bg-gradient-to-b">
+                                            WS客户端</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex flex-col relative overflow-hidden h-auto text-foreground box-border bg-content1 outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 rounded-large transition-transform-background motion-reduce:transition-none bg-opacity-60 shadow-sm shadow-primary-100"
+                                tabindex="-1">
+                                <div
+                                    class="relative flex w-full p-3 flex-auto flex-col place-content-inherit align-items-inherit h-auto break-words text-left overflow-y-auto subpixel-antialiased">
+                                    <div>
+                                        <div class="relative">
+                                            <div>心血来潮的时候，总会有那么几人要顿悟的。</div>
+                                            <div class="text-right">—— <span class="text-default-400">安世</span> 朴素</div>
+                                        </div>
+                                        <div class="flex gap-2"><button
+                                                class="z-0 group relative inline-flex items-center justify-center box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 text-tiny gap-2 rounded-full px-0 !gap-0 transition-transform-colors-opacity motion-reduce:transition-none bg-primary/20 text-primary-600 min-w-8 w-8 h-8 data-[hover=true]:opacity-hover"
+                                                type="button" tabindex="0"><svg stroke="currentColor"
+                                                    fill="currentColor" stroke-width="0" viewBox="0 0 512 512"
+                                                    height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
+                                                    <path fill="none" stroke-linecap="round" stroke-miterlimit="10"
+                                                        stroke-width="32"
+                                                        d="M320 146s24.36-12-64-12a160 160 0 1 0 160 160"></path>
+                                                    <path fill="none" stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="32" d="m256 58 80 80-80 80"></path>
+                                                </svg></button><button
+                                                class="z-0 group relative inline-flex items-center justify-center box-border appearance-none select-none whitespace-nowrap font-normal subpixel-antialiased overflow-hidden tap-highlight-transparent data-[pressed=true]:scale-[0.97] outline-none data-[focus-visible=true]:z-10 data-[focus-visible=true]:outline-2 data-[focus-visible=true]:outline-focus data-[focus-visible=true]:outline-offset-2 text-tiny gap-2 rounded-full px-0 !gap-0 transition-transform-colors-opacity motion-reduce:transition-none bg-success/20 text-success-700 dark:text-success min-w-8 w-8 h-8 data-[hover=true]:opacity-hover"
+                                                type="button" tabindex="0"><svg stroke="currentColor"
+                                                    fill="currentColor" stroke-width="0" viewBox="0 0 512 512"
+                                                    height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
+                                                    <path
+                                                        d="M408 480H184a72 72 0 0 1-72-72V184a72 72 0 0 1 72-72h224a72 72 0 0 1 72 72v224a72 72 0 0 1-72 72z">
+                                                    </path>
+                                                    <path
+                                                        d="M160 80h235.88A72.12 72.12 0 0 0 328 32H104a72 72 0 0 0-72 72v224a72.12 72.12 0 0 0 48 67.88V160a80 80 0 0 1 80-80z">
+                                                    </path>
+                                                </svg></button></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

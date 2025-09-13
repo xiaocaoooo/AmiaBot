@@ -1,0 +1,270 @@
+:root {
+    --sidebar-width: 200px;
+
+    /* 颜色种子，通常用于生成调色板 */
+    --color-seed: #ddaacc;
+
+    /* 主色调 */
+    --color-primary             : #834c75;
+    /* 用于主色调背景上的文本或图标颜色 */
+    --color-on-primary          : #ffffff;
+    /* 主色调的容器颜色 */
+    --color-primary-container   : #ffd7f0;
+    /* 用于主色调容器背景上的文本或图标颜色 */
+    --color-on-primary-container: #68355c;
+
+    /* 辅助色调 */
+    --color-secondary             : #6f5767;
+    /* 用于辅助色调背景上的文本或图标颜色 */
+    --color-on-secondary          : #ffffff;
+    /* 辅助色调的容器颜色 */
+    --color-secondary-container   : #f9daec;
+    /* 用于辅助色调容器背景上的文本或图标颜色 */
+    --color-on-secondary-container: #56404f;
+
+    /* 第三色调 */
+    --color-on-tertiary          : #ffffff;
+    /* 用于第三色调背景上的文本或图标颜色 */
+    --color-tertiary             : #815341;
+    /* 第三色调的容器颜色 */
+    --color-tertiary-container   : #ffdbce;
+    /* 用于第三色调容器背景上的文本或图标颜色 */
+    --color-on-tertiary-container: #663c2b;
+
+    /* 错误状态的颜色 */
+    --color-error             : #ba1a1a;
+    /* 用于错误颜色背景上的文本或图标颜色 */
+    --color-on-error          : #ffffff;
+    /* 错误状态的容器颜色 */
+    --color-error-container   : #ffdad6;
+    /* 用于错误容器背景上的文本或图标颜色 */
+    --color-on-error-container: #93000a;
+
+    /* 表面颜色，较暗 */
+    --color-surface-dim              : #e4d7dc;
+    /* 表面颜色 */
+    --color-surface                  : #fff7f9;
+    /* 表面颜色，较亮 */
+    --color-surface-bright           : #fff7f9;
+    /* 最低的表面容器颜色 */
+    --color-surface-container-lowest : #ffffff;
+    /* 较低的表面容器颜色 */
+    --color-surface-container-low    : #fef0f6;
+    /* 表面容器颜色 */
+    --color-surface-container        : #f8eaf0;
+    /* 较高的表面容器颜色 */
+    --color-surface-container-high   : #f2e5ea;
+    /* 最高的表面容器颜色 */
+    --color-surface-container-highest: #ecdfe5;
+
+    /* 反向表面颜色 */
+    --color-inverse-surface   : #362e33;
+    /* 用于反向表面颜色背景上的文本或图标颜色 */
+    --color-inverse-on-surface: #fbedf3;
+    /* 反向主色调 */
+    --color-inverse-primary   : #f5b2e0;
+
+    /* 用于表面颜色背景上的文本或图标颜色 */
+    --color-on-surface        : #201a1e;
+    /* 用于表面颜色背景上的变体文本或图标颜色 */
+    --color-on-surface-variant: #4f444a;
+    /* 轮廓颜色 */
+    --color-outline           : #81737b;
+    /* 轮廓颜色变体 */
+    --color-outline-variant   : #d2c2ca;
+    /* 幕布颜色，通常用于覆盖内容 */
+    --color-scrim             : #000000;
+    /* 阴影颜色 */
+    --color-shadow            : #000000;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* 主色调 */
+        --color-primary             : #f5b2e0;
+        /* 用于主色调背景上的文本或图标颜色 */
+        --color-on-primary          : #4e1e44;
+        /* 主色调的容器颜色 */
+        --color-primary-container   : #68355c;
+        /* 用于主色调容器背景上的文本或图标颜色 */
+        --color-on-primary-container: #ffd7f0;
+
+        /* 辅助色调 */
+        --color-secondary             : #dcbed0;
+        /* 用于辅助色调背景上的文本或图标颜色 */
+        --color-on-secondary          : #3e2a38;
+        /* 辅助色调的容器颜色 */
+        --color-secondary-container   : #56404f;
+        /* 用于辅助色调容器背景上的文本或图标颜色 */
+        --color-on-secondary-container: #f9daec;
+
+        /* 第三色调 */
+        --color-on-tertiary          : #f5b9a2;
+        /* 用于第三色调背景上的文本或图标颜色 */
+        --color-tertiary             : #4b2617;
+        /* 第三色调的容器颜色 */
+        --color-tertiary-container   : #663c2b;
+        /* 用于第三色调容器背景上的文本或图标颜色 */
+        --color-on-tertiary-container: #ffdbce;
+
+        /* 错误状态的颜色 */
+        --color-error             : #ffb4ab;
+        /* 用于错误颜色背景上的文本或图标颜色 */
+        --color-on-error          : #690005;
+        /* 错误状态的容器颜色 */
+        --color-error-container   : #93000a;
+        /* 用于错误容器背景上的文本或图标颜色 */
+        --color-on-error-container: #ffdad6;
+
+        /* 表面颜色，较暗 */
+        --color-surface-dim              : #181215;
+        /* 表面颜色 */
+        --color-surface                  : #181215;
+        /* 表面颜色，较亮 */
+        --color-surface-bright           : #3f373b;
+        /* 最低的表面容器颜色 */
+        --color-surface-container-lowest : #120c10;
+        /* 较低的表面容器颜色 */
+        --color-surface-container-low    : #201a1e;
+        /* 表面容器颜色 */
+        --color-surface-container        : #241e22;
+        /* 较高的表面容器颜色 */
+        --color-surface-container-high   : #2f282c;
+        /* 最高的表面容器颜色 */
+        --color-surface-container-highest: #3a3337;
+
+        /* 反向表面颜色 */
+        --color-inverse-surface   : #ecdfe5;
+        /* 用于反向表面颜色背景上的文本或图标颜色 */
+        --color-inverse-on-surface: #362e33;
+        /* 反向主色调 */
+        --color-inverse-primary   : #834c75;
+
+        /* 用于表面颜色背景上的文本或图标颜色 */
+        --color-on-surface        : #ecdfe5;
+        /* 用于表面颜色背景上的变体文本或图标颜色 */
+        --color-on-surface-variant: #d2c2ca;
+        /* 轮廓颜色 */
+        --color-outline           : #9b8d94;
+        /* 轮廓颜色变体 */
+        --color-outline-variant   : #4f444a;
+        /* 幕布颜色，通常用于覆盖内容 */
+        --color-scrim             : #000000;
+        /* 阴影颜色 */
+        --color-shadow            : #000000;
+    }
+}
+
+* {
+    margin    : 0;
+    padding   : 0;
+    box-sizing: border-box;
+}
+
+a {
+    text-decoration: none;
+    color          : unset;
+}
+
+ul {
+    list-style: none;
+}
+
+.primary-container {
+    background-color: var(--color-primary-container);
+    color           : var(--color-on-primary-container);
+}
+
+.secondary-container {
+    background-color: var(--color-secondary-container);
+    color           : var(--color-on-secondary-container);
+}
+
+.tertiary-container {
+    background-color: var(--color-tertiary-container);
+    color           : var(--color-on-tertiary-container);
+}
+
+.error-container {
+    background-color: var(--color-error-container);
+    color           : var(--color-on-error-container);
+}
+
+html,
+body,
+#app {
+    position        : relative;
+    height          : 100vh;
+    background-color: var(--color-surface);
+    color           : var(--color-on-surface);
+}
+
+nav {
+    position: absolute;
+    display : inline-block;
+    left    : 0;
+    top     : 0;
+    bottom  : 0;
+    width   : var(--sidebar-width);
+    height  : 100vh;
+}
+
+#content {
+    position        : absolute;
+    display         : inline-block;
+    overflow-x      : hidden;
+    overflow-y      : scroll;
+    padding         : 36px;
+    padding-top     : 60px;
+    left            : var(--sidebar-width);
+    top             : 0;
+    bottom          : 0;
+    right           : 0;
+    height          : 100vh;
+    background-color: var(--color-surface-bright);
+    border-radius   : 36px 0 0 36px;
+}
+
+#content::-webkit-scrollbar {
+    width: 0;
+}
+
+#appbar {
+    position               : fixed;
+    display                : flex;
+    align-items            : center;
+    overflow               : hidden;
+    padding                : 0 12px;
+    left                   : calc(var(--sidebar-width) + 12px);
+    top                    : 12px;
+    right                  : 12px;
+    height                 : 36px;
+    border-radius          : 24px;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter        : blur(12px);
+    z-index                : 100;
+}
+
+#appbar::before {
+    content         : '';
+    position        : absolute;
+    left            : 0;
+    top             : 0;
+    bottom          : 0;
+    right           : 0;
+    background-color: var(--color-surface-container);
+    opacity         : 0.4;
+    z-index         : 99;
+}
+
+#appbar #page-name {
+    z-index: 100;
+}
+
+#content>.page {
+    display: none;
+}
+
+#content>.page.active {
+    display: block;
+}

@@ -9,10 +9,19 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+from amia import Amia
+
 
 # 定义项目接口，供插件调用
 class ProjectInterface:
     """Interface for plugins to interact with the main project."""
+    _instance = None
+    bot:Amia|None = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(self):
         pass
@@ -34,6 +43,13 @@ class ProjectInterface:
 
 class PluginManager:
     """Manages the lifecycle of plugins, including loading, unloading, and execution."""
+
+    _instance = None
+    
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(
         self,

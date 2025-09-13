@@ -1,0 +1,28 @@
+#user-info {
+    padding         : 12px;
+    overflow        : hidden;
+    height          : 72px;
+    border-radius   : 72px;
+}
+
+#user-avatar,
+#user-avatar img {
+    float        : left;
+    width        : 48px;
+    height       : 48px;
+    border-radius: 100%;
+}
+
+#user-name-id {
+    display        : flex;
+    flex-direction : column;
+    justify-content: center;
+    height         : 100%;
+    float          : left;
+    margin-left    : 12px;
+}
+
+#user-id{
+    color: var(--color-primary);
+    font-size: .8em;
+}
