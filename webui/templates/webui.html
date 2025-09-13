@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 引入Font Awesome图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
     <title>AmiaBot WebUI</title>
 </head>
@@ -10,9 +12,18 @@
     <div id="app">
         <nav id="nav">
             <ul>
-                <li><a href="./base-info" data-id="base-info">基础信息</a></li>
-                <li><a href="./plugin-manage" data-id="plugin-manage">插件管理</a></li>
-                <li><a href="./log-view" data-id="log-view">日志查看</a></li>
+                <li><a href="./base-info" data-id="base-info">
+                    <i class="fas fa-info-circle" style="margin-right: 12px; width: 18px; text-align: center;"></i>
+                    基础信息
+                </a></li>
+                <li><a href="./plugin-manage" data-id="plugin-manage">
+                    <i class="fas fa-puzzle-piece" style="margin-right: 12px; width: 18px; text-align: center;"></i>
+                    插件管理
+                </a></li>
+                <li><a href="./log-view" data-id="log-view">
+                    <i class="fas fa-history" style="margin-right: 12px; width: 18px; text-align: center;"></i>
+                    日志查看
+                </a></li>
             </ul>
         </nav>
         <div id="content">
