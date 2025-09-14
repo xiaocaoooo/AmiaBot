@@ -1,0 +1,33 @@
+<link rel="stylesheet" href="/static/css/plugin-manage.css">
+
+<div id="page-header">
+    <div id="header-actions">
+        <button id="refresh-plugins-button" class="reload-button">
+            刷新插件列表
+        </button>
+        <button id="reload-all-plugins-button" class="reload-button">
+            重载所有插件
+        </button>
+    </div>
+</div>
+
+<div id="plugins-stats">
+    <div id="plugins-stats-grid">
+        <div class="stat-item secondary-container">
+            <div class="stat-label">总插件数</div>
+            <div id="total-plugins-count" class="stat-value">0</div>
+        </div>
+        <div class="stat-item secondary-container">
+            <div class="stat-label">已启用插件</div>
+            <div id="enabled-plugins-count" class="stat-value">0</div>
+        </div>
+        <div class="stat-item secondary-container">
+            <div class="stat-label">已禁用插件</div>
+            <div id="disabled-plugins-count" class="stat-value">0</div>
+        </div>
+    </div>
+</div>
+
+<div id="plugins-container"></div>
+
+<script src="/static/js/plugin-manage.js"></script>

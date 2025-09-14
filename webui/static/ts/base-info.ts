@@ -434,32 +434,6 @@ if (document.readyState === 'loading') {
 }
 
 /**
- * 插件信息接口类型定义
- */
-interface Plugin {
-  id: string;
-  pluginName?: string;
-  pluginDescription?: string;
-  enabled: boolean;
-  loaded: boolean;
-  file_name: string;
-  file_path: string;
-}
-
-/**
- * 插件信息响应接口类型定义
- */
-interface PluginInfoResponse {
-  code: number;
-  data: {
-    plugins_count: number;
-    enabled_count: number;
-    plugins: Record<string, Plugin>;
-  };
-  message?: string;
-}
-
-/**
  * 系统信息接口类型定义
  */
 interface SystemInfo {

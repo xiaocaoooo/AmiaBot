@@ -99,6 +99,34 @@ class PluginManager:
             os.makedirs(extract_path, exist_ok=True)
             zip_ref.extractall(extract_path)
             return plugin_id
+        
+    async def _setup_plugin_file_mapping(self):
+        """
+        Sets up the plugin file mapping by scanning the plugins directory.
+        """
+        for plugin_file in self.plugins_directory.glob("*.plugin"):
+            try:
+                with zipfile.ZipFile(plugin_file, "r") as zip_ref:
+                    plugin_info_string = zip_ref.read("info.json").decode("utf-8")
+                    plugin_info = json.loads(plugin_info_string)
+                    plugin_id = plugin_info["id"]
+                    self.plugin_file_mapping[plugin_id] = plugin_file.name
+            except Exception as e:
+                logging.warning(f"Failed to get plugin ID from {plugin_file.name}: {e}. Using filename stem instead.")
+                plugin_id = plugin_file.stem
+                self.plugin_file_mapping[plugin_id] = plugin_file.name
+
+        for plugin_file in self.plugins_directory.glob("*.plugin.disabled"):
+            try:
+                with zipfile.ZipFile(plugin_file, "r") as zip_ref:
+                    plugin_info_string = zip_ref.read("info.json").decode("utf-8")
+                    plugin_info = json.loads(plugin_info_string)
+                    plugin_id = plugin_info["id"]
+                    self.plugin_file_mapping[plugin_id] = plugin_file.name.replace(".disabled", "")
+            except Exception as e:
+                logging.warning(f"Failed to get plugin ID from {plugin_file.name}: {e}. Using filename stem instead.")
+                plugin_id = plugin_file.stem.replace(".disabled", "")
+                self.plugin_file_mapping[plugin_id] = plugin_file.name.replace(".disabled", "")
 
     async def _load_plugin(self, plugin_zip_path: Path) -> bool:
         """
@@ -142,6 +170,7 @@ class PluginManager:
 
     async def load_all_plugins(self):
         """Loads all available plugins from the plugins directory."""
+        await self._setup_plugin_file_mapping()
         self.plugins_directory.mkdir(parents=True, exist_ok=True)
         for plugin_file in self.plugins_directory.glob("*.plugin"):
             await self._load_plugin(plugin_file)
@@ -196,31 +225,38 @@ class PluginManager:
                 return False
         return False
 
-    def enable_plugin(self, plugin_id: str):
+    async def enable_plugin(self, plugin_id: str):
         """
         Enables a disabled plugin by renaming its file.
 
         Args:
             plugin_id (str): The ID of the plugin to enable.
         """
-        disabled_path = self.plugins_directory / f"{plugin_id}.plugin.disabled"
-        if disabled_path.exists():
-            disabled_path.rename(self.plugins_directory / f"{plugin_id}.plugin")
-            logging.info(f"Plugin '{plugin_id}' enabled.")
+        print(self.plugin_file_mapping)
+        if plugin_id in self.plugin_file_mapping:
+            disabled_path = self.plugins_directory / f"{self.plugin_file_mapping[plugin_id]}.disabled"
+            if disabled_path.exists():
+                disabled_path.rename(self.plugins_directory / self.plugin_file_mapping[plugin_id])
+                logging.info(f"Plugin '{plugin_id}' enabled.")
+                return True
+        return False
 
-    def disable_plugin(self, plugin_id: str):
+    async def disable_plugin(self, plugin_id: str):
         """
         Disables an enabled plugin by renaming its file.
 
         Args:
             plugin_id (str): The ID of the plugin to disable.
         """
-        enabled_path = self.plugins_directory / f"{plugin_id}.plugin"
-        if enabled_path.exists():
-            enabled_path.rename(self.plugins_directory / f"{plugin_id}.plugin.disabled")
-            logging.info(f"Plugin '{plugin_id}' disabled.")
+        if plugin_id in self.plugin_file_mapping:
+            enabled_path = self.plugins_directory / self.plugin_file_mapping[plugin_id]
+            if enabled_path.exists():
+                enabled_path.rename(self.plugins_directory / f"{self.plugin_file_mapping[plugin_id]}.disabled")
+                logging.info(f"Plugin '{plugin_id}' disabled.")
+                return True
+        return False
 
-    async def call_plugin_function(
+    async  def call_plugin_function(
         self, plugin_id: str, function_name: str, **kwargs: Any
     ) -> Optional[Any]:
         """

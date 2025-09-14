@@ -225,6 +225,82 @@ async def reload_all_plugins(request):
         return web.json_response({"code": -1, "message": str(e)}, status=500)
 
 
+async def reload_plugin(request):
+    """重载指定插件"""
+    try:
+        data = await request.json()
+        plugin_id = data.get("plugin_id")
+        if not plugin_id:
+            return web.json_response(
+                {"code": -1, "message": "Plugin ID is required"}, status=400
+            )
+        await plugin_manager.reload_plugin(plugin_id)
+        return web.json_response(
+            {
+                "code": 0,
+                "data": {"message": f"Plugin {plugin_id} reloaded successfully"},
+            }
+        )
+    except Exception as e:
+        # Get plugin_id from local scope in case of error
+        plugin_id = data.get("plugin_id") if "data" in locals() else "unknown"  # type: ignore
+        logger.error(f"Error reloading plugin {plugin_id}: {e}")
+        return web.json_response({"code": -1, "message": str(e)}, status=500)
+
+
+async def enable_plugin(request):
+    """启用指定插件"""
+    try:
+        data = await request.json()
+        plugin_id = data.get("plugin_id")
+        if not plugin_id:
+            return web.json_response(
+                {"code": -1, "message": "Plugin ID is required"}, status=400
+            )
+        enabled = await plugin_manager.enable_plugin(plugin_id)
+        if enabled:
+            return web.json_response(
+                {"code": 0, "data": {"message": f"Plugin {plugin_id} enabled successfully"}}
+            )
+        else:
+            return web.json_response(
+                {"code": -1, "message": f"Failed to enable plugin {plugin_id}"}, status=500
+            )
+    except Exception as e:
+        # Get plugin_id from local scope in case of error
+        plugin_id = data.get("plugin_id") if "data" in locals() else "unknown"  # type: ignore
+        logger.error(f"Error enabling plugin {plugin_id}: {e}")
+        return web.json_response({"code": -1, "message": str(e)}, status=500)
+
+
+async def disable_plugin(request):
+    """禁用指定插件"""
+    try:
+        data = await request.json()
+        plugin_id = data.get("plugin_id")
+        if not plugin_id:
+            return web.json_response(
+                {"code": -1, "message": "Plugin ID is required"}, status=400
+            )
+        disabled = await plugin_manager.disable_plugin(plugin_id)
+        if disabled:
+            return web.json_response(
+                {
+                    "code": 0,
+                    "data": {"message": f"Plugin {plugin_id} disabled successfully"},
+                }
+            )
+        else:
+            return web.json_response(
+                {"code": -1, "message": f"Failed to disable plugin {plugin_id}"}, status=500
+            )
+    except Exception as e:
+        # Get plugin_id from local scope in case of error
+        plugin_id = data.get("plugin_id") if "data" in locals() else "unknown"  # type: ignore
+        logger.error(f"Error disabling plugin {plugin_id}: {e}")
+        return web.json_response({"code": -1, "message": str(e)}, status=500)
+
+
 # 注册路由
 app.router.add_get("/", index)
 app.router.add_get("/webui/{tail:.*}", webui_handler)
@@ -232,6 +308,9 @@ app.router.add_get("/api/self", get_self)
 app.router.add_get("/api/system-info", get_system_info)
 app.router.add_get("/api/plugins/status", get_all_plugins_status)
 app.router.add_post("/api/plugins/reload-all", reload_all_plugins)
+app.router.add_post("/api/plugins/reload", reload_plugin)
+app.router.add_post("/api/plugins/enable", enable_plugin)
+app.router.add_post("/api/plugins/disable", disable_plugin)
 
 # 添加静态文件目录
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")

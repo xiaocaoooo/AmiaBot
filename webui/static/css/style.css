@@ -202,34 +202,34 @@ ul {
     overflow        : hidden;
 }
 
-button{
-    position: relative;
-    outline: none;
+button {
+    position        : relative;
+    outline         : none;
     background-color: var(--color-primary);
-    color: var(--color-on-primary);
-    border: none;
-    border-radius: 8px;
-    padding: 12px 24px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.25s ease;
+    color           : var(--color-on-primary);
+    border          : none;
+    border-radius   : 8px;
+    padding         : 12px 24px;
+    font-size       : 14px;
+    font-weight     : 500;
+    cursor          : pointer;
+    transition      : all 0.25s ease;
 }
 
-button::after{
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
+button::after {
+    content         : '';
+    position        : absolute;
+    left            : 0;
+    top             : 0;
+    width           : 100%;
+    height          : 100%;
     background-color: black;
-    opacity: 0;
-    border-radius: 8px;
-    transition: all 0.25s ease;
+    opacity         : 0;
+    border-radius   : 8px;
+    transition      : all 0.25s ease;
 }
 
-button:hover::after{
+button:hover::after {
     opacity: 0.2;
 }
 
@@ -394,6 +394,6 @@ nav a.active::before {
 }
 
 #page {
-    max-width: 1000px;
+    max-width: max(1000px, 50vw);
     margin   : 0 auto;
 }
