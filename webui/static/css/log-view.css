@@ -1,0 +1,201 @@
+/* 日志页面样式 */
+
+#logs-stats-grid {
+    display              : grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-gap             : 20px;
+    margin               : 20px 0;
+}
+
+#logs-container {
+    margin-top      : 20px;
+    overflow-x      : auto;
+    border-radius   : 16px;
+    background-color: var(--color-surface-container);
+}
+
+#logs-table {
+    width          : 100%;
+    border-collapse: collapse;
+    font-size      : 14px;
+}
+
+#logs-table th {
+    background-color: var(--color-surface-container-high);
+    color           : var(--color-on-surface);
+    font-weight     : 600;
+    text-align      : left;
+    padding         : 12px 16px;
+    border-bottom   : 2px solid var(--color-outline-variant);
+    position        : sticky;
+    top             : 0;
+    z-index         : 10;
+}
+
+#logs-table td {
+    padding      : 12px 16px;
+    border-bottom: 1px solid var(--color-outline-variant);
+}
+
+#logs-table tr:hover {
+    background-color: var(--color-surface-container-low);
+}
+
+/* 日志级别样式 */
+.log-level {
+    display      : inline-block;
+    padding      : 2px 8px;
+    border-radius: 12px;
+    font-size    : 12px;
+    font-weight  : 500;
+    text-align   : center;
+}
+
+.log-level.DEBUG {
+    background-color: var(--color-primary-container);
+    color           : var(--color-on-primary-container);
+}
+
+.log-level.INFO {
+    background-color: var(--color-tertiary-container);
+    color           : var(--color-on-tertiary-container);
+}
+
+.log-level.WARNING {
+    background-color: #FFE082;
+    color           : #7C6514;
+}
+
+.log-level.ERROR {
+    background-color: var(--color-error-container);
+    color           : var(--color-on-error-container);
+}
+
+.log-level.CRITICAL {
+    background-color: var(--color-error);
+    color           : var(--color-on-error);
+}
+
+/* 分页控件样式 */
+#pagination {
+    display        : flex;
+    justify-content: center;
+    align-items    : center;
+    gap            : 16px;
+    margin-top     : 24px;
+    margin-bottom  : 32px;
+}
+
+#page-info {
+    font-size: 14px;
+    color    : var(--color-on-surface-variant);
+}
+
+/* 刷新和过滤控件样式 */
+#header-actions {
+    display      : flex;
+    align-items  : center;
+    gap          : 20px;
+    margin-bottom: 16px;
+}
+
+/* 按钮基础样式 */
+.reload-button,
+.auto-refresh-button {
+    padding         : 8px 16px;
+    border          : none;
+    border-radius   : 8px;
+    background-color: var(--color-primary);
+    color           : var(--color-on-primary);
+    font-size       : 14px;
+    font-weight     : 500;
+    cursor          : pointer;
+    transition      : all 0.2s ease;
+    display         : flex;
+    align-items     : center;
+    gap             : 6px;
+}
+
+.reload-button:hover,
+.auto-refresh-button:hover {
+    background-color: var(--color-primary-container);
+    color           : var(--color-on-primary-container);
+}
+
+/* 自动刷新按钮激活状态 */
+.auto-refresh-button.active {
+    background-color: var(--color-success);
+    color           : var(--color-on-success);
+}
+
+.auto-refresh-button.active:hover {
+    background-color: var(--color-success-container);
+}
+
+#log-filter-container {
+    display    : flex;
+    align-items: center;
+    gap        : 8px;
+}
+
+/* 空日志状态样式 */
+#empty-logs {
+    text-align: center;
+    padding   : 60px 20px;
+    color     : var(--color-on-surface-variant);
+}
+
+#empty-logs i {
+    font-size    : 48px;
+    margin-bottom: 16px;
+    opacity      : 0.5;
+}
+
+/* 加载状态样式 */
+#loading-logs {
+    text-align: center;
+    padding   : 40px 20px;
+    color     : var(--color-on-surface-variant);
+}
+
+#loading-logs i {
+    font-size    : 24px;
+    margin-bottom: 12px;
+    animation    : spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    #logs-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #logs-table {
+        font-size: 12px;
+    }
+
+    #logs-table th,
+    #logs-table td {
+        padding: 8px 12px;
+    }
+
+    #header-actions {
+        flex-direction: column;
+        align-items   : stretch;
+        gap           : 12px;
+    }
+
+    #log-filter-container {
+        justify-content: center;
+    }
+}

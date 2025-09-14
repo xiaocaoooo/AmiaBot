@@ -1,16 +1,14 @@
 import sys
 import os
-import sys
 import logging
-import json
 import platform
 import time
-from pathlib import Path
 import asyncio
 from aiohttp import web
 from datetime import datetime
 import jinja2
 import psutil
+from typing import Dict, Any, List, Optional
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -44,12 +42,19 @@ jinja_env = jinja2.Environment(
 class LogBufferHandler(logging.Handler):
     def emit(self, record):
         log_entry = {
-            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "time": time.time(),
             "level": record.levelname,
             "message": self.format(record),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
+            "process": record.process,
+            "thread": record.thread,
+            "process_name": record.processName,
+            "thread_name": record.threadName,
         }
         log_buffer.append(log_entry)
-        # 限制缓冲区大小
+        # Limit the buffer size
         if len(log_buffer) > 1000:
             log_buffer.pop(0)
 
@@ -145,7 +150,7 @@ async def get_system_info(request):
                 # 如果没有找到驱动器，添加一些常见的驱动器字母作为备选
                 if not drives:
                     drives = ["C:", "D:", "E:"]
-            except:
+            except Exception:
                 # 如果出现异常，使用默认驱动器列表
                 drives = ["C:", "D:", "E:"]
 
@@ -301,6 +306,59 @@ async def disable_plugin(request):
         return web.json_response({"code": -1, "message": str(e)}, status=500)
 
 
+async def get_logs(request):
+    """分页获取日志信息
+    
+    Args:
+        request: HTTP请求对象，包含查询参数
+            - page: 当前页码，默认为1
+            - page_size: 每页记录数，默认为20
+    
+    Returns:
+        JSON响应，包含分页日志数据和元信息
+    """
+    try:
+        # 获取查询参数
+        page = int(request.query.get("page", 1))
+        page_size = int(request.query.get("page_size", 20))
+        
+        # 参数验证
+        if page < 1:
+            page = 1
+        if page_size < 1 or page_size > 100:
+            page_size = 20
+        
+        # 计算总页数
+        total_logs = len(log_buffer)
+        total_pages = (total_logs + page_size - 1) // page_size
+        
+        # 计算当前页的起始和结束索引
+        start_index = (page - 1) * page_size
+        end_index = start_index + page_size
+        
+        # 获取当前页的日志数据
+        current_page_logs = log_buffer[start_index:end_index]
+        
+        # 构建响应数据
+        response_data = {
+            "code": 0,
+            "data": {
+                "logs": current_page_logs,
+                "pagination": {
+                    "current_page": page,
+                    "page_size": page_size,
+                    "total_pages": total_pages,
+                    "total_logs": total_logs
+                }
+            }
+        }
+        
+        return web.json_response(response_data)
+    except Exception as e:
+        logger.error(f"Error getting logs: {e}")
+        return web.json_response({"code": -1, "message": str(e)}, status=500)
+
+
 # 注册路由
 app.router.add_get("/", index)
 app.router.add_get("/webui/{tail:.*}", webui_handler)
@@ -311,6 +369,7 @@ app.router.add_post("/api/plugins/reload-all", reload_all_plugins)
 app.router.add_post("/api/plugins/reload", reload_plugin)
 app.router.add_post("/api/plugins/enable", enable_plugin)
 app.router.add_post("/api/plugins/disable", disable_plugin)
+app.router.add_get("/api/logs", get_logs)
 
 # 添加静态文件目录
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")

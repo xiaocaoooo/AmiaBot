@@ -1,0 +1,76 @@
+<link rel="stylesheet" href="/static/css/log-view.css">
+
+<div id="page-header">
+    <div id="header-actions">
+        <button id="refresh-logs-button" class="reload-button">
+            刷新日志
+        </button>
+        <button id="toggle-auto-refresh-button" class="auto-refresh-button">
+            自动刷新: 开启
+        </button>
+        <div id="log-filter-container">
+            <label for="log-level-filter">日志级别：</label>
+            <select id="log-level-filter">
+                <option value="all">全部</option>
+                <option value="DEBUG">DEBUG</option>
+                <option value="INFO">INFO</option>
+                <option value="WARNING">WARNING</option>
+                <option value="ERROR">ERROR</option>
+                <option value="CRITICAL">CRITICAL</option>
+            </select>
+            <button id="toggle-web-logs-button" class="auto-refresh-button">
+                显示WebUI日志: 关闭
+            </button>
+        </div>
+        <div id="search-container">
+            <input type="text" id="log-search-input" placeholder="搜索日志内容...">
+            <button id="search-logs-button" class="search-button">搜索</button>
+        </div>
+    </div>
+</div>
+
+<div id="logs-stats">
+    <div id="logs-stats-grid">
+        <div class="stat-item secondary-container">
+            <div class="stat-label">总日志数</div>
+            <div id="total-logs-count" class="stat-value">0</div>
+        </div>
+        <div class="stat-item secondary-container">
+            <div class="stat-label">当前页</div>
+            <div id="current-page" class="stat-value">1</div>
+        </div>
+        <div class="stat-item secondary-container">
+            <div class="stat-label">总页数</div>
+            <div id="total-pages" class="stat-value">0</div>
+        </div>
+    </div>
+</div>
+
+<div id="logs-container">
+    <table id="logs-table">
+        <thead>
+            <tr>
+                <th>时间</th>
+                <th>级别</th>
+                <th>消息</th>
+                <th>模块</th>
+                <th>函数</th>
+            </tr>
+        </thead>
+        <tbody id="logs-table-body">
+            <!-- 日志条目将通过JavaScript动态添加 -->
+        </tbody>
+    </table>
+</div>
+
+<div id="pagination">
+    <button id="prev-page" class="action-button" disabled>
+        上一页
+    </button>
+    <span id="page-info">第 1 页，共 0 页</span>
+    <button id="next-page" class="action-button" disabled>
+        下一页
+    </button>
+</div>
+
+<script src="/static/js/log-view.js"></script>

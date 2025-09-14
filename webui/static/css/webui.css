@@ -1,0 +1,164 @@
+html,
+body,
+#app {
+    position        : relative;
+    height          : 100vh;
+    background-color: var(--color-surface-container);
+    color           : var(--color-on-surface);
+}
+
+/* 导航栏样式 */
+nav {
+    position        : absolute;
+    display         : inline-block;
+    left            : 0;
+    top             : 0;
+    bottom          : 0;
+    width           : var(--sidebar-width);
+    height          : 100vh;
+    background-color: var(--color-surface-container);
+    box-shadow      : 2px 0 10px rgba(0, 0, 0, 0.1);
+    transition      : transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* 导航列表样式 */
+nav ul {
+    padding       : 16px 0;
+    height        : 100%;
+    display       : flex;
+    flex-direction: column;
+    gap           : 8px;
+}
+
+/* 导航列表项样式 */
+nav li {
+    width: 90%;
+}
+
+/* 导航链接基础样式 */
+nav a {
+    display      : flex;
+    align-items  : center;
+    width        : 100%;
+    padding      : 12px 20px;
+    color        : var(--color-on-surface-variant);
+    font-weight  : 500;
+    font-size    : 14px;
+    border-radius: 0 24px 24px 0;
+    transition   : all 0.25s ease;
+    position     : relative;
+    overflow     : hidden;
+}
+
+/* 导航链接中的图标样式 */
+nav a i {
+    margin-right: 12px;
+    width       : 18px;
+    text-align  : center;
+}
+
+/* 导航链接悬停效果 */
+nav a:hover {
+    background-color: rgba(131, 76, 117, 0.1);
+    color           : var(--color-primary);
+    transform       : translateX(5px);
+}
+
+/* 导航链接活动状态 */
+nav a.active {
+    background-color: var(--color-primary);
+    color           : var(--color-on-primary);
+    font-weight     : 600;
+    box-shadow      : 0 4px 12px rgba(131, 76, 117, 0.3);
+}
+
+/* 活动状态下的左侧强调条 */
+nav a.active::before {
+    content         : '';
+    position        : absolute;
+    left            : 0;
+    top             : 0;
+    bottom          : 0;
+    width           : 4px;
+    background-color: var(--color-primary-container);
+    border-radius   : 0 4px 4px 0;
+}
+
+/* 为小屏幕设备优化导航栏响应式布局 */
+@media (max-width: 768px) {
+    :root {
+        --sidebar-width: 60px;
+    }
+
+    nav a {
+        justify-content: center;
+        padding        : 12px 8px;
+        font-size      : 0;
+    }
+
+    nav a:hover {
+        transform: none;
+    }
+
+    #content {
+        padding    : 24px 16px 16px 16px;
+        padding-top: 48px;
+    }
+}
+
+#content {
+    position        : absolute;
+    display         : inline-block;
+    overflow-x      : hidden;
+    overflow-y      : scroll;
+    padding         : 36px;
+    padding-top     : 60px;
+    left            : var(--sidebar-width);
+    top             : 0;
+    bottom          : 0;
+    right           : 0;
+    height          : 100vh;
+    background-color: var(--color-surface-bright);
+    border-radius   : 36px 0 0 36px;
+}
+
+#content::-webkit-scrollbar {
+    width: 0;
+}
+
+#appbar {
+    position               : fixed;
+    display                : flex;
+    align-items            : center;
+    overflow               : hidden;
+    padding                : 0 12px;
+    left                   : calc(var(--sidebar-width) + 12px);
+    top                    : 12px;
+    right                  : 12px;
+    height                 : 36px;
+    border-radius          : 24px;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter        : blur(12px);
+    z-index                : 100;
+}
+
+#appbar::before {
+    content         : '';
+    position        : absolute;
+    left            : 0;
+    top             : 0;
+    bottom          : 0;
+    right           : 0;
+    background-color: var(--color-surface-container);
+    opacity         : 0.4;
+    z-index         : 99;
+}
+
+#appbar #page-name {
+    z-index: 100;
+}
+
+#page {
+    max-width: max(1000px, 50vw);
+    margin   : 0 auto;
+}
