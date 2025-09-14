@@ -4,17 +4,22 @@ import logging
 import platform
 import time
 import asyncio
+import json
+import hashlib
+import uuid
+from datetime import datetime, timedelta
 from aiohttp import web
-from datetime import datetime
 import jinja2
 import psutil
 from typing import Dict, Any, List, Optional
+from pathlib import Path
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 从plugin_manager导入必要的类
 from plugin_manager import PluginManager, ProjectInterface
+from config import Config
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -30,12 +35,78 @@ log_buffer = []
 # 初始化aiohttp应用
 app = web.Application()
 
+# 读取配置文件
+def load_config() -> Config:
+    """加载配置文件"""
+    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.json")
+    return Config(Path(config_path))
+
+# 全局配置对象
+config = load_config()
+
+# 全局会话字典，用于存储登录会话
+# 键为会话ID，值为(过期时间, 用户信息)
+sessions = {}
+
+# 生成会话ID
+def generate_session_id() -> str:
+    """生成唯一的会话ID"""
+    return str(uuid.uuid4())
+
+# 验证密码
+def verify_password(input_password: str) -> bool:
+    """验证用户输入的密码是否正确"""
+    try:
+        # 从配置中获取密码
+        correct_password = config.webui.password # type: ignore
+        
+        # 检查是否是哈希密码（长度为64个字符的十六进制字符串）
+        if len(input_password) == 64 and all(c in '0123456789abcdefABCDEF' for c in input_password):
+            # 计算正确密码的哈希值
+            correct_password_hash = hashlib.sha256(correct_password.encode()).hexdigest()
+            return input_password.lower() == correct_password_hash.lower()
+        else:
+            # 否则，直接比较明文密码（向后兼容）
+            return input_password == correct_password
+    except Exception as e:
+        logger.error(f"Error verifying password: {e}")
+        return False
+
+# 认证中间件
+@web.middleware
+async def auth_middleware(request: web.Request, handler):
+    """认证中间件，用于验证用户登录状态"""
+    # 排除登录相关路由
+    if request.path == "/login" or request.path == "/":
+        return await handler(request)
+    
+    # 获取会话ID
+    session_id = request.cookies.get("session_id")
+    
+    # 验证会话ID
+    if not session_id or session_id not in sessions:
+        # 未登录或会话不存在，重定向到登录页
+        raise web.HTTPFound("/login")
+    
+    # 检查会话是否过期
+    expiry_time = sessions[session_id][0]
+    if datetime.now() > expiry_time:
+        # 会话过期，删除会话并重定向到登录页
+        del sessions[session_id]
+        raise web.HTTPFound("/login")
+    
+    # 会话有效，继续处理请求
+    return await handler(request)
+
 # 设置Jinja2模板环境
 templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 jinja_env = jinja2.Environment(
     loader=jinja2.FileSystemLoader(templates_dir),
     autoescape=jinja2.select_autoescape(["html", "xml"]),
 )
+
+# 添加认证中间件到应用
+app.middlewares.append(auth_middleware)
 
 
 # 自定义日志处理器，将日志添加到缓冲区
@@ -86,11 +157,56 @@ async def load_all_plugins():
 # 路由处理函数
 async def index(request):
     """首页路由"""
-    raise web.HTTPFound("/webui/")
+    raise web.HTTPFound("/login")
+
+
+async def login(request):
+    """登录路由处理函数"""
+    if request.method == "GET":
+        # GET请求，显示登录页面
+        return await render_template_async("login.html")
+    elif request.method == "POST":
+        # POST请求，处理登录表单提交
+        form = await request.post()
+        
+        # 优先使用哈希密码
+        password = form.get("hashed_password", "")
+        
+        # 如果没有哈希密码，则使用明文密码（向后兼容）
+        if not password:
+            password = form.get("password", "")
+        
+        # 验证密码
+        if verify_password(password):
+            # 密码正确，生成会话ID
+            session_id = generate_session_id()
+            # 设置会话过期时间为2小时
+            expiry_time = datetime.now() + timedelta(hours=2)
+            # 存储会话信息
+            sessions[session_id] = (expiry_time, {"user": "admin"})
+            
+            # 创建响应对象
+            response = web.HTTPFound("/webui/")
+            # 设置Cookie，过期时间与会话一致
+            response.set_cookie(
+                "session_id", 
+                session_id, 
+                expires=expiry_time.timestamp(), # type: ignore
+                httponly=True,  # 设置httponly，提高安全性
+                samesite="Strict"  # 设置samesite，防止CSRF攻击
+            )
+            return response
+        else:
+            # 密码错误，重新显示登录页面并提示错误
+            return await render_template_async("login.html", error="密码错误，请重新输入")
+    
+    # 不支持的请求方法
+    return web.Response(text="Method not allowed", status=405)
 
 
 async def webui_handler(request):
     """WebUI首页路由"""
+    # 检查登录状态（已在中间件中完成）
     return await render_template_async("webui.html")
 
 
@@ -361,6 +477,7 @@ async def get_logs(request):
 
 # 注册路由
 app.router.add_get("/", index)
+app.router.add_route("*", "/login", login)  # 支持GET和POST
 app.router.add_get("/webui/{tail:.*}", webui_handler)
 app.router.add_get("/api/self", get_self)
 app.router.add_get("/api/system-info", get_system_info)

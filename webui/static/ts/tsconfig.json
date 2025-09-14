@@ -7,7 +7,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "../js",
-    "sourceMap": true
+    "sourceMap": true,
+    "lib": ["ES2017", "DOM"]
   },
   "include": [
     "*.ts"
