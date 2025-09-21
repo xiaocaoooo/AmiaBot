@@ -4,14 +4,12 @@ import logging
 import platform
 import time
 import asyncio
-import json
 import hashlib
 import uuid
 from datetime import datetime, timedelta
 from aiohttp import web
 import jinja2
 import psutil
-from typing import Dict, Any, List, Optional
 from pathlib import Path
 
 # 添加项目根目录到Python路径
@@ -35,11 +33,15 @@ log_buffer = []
 # 初始化aiohttp应用
 app = web.Application()
 
+
 # 读取配置文件
 def load_config() -> Config:
     """加载配置文件"""
-    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.json")
+    config_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.json"
+    )
     return Config(Path(config_path))
+
 
 # 全局配置对象
 config = load_config()
@@ -48,55 +50,66 @@ config = load_config()
 # 键为会话ID，值为(过期时间, 用户信息)
 sessions = {}
 
+# 全局存储失败登录尝试的字典
+# 键为客户端IP，值为(尝试次数, 首次尝试时间)
+failed_login_attempts = {}
+
+
 # 生成会话ID
 def generate_session_id() -> str:
     """生成唯一的会话ID"""
     return str(uuid.uuid4())
+
 
 # 验证密码
 def verify_password(input_password: str) -> bool:
     """验证用户输入的密码是否正确"""
     try:
         # 从配置中获取密码
-        correct_password = config.webui.password # type: ignore
-        
-        # 检查是否是哈希密码（长度为64个字符的十六进制字符串）
-        if len(input_password) == 64 and all(c in '0123456789abcdefABCDEF' for c in input_password):
-            # 计算正确密码的哈希值
-            correct_password_hash = hashlib.sha256(correct_password.encode()).hexdigest()
-            return input_password.lower() == correct_password_hash.lower()
-        else:
-            # 否则，直接比较明文密码（向后兼容）
-            return input_password == correct_password
+        correct_password = config.webui.password  # type: ignore
+
+        # 计算正确密码的哈希值
+        correct_password_hash = hashlib.sha256(
+            correct_password.encode()
+        ).hexdigest()
+        return input_password.lower() == correct_password_hash.lower()
     except Exception as e:
         logger.error(f"Error verifying password: {e}")
         return False
+
 
 # 认证中间件
 @web.middleware
 async def auth_middleware(request: web.Request, handler):
     """认证中间件，用于验证用户登录状态"""
     # 排除登录相关路由
-    if request.path == "/login" or request.path == "/":
+    if (
+        request.path == "/login"
+        or request.path == "/"
+        or request.path.startswith("/static")
+        or request.path.startswith("/fonts")
+        or request.path.startswith("/favicon.ico")
+    ):
         return await handler(request)
-    
+
     # 获取会话ID
     session_id = request.cookies.get("session_id")
-    
+
     # 验证会话ID
     if not session_id or session_id not in sessions:
         # 未登录或会话不存在，重定向到登录页
-        raise web.HTTPFound("/login")
-    
+        raise web.HTTPFound(f"/login?url={request.path}")
+
     # 检查会话是否过期
     expiry_time = sessions[session_id][0]
     if datetime.now() > expiry_time:
         # 会话过期，删除会话并重定向到登录页
         del sessions[session_id]
-        raise web.HTTPFound("/login")
-    
+        raise web.HTTPFound(f"/login?url={request.path}")
+
     # 会话有效，继续处理请求
     return await handler(request)
+
 
 # 设置Jinja2模板环境
 templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
@@ -163,43 +176,82 @@ async def index(request):
 async def login(request):
     """登录路由处理函数"""
     if request.method == "GET":
-        # GET请求，显示登录页面
-        return await render_template_async("login.html")
+        # 获取重定向URL参数
+        url = request.query.get("url", "/webui/")
+        # 显示登录页面并传递url参数
+        return await render_template_async("login.html", url=url)
     elif request.method == "POST":
         # POST请求，处理登录表单提交
         form = await request.post()
+
+        # 获取客户端IP
+        client_ip = request.remote or "unknown"
         
+        # 检查失败次数
+        if client_ip in failed_login_attempts:
+            attempts, timestamp = failed_login_attempts[client_ip]
+            # 5分钟内超过5次失败尝试，则暂时拒绝登录
+            if attempts >= 5 and (datetime.now() - timestamp).seconds < 300:
+                return await render_template_async(
+                    "login.html", error="登录失败次数过多，请稍后再试"
+                )
+
         # 优先使用哈希密码
         password = form.get("hashed_password", "")
-        
-        # 如果没有哈希密码，则使用明文密码（向后兼容）
+
+        # 如果没有哈希密码，则使用明文密码
         if not password:
             password = form.get("password", "")
-        
+
+        # 获取重定向URL
+        redirect_url = form.get("url", "/webui/")
+        # 验证URL安全性，防止开放重定向攻击
+        if not redirect_url.startswith("/"):
+            redirect_url = "/webui/"
+
         # 验证密码
         if verify_password(password):
+            # 登录成功，清除失败记录
+            if client_ip in failed_login_attempts:
+                del failed_login_attempts[client_ip]
+                
             # 密码正确，生成会话ID
             session_id = generate_session_id()
-            # 设置会话过期时间为2小时
-            expiry_time = datetime.now() + timedelta(hours=2)
+            
+            # 获取记住我选项，决定会话过期时间
+            remember_me = form.get("remember_me", "")
+            expiry_time = datetime.now() + timedelta(hours=2 if not remember_me else 7*24)
+            
             # 存储会话信息
             sessions[session_id] = (expiry_time, {"user": "admin"})
-            
-            # 创建响应对象
-            response = web.HTTPFound("/webui/")
+
+            # 重定向到指定URL
+            response = web.HTTPFound(redirect_url)
+
             # 设置Cookie，过期时间与会话一致
             response.set_cookie(
-                "session_id", 
-                session_id, 
-                expires=expiry_time.timestamp(), # type: ignore
+                "session_id",
+                session_id,
+                expires=expiry_time.timestamp(),  # type: ignore
                 httponly=True,  # 设置httponly，提高安全性
-                samesite="Strict"  # 设置samesite，防止CSRF攻击
+                samesite="Strict",  # 设置samesite，防止CSRF攻击
+                secure=request.scheme == "https"  # 条件性设置secure属性
             )
             return response
         else:
+            # 记录失败尝试
+            if client_ip not in failed_login_attempts or \
+               (datetime.now() - failed_login_attempts[client_ip][1]).seconds > 300:
+                failed_login_attempts[client_ip] = (1, datetime.now())
+            else:
+                attempts, timestamp = failed_login_attempts[client_ip]
+                failed_login_attempts[client_ip] = (attempts + 1, timestamp)
+                
             # 密码错误，重新显示登录页面并提示错误
-            return await render_template_async("login.html", error="密码错误，请重新输入")
-    
+            return await render_template_async(
+                "login.html", error="密码错误，请重新输入", url=redirect_url
+            )
+
     # 不支持的请求方法
     return web.Response(text="Method not allowed", status=405)
 
@@ -381,11 +433,15 @@ async def enable_plugin(request):
         enabled = await plugin_manager.enable_plugin(plugin_id)
         if enabled:
             return web.json_response(
-                {"code": 0, "data": {"message": f"Plugin {plugin_id} enabled successfully"}}
+                {
+                    "code": 0,
+                    "data": {"message": f"Plugin {plugin_id} enabled successfully"},
+                }
             )
         else:
             return web.json_response(
-                {"code": -1, "message": f"Failed to enable plugin {plugin_id}"}, status=500
+                {"code": -1, "message": f"Failed to enable plugin {plugin_id}"},
+                status=500,
             )
     except Exception as e:
         # Get plugin_id from local scope in case of error
@@ -413,7 +469,8 @@ async def disable_plugin(request):
             )
         else:
             return web.json_response(
-                {"code": -1, "message": f"Failed to disable plugin {plugin_id}"}, status=500
+                {"code": -1, "message": f"Failed to disable plugin {plugin_id}"},
+                status=500,
             )
     except Exception as e:
         # Get plugin_id from local scope in case of error
@@ -424,12 +481,12 @@ async def disable_plugin(request):
 
 async def get_logs(request):
     """分页获取日志信息
-    
+
     Args:
         request: HTTP请求对象，包含查询参数
             - page: 当前页码，默认为1
             - page_size: 每页记录数，默认为20
-    
+
     Returns:
         JSON响应，包含分页日志数据和元信息
     """
@@ -437,24 +494,31 @@ async def get_logs(request):
         # 获取查询参数
         page = int(request.query.get("page", 1))
         page_size = int(request.query.get("page_size", 20))
-        
+        no_webui = request.query.get("no_webui", "false").lower() == "true"
+        log_buffer_copy = log_buffer.copy()
+        log_buffer_copy.reverse()
+        if no_webui:
+            log_buffer_copy = [
+                log for log in log_buffer_copy if "web_log" not in log.get("module", "")
+            ]
+
         # 参数验证
         if page < 1:
             page = 1
         if page_size < 1 or page_size > 100:
             page_size = 20
-        
+
         # 计算总页数
-        total_logs = len(log_buffer)
+        total_logs = len(log_buffer_copy)
         total_pages = (total_logs + page_size - 1) // page_size
-        
+
         # 计算当前页的起始和结束索引
         start_index = (page - 1) * page_size
         end_index = start_index + page_size
-        
+
         # 获取当前页的日志数据
-        current_page_logs = log_buffer[start_index:end_index]
-        
+        current_page_logs = log_buffer_copy[start_index:end_index]
+
         # 构建响应数据
         response_data = {
             "code": 0,
@@ -464,20 +528,51 @@ async def get_logs(request):
                     "current_page": page,
                     "page_size": page_size,
                     "total_pages": total_pages,
-                    "total_logs": total_logs
-                }
-            }
+                    "total_logs": total_logs,
+                },
+            },
         }
-        
+
         return web.json_response(response_data)
     except Exception as e:
         logger.error(f"Error getting logs: {e}")
         return web.json_response({"code": -1, "message": str(e)}, status=500)
 
 
+async def font_handler(request):
+    """处理字体文件请求"""
+    try:
+        font_path = str(request.url).split("/")[-1]
+        if not font_path:
+            return web.json_response(
+                {"code": -1, "message": "Font path is required"}, status=400
+            )
+        font_path = os.path.join(os.path.dirname(__file__), "..", "fonts", font_path)
+        if not os.path.exists(font_path):
+            return web.json_response(
+                {"code": -1, "message": "Font file not found"}, status=404
+            )
+        with open(font_path, "rb") as f:
+            font_data = f.read()
+        return web.Response(body=font_data, content_type="font/ttf")
+    except Exception as e:
+        logger.error(f"Error serving font file: {e}")
+        return web.json_response({"code": -1, "message": str(e)}, status=500)
+
+
+async def favicon_handler(request):
+    """处理favicon.ico请求"""
+    # logo.svg
+    with open(os.path.join(os.path.dirname(__file__), "..", "logo.svg"), "rb") as f:
+        logo_data = f.read()
+    return web.Response(body=logo_data, content_type="image/svg+xml")
+
+
 # 注册路由
 app.router.add_get("/", index)
-app.router.add_route("*", "/login", login)  # 支持GET和POST
+app.router.add_route("*", "/login", login)
+app.router.add_get("/fonts/{font:.*}", font_handler)
+app.router.add_get("/favicon.ico", favicon_handler)
 app.router.add_get("/webui/{tail:.*}", webui_handler)
 app.router.add_get("/api/self", get_self)
 app.router.add_get("/api/system-info", get_system_info)
@@ -494,8 +589,20 @@ app.router.add_static("/static/", path=static_dir, name="static")
 
 
 # 启动Web服务器的函数
+async def cleanup_sessions():
+    """定期清理过期会话"""
+    while True:
+        current_time = datetime.now()
+        expired_sessions = [sid for sid, (expiry, _) in sessions.items() if current_time > expiry]
+        for sid in expired_sessions:
+            del sessions[sid]
+        await asyncio.sleep(3600)  # 每小时清理一次
+
 async def run_web_server_async():
     """异步启动Web服务器"""
+    # 启动会话清理任务
+    asyncio.create_task(cleanup_sessions())
+    
     # 加载插件
     await load_all_plugins()
 

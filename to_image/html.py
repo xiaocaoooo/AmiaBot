@@ -34,11 +34,11 @@ async def htmlToImage(
 
     # 读取字体文件并转换为base64
     ShangShouFangTangTi_path = os.path.join(
-        os.path.dirname(__file__), "..", "ShangShouFangTangTi.ttf"
+        os.path.dirname(__file__), "..", "fonts", "ShangShouFangTangTi.ttf"
     )
     with open(ShangShouFangTangTi_path, "rb") as f:
         ShangShouFangTangTi_data = base64.b64encode(f.read()).decode("utf-8")
-    YurukaStd_path = os.path.join(os.path.dirname(__file__), "..", "YurukaStd.ttf")
+    YurukaStd_path = os.path.join(os.path.dirname(__file__), "..", "fonts", "YurukaStd.ttf")
     with open(YurukaStd_path, "rb") as f:
         YurukaStd_data = base64.b64encode(f.read()).decode("utf-8")
 

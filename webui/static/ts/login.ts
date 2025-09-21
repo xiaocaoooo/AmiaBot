@@ -4,6 +4,7 @@
 class LoginManager {
   private loginForm: HTMLFormElement | null;
   private passwordInput: HTMLInputElement | null;
+  private rememberMeCheckbox: HTMLInputElement | null;
   
   /**
    * 构造函数，初始化登录管理器
@@ -11,6 +12,7 @@ class LoginManager {
   constructor() {
     this.loginForm = document.querySelector('form');
     this.passwordInput = document.getElementById('password') as HTMLInputElement | null;
+    this.rememberMeCheckbox = document.getElementById('remember_me') as HTMLInputElement | null;
     this.initEventListeners();
   }
   
@@ -134,8 +136,21 @@ class LoginManager {
       // 设置哈希密码值
       hashedPasswordInput.value = hashedPassword;
       
+      // 处理"记住我"选项
+      // 先移除可能存在的隐藏字段
+      const existingRememberMeInput = this.loginForm.querySelector('input[name="remember_me_hidden"]') as HTMLInputElement | null;
+      if (existingRememberMeInput) {
+        existingRememberMeInput.remove();
+      }
+      
+      // 创建新的隐藏字段存储记住我状态
+      const rememberMeInput = document.createElement('input');
+      rememberMeInput.type = 'hidden';
+      rememberMeInput.name = 'remember_me_hidden';
+      rememberMeInput.value = this.rememberMeCheckbox?.checked ? 'true' : 'false';
+      this.loginForm.appendChild(rememberMeInput);
+      
       // 清空原始密码输入框，避免在网络请求中发送原始密码
-      const originalPassword = this.passwordInput.value;
       this.passwordInput.value = '';
       
       // 提交表单

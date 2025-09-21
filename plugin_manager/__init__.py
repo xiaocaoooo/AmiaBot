@@ -237,6 +237,8 @@ class PluginManager:
             disabled_path = self.plugins_directory / f"{self.plugin_file_mapping[plugin_id]}.disabled"
             if disabled_path.exists():
                 disabled_path.rename(self.plugins_directory / self.plugin_file_mapping[plugin_id])
+                await self._load_plugin(disabled_path)
+                await self.reload_plugin(plugin_id)
                 logging.info(f"Plugin '{plugin_id}' enabled.")
                 return True
         return False
@@ -252,6 +254,7 @@ class PluginManager:
             enabled_path = self.plugins_directory / self.plugin_file_mapping[plugin_id]
             if enabled_path.exists():
                 enabled_path.rename(self.plugins_directory / f"{self.plugin_file_mapping[plugin_id]}.disabled")
+                await self.unload_plugin(plugin_id)
                 logging.info(f"Plugin '{plugin_id}' disabled.")
                 return True
         return False

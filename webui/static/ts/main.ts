@@ -150,8 +150,229 @@ class NavigationManager {
 }
 
 /**
- * 当DOM加载完成后初始化导航管理器
+ * 弹窗管理类
+ * 负责处理页面弹窗的显示、隐藏和交互
  */
+class AlertManager {
+  private alertsContainer: HTMLElement | null;
+
+  /**
+   * 构造函数，初始化弹窗管理器
+   */
+  constructor() {
+    this.alertsContainer = document.getElementById('alerts-container');
+    this.initEventListeners();
+  }
+
+  /**
+   * 初始化事件监听器
+   */
+  private initEventListeners(): void {
+    // 监听整个弹窗容器的点击事件，使用事件委托处理关闭按钮点击
+    if (this.alertsContainer) {
+      this.alertsContainer.addEventListener('click', (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('.alert-close')) {
+          const alertContainer = target.closest('.alert-container');
+          if (alertContainer) {
+            this.removeAlert(alertContainer as HTMLElement);
+          }
+        }
+      });
+    }
+  }
+
+  /**
+   * 显示弹窗
+   * @param title 弹窗标题 (支持字符串或HTML元素)
+   * @param content 弹窗内容 (支持字符串或HTML元素)
+   * @param type 弹窗类型 (默认: 'info')
+   * @param autoClose 是否自动关闭 (默认: false)
+   * @param duration 自动关闭延迟时间(毫秒) (默认: 3000)
+   * @returns 创建的弹窗元素
+   */
+  public showAlert(
+    title: string | HTMLElement,
+    content: string | HTMLElement,
+    type: 'info' | 'success' | 'warning' | 'error' = 'info',
+    autoClose: boolean = false,
+    duration: number = 3000
+  ): HTMLElement {
+    // 获取或创建弹窗容器
+    const container = this.getAlertsContainer();
+    if (!container) {
+      console.error('Alerts container not found or could not be created');
+      // 创建一个临时元素并返回，避免返回null
+      const tempDiv = document.createElement('div');
+      return tempDiv;
+    }
+
+    // 创建弹窗元素
+    const alertElement = document.createElement('div');
+    // 默认使用secondary-container样式
+    alertElement.className = `alert-container secondary-container`;
+
+    // 创建标题和内容容器
+    const titleElement = document.createElement('div');
+    titleElement.className = 'alert-title';
+    
+    const closeElement = document.createElement('div');
+    closeElement.className = 'alert-close';
+    closeElement.innerHTML = `<i class="fas fa-times"></i>`;
+    
+    const contentElement = document.createElement('div');
+    contentElement.className = 'alert-content';
+    
+    // 设置弹窗标题
+    if (typeof title === 'string') {
+      titleElement.innerHTML = title;
+    } else {
+      titleElement.appendChild(title);
+    }
+    
+    // 设置弹窗内容
+    if (typeof content === 'string') {
+      contentElement.innerHTML = content;
+    } else {
+      contentElement.appendChild(content);
+    }
+    
+    // 将元素添加到弹窗中
+    alertElement.appendChild(titleElement);
+    alertElement.appendChild(closeElement);
+    alertElement.appendChild(contentElement);
+
+    // 添加到容器
+    container.appendChild(alertElement);
+
+    // 如果设置了自动关闭，则在指定时间后关闭
+    if (autoClose) {
+      setTimeout(() => {
+        this.removeAlert(alertElement);
+      }, duration);
+    }
+
+    return alertElement;
+  }
+
+  /**
+   * 移除弹窗
+   * @param alertElement 要移除的弹窗元素
+   */
+  public removeAlert(alertElement: HTMLElement): void {
+    // 添加淡出动画效果
+    alertElement.style.opacity = '0';
+    alertElement.style.transition = 'opacity 0.3s ease-out';
+
+    // 等待动画完成后移除元素
+    setTimeout(() => {
+      if (alertElement.parentNode) {
+        alertElement.parentNode.removeChild(alertElement);
+      }
+
+      // 检查是否还有弹窗，如果没有则隐藏遮罩层
+      this.checkAndHideContainer();
+    }, 300);
+  }
+
+  /**
+   * 移除所有弹窗
+   */
+  public removeAllAlerts(): void {
+    const container = this.alertsContainer;
+    if (container) {
+      const alertElements = container.querySelectorAll('.alert-container');
+      alertElements.forEach(alert => {
+        this.removeAlert(alert as HTMLElement);
+      });
+    }
+  }
+
+  /**
+   * 获取或创建弹窗容器
+   * @returns 弹窗容器元素
+   */
+  private getAlertsContainer(): HTMLElement | null {
+    if (!this.alertsContainer) {
+      this.alertsContainer = document.getElementById('alerts-container');
+      
+      // 如果容器不存在，则创建一个
+      if (!this.alertsContainer) {
+        const newContainer = document.createElement('div');
+        newContainer.id = 'alerts-container';
+        document.body.appendChild(newContainer);
+        this.alertsContainer = newContainer;
+      }
+    }
+    return this.alertsContainer;
+  }
+
+  /**
+   * 检查是否还有弹窗，如果没有则隐藏容器
+   */
+  private checkAndHideContainer(): void {
+    const container = this.alertsContainer;
+    if (container && container.querySelectorAll('.alert-container').length === 0) {
+      // 移除遮罩层效果
+      container.classList.remove('has-alerts');
+    }
+  }
+}
+
+/**
+ * 当DOM加载完成后初始化导航管理器和弹窗管理器
+ */
+let alertManager: AlertManager;
+
 document.addEventListener('DOMContentLoaded', () => {
   new NavigationManager();
+  alertManager = new AlertManager();
 });
+
+/**
+ * 全局alert函数，可在页面的任何TypeScript代码中调用
+ * @param title 弹窗标题 (支持字符串或HTML元素)
+ * @param content 弹窗内容 (支持字符串或HTML元素)
+ * @param type 弹窗类型 (默认: 'info')
+ * @param autoClose 是否自动关闭 (默认: false)
+ * @param duration 自动关闭延迟时间(毫秒) (默认: 3000)
+ * @returns 创建的弹窗元素
+ */
+function showAlert(
+  title: string | HTMLElement,
+  content: string | HTMLElement,
+  type: 'info' | 'success' | 'warning' | 'error' = 'info',
+  autoClose: boolean = false,
+  duration: number = 3000
+): HTMLElement {
+  // 如果alertManager还未初始化，则延迟执行
+  if (!alertManager) {
+    setTimeout(() => {
+      showAlert(title, content, type, autoClose, duration);
+    }, 100);
+    // 返回临时元素避免返回undefined
+    const tempDiv = document.createElement('div');
+    return tempDiv;
+  }
+  
+  return alertManager.showAlert(title, content, type, autoClose, duration);
+}
+
+/**
+ * 全局移除弹窗函数
+ * @param alertElement 要移除的弹窗元素
+ */
+function removeAlert(alertElement: HTMLElement): void {
+  if (alertManager) {
+    alertManager.removeAlert(alertElement);
+  }
+}
+
+/**
+ * 全局移除所有弹窗函数
+ */
+function removeAllAlerts(): void {
+  if (alertManager) {
+    alertManager.removeAllAlerts();
+  }
+}

@@ -122,10 +122,6 @@ nav a.active::before {
     border-radius   : 36px 0 0 36px;
 }
 
-#content::-webkit-scrollbar {
-    width: 0;
-}
-
 #appbar {
     position               : fixed;
     display                : flex;

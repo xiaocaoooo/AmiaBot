@@ -47,6 +47,8 @@ async def main():
     plugin_manager = PluginManager()
     # 加载所有插件
     await plugin_manager.load_all_plugins()
+    
+    asyncio.create_task(bot.run())
 
     # 保持主程序运行
     while True:

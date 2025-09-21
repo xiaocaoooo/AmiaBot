@@ -9,15 +9,17 @@
 
 #logs-container {
     margin-top      : 20px;
-    overflow-x      : auto;
     border-radius   : 16px;
     background-color: var(--color-surface-container);
+    width           : 100%;
+    overflow        : hidden;
 }
 
 #logs-table {
     width          : 100%;
     border-collapse: collapse;
     font-size      : 14px;
+    table-layout   : fixed;
 }
 
 #logs-table th {
@@ -30,15 +32,40 @@
     position        : sticky;
     top             : 0;
     z-index         : 10;
+    white-space     : nowrap;
+}
+
+/* 表格列宽设置 - 除消息列外尽量占用最小宽度 */
+#logs-table th:nth-child(1),
+#logs-table td:nth-child(1) {
+    width: 20%;
+}
+
+#logs-table th:nth-child(2),
+#logs-table td:nth-child(2) {
+    width: 10%;
+}
+
+#logs-table th:nth-child(4),
+#logs-table td:nth-child(4) {
+    width: 10%;
+}
+
+#logs-table th:nth-child(5),
+#logs-table td:nth-child(5) {
+    width: 10%;
+}
+
+#logs-table tr:hover {
+    background-color: var(--color-surface-container-low);
 }
 
 #logs-table td {
     padding      : 12px 16px;
     border-bottom: 1px solid var(--color-outline-variant);
-}
-
-#logs-table tr:hover {
-    background-color: var(--color-surface-container-low);
+    white-space  : nowrap;
+    overflow     : hidden;
+    text-overflow: ellipsis;
 }
 
 /* 日志级别样式 */
@@ -197,5 +224,65 @@
 
     #log-filter-container {
         justify-content: center;
+    }
+}
+
+/* 日志详情卡片式布局样式 */
+.log-details-container {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.log-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+}
+
+.log-detail-item {
+    background-color: var(--color-surface-container);
+    border-radius: 8px;
+    padding: 12px;
+    transition: all 0.2s ease;
+}
+
+.log-detail-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-on-surface-variant);
+    margin-bottom: 4px;
+}
+
+.log-detail-value {
+    font-size: 14px;
+    color: var(--color-on-surface);
+    word-break: break-word;
+}
+
+.log-message-item {
+    grid-column: 1 / -1;
+    background-color: var(--color-surface-container);
+}
+
+.log-message-item .log-detail-label {
+    color: var(--color-on-surface-variant);
+}
+
+.log-message-item .log-detail-value {
+    color: var(--color-on-surface-variant);
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+/* 日志详情响应式设计 */
+@media (max-width: 600px) {
+    .log-details-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .log-detail-item {
+        padding: 10px;
     }
 }
