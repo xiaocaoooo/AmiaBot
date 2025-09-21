@@ -1,5 +1,15 @@
 {
     "id": "example_plugin_id",
     "name": "Example Plugin",
-    "description": "A test plugin."
+    "description": "A test plugin.",
+    "version": "1.0.0",
+    "author": "Amia",
+    "triggers": [
+        {
+            "type": "text_pattern",
+            "data":{
+                "pattern": "echo.+"
+            }
+        }
+    ]
 }

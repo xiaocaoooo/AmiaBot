@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
-from amia import Amia
+from . import Amia
+from typing import Dict
 
 
 class Sex(Enum):
@@ -20,6 +21,15 @@ class User:
     birthday: datetime
     age: int
     sex: Sex
+    _last_update_time: datetime
+
+    _instances: Dict[str, "User"] = {}
+
+    def __new__(cls, user_id: int, *, group_id: int | None = None, bot: Amia):
+        key = f"{user_id}_{group_id}"
+        if key not in cls._instances:
+            cls._instances[key] = super().__new__(cls)
+        return cls._instances[key]
 
     @property
     def avatar(self) -> str:
@@ -29,8 +39,11 @@ class User:
         self.user_id = user_id
         self.bot = bot
 
-    async def get_info(self) -> "User":
+    async def get_info(self, *, force_update: bool = False) -> "User":
         """获取用户信息"""
+        if not force_update and hasattr(self, "_last_update_time") and datetime.now() - self._last_update_time < timedelta(milliseconds=self.bot.config.info_cache_time):  # type: ignore
+            return self
+
         info = await self.bot.doAction("get_stranger_info", {"user_id": self.user_id})
 
         data = info.get("data", {})
@@ -61,6 +74,8 @@ class User:
             self.sex = Sex(data.get("sex", "unknown"))
         except ValueError:
             self.sex = Sex.UNKNOWN
+
+        self._last_update_time = datetime.now()
 
         return self
 

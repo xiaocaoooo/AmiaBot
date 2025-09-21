@@ -8,5 +8,6 @@
         "host": "127.0.0.1",
         "port": 8080,
         "password": "admin"
-    }
+    },
+    "info_cache_time": 60000
 }

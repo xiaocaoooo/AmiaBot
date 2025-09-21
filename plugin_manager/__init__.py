@@ -7,7 +7,7 @@ import json
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Union
 
 from amia import Amia
 
@@ -40,6 +40,106 @@ class ProjectInterface:
         logging.info(f"Project received data from plugin: {json.dumps(data)}")
         # Here, you would implement the specific business logic, like writing to a database or sending a network request.
         return {"status": "success", "message": "Data received."}
+
+
+class Plugin:
+    """Represents a plugin with its metadata, status and functionality."""
+    
+    def __init__(self, plugin_id: str, plugin_info: Dict[str, Any]):
+        """
+        Initialize a Plugin instance with its metadata and status.
+        
+        Args:
+            plugin_id (str): The unique identifier of the plugin.
+            plugin_info (Dict[str, Any]): A dictionary containing plugin metadata and status.
+        """
+        self.id = plugin_id
+        self.name = plugin_info.get("name", plugin_id)
+        self.description = plugin_info.get("description", "No description available")
+        self.version = plugin_info.get("version", "1.0.0")
+        self.author = plugin_info.get("author", "Unknown")
+        self.triggers = plugin_info.get("triggers", [])
+        self.enabled = plugin_info.get("enabled", False)
+        self.loaded = plugin_info.get("loaded", False)
+        self.file_name = plugin_info.get("file_name", "")
+        self.file_path = plugin_info.get("file_path", "")
+        
+        # Additional plugin metadata
+        self.metadata = {k: v for k, v in plugin_info.items() 
+                        if k not in ["id", "name", "description", "version", "author", 
+                                    "triggers", "enabled", "loaded", "file_name", "file_path"]}
+        
+        # Reference to the loaded module
+        self.module = None
+        
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert plugin information to a dictionary.
+        
+        Returns:
+            Dict[str, Any]: A dictionary containing all plugin information.
+        """
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "version": self.version,
+            "author": self.author,
+            "triggers": self.triggers,
+            "enabled": self.enabled,
+            "loaded": self.loaded,
+            "file_name": self.file_name,
+            "file_path": self.file_path,
+            **self.metadata
+        }
+    
+    async def call_function(self, function_name: str, **kwargs: Any) -> Optional[Any]:
+        """
+        Safely call a function within the plugin module.
+        
+        Args:
+            function_name (str): The name of the function to call.
+            **kwargs (Any): Keyword arguments to pass to the function.
+            
+        Returns:
+            Optional[Any]: The return value of the function, or None if an error occurred.
+        """
+        if not self.module or not self.loaded:
+            logging.error(f"Cannot call function '{function_name}' in plugin '{self.id}': Plugin not loaded.")
+            return None
+        
+        if not hasattr(self.module, function_name):
+            logging.error(f"Function '{function_name}' not found in plugin '{self.id}'.")
+            return None
+        
+        try:
+            func = getattr(self.module, function_name)
+            # Check if the function is awaitable and call it accordingly
+            if asyncio.iscoroutinefunction(func):
+                return await func(**kwargs)
+            else:
+                return func(**kwargs)
+        except Exception as e:
+            logging.error(f"Error calling function '{function_name}' in plugin '{self.id}': {e}")
+            return None
+    
+    def is_triggered(self, trigger_type: str, trigger_data: Dict[str, Any]) -> bool:
+        """
+        Check if the plugin is triggered by the given trigger type and data.
+        
+        Args:
+            trigger_type (str): The type of trigger to check.
+            trigger_data (Dict[str, Any]): The data associated with the trigger.
+            
+        Returns:
+            bool: True if the plugin is triggered, False otherwise.
+        """
+        for trigger in self.triggers:
+            if trigger.get("type") == trigger_type:
+                # Here you would implement the actual trigger matching logic
+                # This is a placeholder implementation
+                return True
+        return False
 
 
 class PluginManager:
@@ -367,3 +467,50 @@ class PluginManager:
             "enabled_count": enabled_count,
             "plugins": plugins_status,
         }
+
+    async def get_plugin(self, plugin_id: str) -> Optional[Plugin]:
+        """
+        Get a Plugin instance for the specified plugin ID.
+        
+        Args:
+            plugin_id (str): The ID of the plugin to retrieve.
+            
+        Returns:
+            Optional[Plugin]: A Plugin instance or None if not found.
+        """
+        all_plugins_status = await self.get_all_plugins_status()
+        plugins = all_plugins_status.get("plugins", {})
+        
+        if plugin_id in plugins:
+            plugin_info = plugins[plugin_id]
+            plugin = Plugin(plugin_id, plugin_info)
+            
+            # Set the module reference if the plugin is loaded
+            if plugin.loaded and plugin_id in self.loaded_plugins:
+                plugin.module = self.loaded_plugins[plugin_id]
+                
+            return plugin
+        
+        return None
+
+    async def get_all_plugins(self) -> List[Plugin]:
+        """
+        Get a list of Plugin instances for all available plugins.
+        
+        Returns:
+            List[Plugin]: A list of Plugin instances.
+        """
+        all_plugins_status = await self.get_all_plugins_status()
+        plugins = all_plugins_status.get("plugins", {})
+        
+        plugin_instances = []
+        for plugin_id, plugin_info in plugins.items():
+            plugin = Plugin(plugin_id, plugin_info)
+            
+            # Set the module reference if the plugin is loaded
+            if plugin.loaded and plugin_id in self.loaded_plugins:
+                plugin.module = self.loaded_plugins[plugin_id]
+                
+            plugin_instances.append(plugin)
+            
+        return plugin_instances

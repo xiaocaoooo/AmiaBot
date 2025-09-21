@@ -60,3 +60,4 @@ node_modules/
 webui/static/js/
 onebot/
 docs/
+.mypy_cache

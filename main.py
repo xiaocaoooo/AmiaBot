@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import shutil
 import sys
 import threading
 from pathlib import Path
@@ -10,7 +11,7 @@ from plugin_manager import PluginManager, ProjectInterface
 
 config = Config(Path("./config.json"))
 
-bot = Amia(config.onebot.host, config.onebot.http_port, config.onebot.ws_port)  # type: ignore
+bot = Amia(config.onebot.host, config.onebot.http_port, config.onebot.ws_port, config)  # type: ignore
 
 ProjectInterface().bot = bot
 
@@ -42,7 +43,7 @@ except ImportError:
 
 
 async def main():
-    """主程序入口"""
+    """主程序入口"""    
     # 初始化插件管理器
     plugin_manager = PluginManager()
     # 加载所有插件
@@ -57,6 +58,10 @@ async def main():
 
 if __name__ == "__main__":
     # 创建目录
+    cache_path = Path("./cache")
+    if cache_path.exists():
+        shutil.rmtree(cache_path)
+    
     Path("./plugins").mkdir(exist_ok=True)
     Path("./cache/plugins").mkdir(parents=True, exist_ok=True)
 

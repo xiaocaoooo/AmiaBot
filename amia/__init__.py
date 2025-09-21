@@ -3,13 +3,15 @@ from typing import Literal
 import logging
 import asyncio
 import aiohttp
+from config import Config
 
 
 class Amia:
-    def __init__(self, host: str, http_port: int, ws_port: int):
+    def __init__(self, host: str, http_port: int, ws_port: int, config: Config):
         self.host = host
         self.http_port = http_port
         self.ws_port = ws_port
+        self.config = config
     
     async def run(self):
         """创建ws连接"""
@@ -43,6 +45,7 @@ class Amia:
         pass
 
     async def doAction(self, action: str, params: dict|None=None, methods:Literal["GET", "POST"]="POST") -> dict:
+        logging.info(f"doAction {action} {params}")
         async with aiohttp.ClientSession() as session:
             async with session.request(methods, f"http://{self.host}:{self.http_port}/{action}", json=params or {}) as resp:
                 return await resp.json()
