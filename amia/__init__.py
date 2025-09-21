@@ -1,3 +1,4 @@
+import json
 from typing import Literal
 import logging
 import asyncio
@@ -25,6 +26,7 @@ class Amia:
                         async for msg in ws:
                             if msg.type == aiohttp.WSMsgType.TEXT:
                                 logging.info(f"Received message: {msg.data}")
+                                asyncio.create_task(self.process_message(json.loads(msg.data)))
                             elif msg.type == aiohttp.WSMsgType.ERROR:
                                 logging.error(f"WebSocket error: {ws.exception()}")
             except (ClientError, asyncio.TimeoutError) as e:
@@ -35,6 +37,10 @@ class Amia:
                 logging.error(f"Unexpected error: {str(e)}. Retrying in {retry_delay} seconds...")
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(retry_delay * 2, max_retry_delay)
+                
+    async def process_message(self, msg: dict):
+        """处理ws消息"""
+        pass
 
     async def doAction(self, action: str, params: dict|None=None, methods:Literal["GET", "POST"]="POST") -> dict:
         async with aiohttp.ClientSession() as session:

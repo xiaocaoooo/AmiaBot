@@ -58,3 +58,5 @@ webui/static/cache/
 
 node_modules/
 webui/static/js/
+onebot/
+docs/

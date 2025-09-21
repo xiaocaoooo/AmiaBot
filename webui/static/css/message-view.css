@@ -1,0 +1,243 @@
+/* 消息查看页面特定样式 */
+/* 消息查看页面特定样式 */
+.message-item {
+    background-color: var(--color-surface-container);
+    border-radius   : 16px;
+    padding         : 16px;
+    margin-bottom   : 16px;
+    box-shadow      : 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition      : transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* .message-item:hover {
+    transform : translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+} */
+
+.message-header {
+    display        : flex;
+    justify-content: space-between;
+    align-items    : center;
+    margin-bottom  : 8px;
+    color          : var(--color-on-surface-variant);
+    font-size      : 12px;
+}
+
+.message-time {
+    font-weight: 500;
+}
+
+.message-type {
+    display    : flex;
+    align-items: center;
+    gap        : 4px;
+}
+
+.message-sender {
+    margin-bottom: 8px;
+    font-weight  : 600;
+    color        : var(--color-on-surface);
+}
+
+.sender-nickname {
+    color: var(--color-primary);
+}
+
+.sender-card {
+    color      : var(--color-on-surface-variant);
+    font-weight: normal;
+    font-size  : 14px;
+}
+
+.group-name {
+    color           : var(--color-on-tertiary);
+    font-weight     : normal;
+    font-size       : 12px;
+    margin-left     : 8px;
+    background-color: var(--color-tertiary-container);
+    padding         : 2px 6px;
+    border-radius   : 4px;
+}
+
+.message-content {
+    padding      : 12px 0;
+    border-top   : 1px solid var(--color-outline-variant);
+    border-bottom: 1px solid var(--color-outline-variant);
+    margin-bottom: 8px;
+    word-break   : break-word;
+    line-height  : 1.6;
+    color        : var(--color-on-surface);
+}
+
+.message-meta {
+    display        : flex;
+    justify-content: space-between;
+    font-size      : 11px;
+    color          : var(--color-outline);
+}
+
+.empty-state {
+    text-align: center;
+    padding   : 60px 20px;
+    color     : var(--color-outline);
+}
+
+.empty-state i {
+    font-size    : 48px;
+    margin-bottom: 16px;
+    opacity      : 0.5;
+}
+
+.empty-state p {
+    font-size: 16px;
+    margin   : 0;
+}
+
+.error-container {
+    text-align      : center;
+    padding         : 12px;
+    background-color: var(--color-error-container);
+    color           : var(--color-on-error-container);
+    margin          : 20px 0;
+    border-radius   : 24px;
+    overflow        : hidden;
+}
+
+.error-container i {
+    margin-right: 8px;
+}
+
+/* 消息元素特殊样式 */
+.message-image,
+.message-at,
+.message-face,
+.message-reply,
+.message-file,
+.message-video,
+.message-unknown,
+.message-voice,
+.message-music,
+.message-mface,
+.message-markdown,
+.message-forward,
+.message-xml,
+.message-poke,
+.message-dice,
+.message-rps,
+.message-miniapp,
+.message-contact,
+.message-location,
+.message-json,
+.message-node {
+    display      : inline-block;
+    padding      : 2px 6px;
+    border-radius: 4px;
+    margin       : 0 2px;
+    font-weight  : 500;
+}
+
+.message-image {
+    background-color: var(--color-primary-container);
+    color           : var(--color-on-primary-container);
+}
+
+.message-at {
+    background-color: var(--color-secondary-container);
+    color           : var(--color-on-secondary-container);
+}
+
+.message-face {
+    background-color: var(--color-tertiary-container);
+    color           : var(--color-on-tertiary-container);
+}
+
+.message-reply {
+    background-color: var(--color-primary-container);
+    color           : var(--color-on-primary-container);
+}
+
+.message-file {
+    background-color: var(--color-surface-container-low);
+    color           : var(--color-on-surface-variant);
+}
+
+.message-video {
+    background-color: var(--color-tertiary-container);
+    color           : var(--color-on-tertiary-container);
+}
+
+.message-unknown {
+    background-color: var(--color-surface-container-low);
+    color           : var(--color-outline);
+}
+
+/* 新增消息类型样式 */
+.message-voice {
+    background-color: var(--color-primary-container);
+    color           : var(--color-on-primary-container);
+}
+
+.message-music {
+    background-color: var(--color-secondary-container);
+    color           : var(--color-on-secondary-container);
+}
+
+.message-mface {
+    background-color: var(--color-tertiary-container);
+    color           : var(--color-on-tertiary-container);
+}
+
+.message-markdown {
+    background-color: var(--color-surface-container-low);
+    color           : var(--color-on-surface-variant);
+}
+
+.message-forward {
+    background-color: var(--color-primary-container);
+    color           : var(--color-on-primary-container);
+}
+
+.message-xml {
+    background-color: var(--color-secondary-container);
+    color           : var(--color-on-secondary-container);
+}
+
+.message-poke {
+    background-color: var(--color-tertiary-container);
+    color           : var(--color-on-tertiary-container);
+}
+
+.message-dice {
+    background-color: var(--color-surface-container-low);
+    color           : var(--color-on-surface-variant);
+}
+
+.message-rps {
+    background-color: var(--color-primary-container);
+    color           : var(--color-on-primary-container);
+}
+
+.message-miniapp {
+    background-color: var(--color-secondary-container);
+    color           : var(--color-on-secondary-container);
+}
+
+.message-contact {
+    background-color: var(--color-tertiary-container);
+    color           : var(--color-on-tertiary-container);
+}
+
+.message-location {
+    background-color: var(--color-surface-container-low);
+    color           : var(--color-on-surface-variant);
+}
+
+.message-json {
+    background-color: var(--color-primary-container);
+    color           : var(--color-on-primary-container);
+}
+
+.message-node {
+    background-color: var(--color-secondary-container);
+    color           : var(--color-on-secondary-container);
+}

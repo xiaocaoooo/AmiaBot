@@ -495,11 +495,16 @@ async def get_logs(request):
         page = int(request.query.get("page", 1))
         page_size = int(request.query.get("page_size", 20))
         no_webui = request.query.get("no_webui", "false").lower() == "true"
+        only_message = request.query.get("only_message", "false").lower() == "true"
         log_buffer_copy = log_buffer.copy()
         log_buffer_copy.reverse()
         if no_webui:
             log_buffer_copy = [
                 log for log in log_buffer_copy if "web_log" not in log.get("module", "")
+            ]
+        if only_message:
+            log_buffer_copy = [
+                log for log in log_buffer_copy if log.get("message", "").startswith("Received message: ")
             ]
 
         # 参数验证
