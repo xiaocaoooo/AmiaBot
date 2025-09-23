@@ -120,7 +120,9 @@ class Amia:
                 f"http://{self.host}:{self.http_port}/{action}",
                 json=params or {},
             ) as resp:
-                return cast(Dict[str, Any], await resp.json())
+                data = cast(Dict[str, Any], await resp.json())
+                logging.info(f"操作 {action} 响应: {json.dumps(data)}")
+                return data
 
     async def getBotUser(self) -> "User":  # type: ignore  # noqa: F821
         """获取机器人自身的用户信息

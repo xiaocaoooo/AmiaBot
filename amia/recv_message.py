@@ -60,6 +60,24 @@ class RecvMessage:
             self.raw_message = ""
             self.message = []
             self._initialized = True
+            
+    @property
+    def is_group(self) -> bool:
+        """判断消息是否为群消息
+
+        Returns:
+            bool: 如果是群消息则返回True，否则返回False
+        """
+        return self.message_type == "group"
+    
+    @property
+    def is_private(self) -> bool:
+        """判断消息是否为私聊消息
+
+        Returns:
+            bool: 如果是私聊消息则返回True，否则返回False
+        """
+        return self.message_type == "private"
 
     async def get_info(self) -> "RecvMessage":
         """异步获取消息的详细信息

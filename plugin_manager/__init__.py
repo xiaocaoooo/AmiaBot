@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional, List, Union, Set, TypeVar, Callable, Tup
 
 from amia import Amia
 from amia.recv_message import RecvMessage
+from config import Config
 
 
 # 定义项目接口，供插件调用
@@ -179,7 +180,7 @@ class PluginManager:
         self,
         plugins_directory: str = "./plugins",
         cache_directory: str = "./cache/plugins",
-        config_directory: str = "./data/configs/plugins",
+        data_directory: str = "./data",
     ) -> None:
         """
         初始化PluginManager。
@@ -192,7 +193,9 @@ class PluginManager:
         self.bot: Amia = Amia.get_instance()
         self.plugins_directory: Path = Path(plugins_directory)
         self.cache_directory: Path = Path(cache_directory)
-        self.config_directory: Path = Path(config_directory)
+        self.data_directory: Path = Path(data_directory)
+        self.config_directory: Path = self.data_directory / "configs"
+        self.plugin_config_directory: Path = self.config_directory / "plugins"
         self.loaded_plugins: Dict[str, Any] = {}  # 存储已加载的插件模块
         self.plugin_file_mapping: Dict[str, str] = {}  # 映射插件ID到文件名
         # 添加一个字典来缓存Plugin对象，避免重复读取ZIP文件
@@ -205,7 +208,7 @@ class PluginManager:
 
         self.plugins_directory.mkdir(exist_ok=True)
         self.cache_directory.mkdir(parents=True, exist_ok=True)
-        self.config_directory.mkdir(parents=True, exist_ok=True)
+        self.plugin_config_directory.mkdir(parents=True, exist_ok=True)
 
         logging.info("PluginManager 初始化完成")
         if not self._is_init_listener:
@@ -245,7 +248,7 @@ class PluginManager:
             plugin_id (str): 插件的ID。
             plugin_info (Dict[str, Any]): 插件的信息。
         """
-        config_file_path = self.config_directory / f"{plugin_id}.json"
+        config_file_path = self.plugin_config_directory / f"{plugin_id}.json"
 
         # 如果配置文件已存在，则不覆盖
         if config_file_path.exists():
@@ -740,20 +743,35 @@ class PluginManager:
         Args:
             message (Dict[str, Any]): 接收到的消息数据。
         """
-        # {'self_id': 904228000, 'user_id': 1509127917, 'time': 1758587927, 'message_id': 1929076288, 'message_seq': 1929076288, 'real_id': 1929076288, 'real_seq': '139516', 'message_type': 'group', 'sender': {'user_id': 1509127917, 'nickname': 'Echo', 'card': '一加', 'role': 'member'}, 'raw_message': '[CQ:at,qq=3265781740] 你女友真的很猛吗', 'font': 14, 'sub_type': 'normal', 'message': [{'type': 'at', 'data': {'qq': '3265781740'}}, {'type': 'text', 'data': {'text': ' 你女友真的很猛吗'}}], 'message_format': 'array', 'post_type': 'message', 'group_id': 868666754, 'group_name': '米加杂鱼大学⑧群'}
+        group_categories = Config(self.config_directory / "group_categories.json")
         if message.get("post_type") == "message":
             if "message_id" in message:
                 msg = RecvMessage(message["message_id"], self.bot)
                 await msg.get_info()
+                # if msg.user_id!=3381464350:return
                 for plugin in self._plugins_cache.values():
                     if plugin.enabled:
+                        plugin_config = Config(self.plugin_config_directory / f"{plugin.id}.json")
                         for trigger in plugin.triggers:
-                            if trigger["type"] == "text_pattern":
-                                if re.search(
-                                    trigger["params"]["pattern"], msg.text.lower()
-                                ):
-                                    asyncio.create_task(
-                                        plugin.call_function(
-                                            trigger["func"], message=msg
+                            trigger_config = plugin_config.triggers[trigger["id"]]
+                            # 检查群组是否在指定的分类中
+                            is_in_valid_group = False
+                            if msg.is_group and trigger_config.groups:
+                                # 将分类ID转换为分类对象，再检查群组ID是否在其中
+                                for category_id in trigger_config.groups:
+                                    if category_id in group_categories and msg.group_id in group_categories[category_id].get("groups", []):
+                                        is_in_valid_group = True
+                                        logging.info(f"检查群组 {msg.group_id} 是否在分类 {category_id} 中: {is_in_valid_group}")
+                                        break
+                            
+                            if trigger_config.enabled and (is_in_valid_group or (msg.is_private and trigger_config.can_private)):
+                                if trigger["type"] == "text_pattern":
+                                    if re.search(
+                                        trigger["params"]["pattern"], msg.text.lower()
+                                    ):
+                                        asyncio.create_task(
+                                            plugin.call_function(
+                                                trigger["func"], message=msg
+                                            )
                                         )
-                                    )
+        logging.info(f"处理消息结束: {message}")

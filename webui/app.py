@@ -637,6 +637,10 @@ async def get_group_categories(request):
         # 读取并解析JSON文件
         with open(file_path, "r", encoding="utf-8") as f:
             categories_data = json.load(f)
+        
+        # 转换为数组格式以便前端处理
+        if isinstance(categories_data, dict):
+            categories_data = list(categories_data.values())
 
         # 返回配置数据
         return web.json_response({"code": 0, "data": categories_data})
@@ -682,9 +686,17 @@ async def update_group_categories(request):
         # 确保目录存在
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
+        # 将数组转换为对象格式（使用id作为键）
+        if isinstance(categories_data, list):
+            categories_dict = {}
+            for category in categories_data:
+                if "id" in category:
+                    categories_dict[category["id"]] = category
+            categories_data = categories_dict
+        
         # 写入格式化的JSON内容
         with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(categories_data, f, ensure_ascii=False)
+            json.dump(categories_data, f, ensure_ascii=False, indent=2)
 
         # 返回成功响应
         return web.json_response(
