@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
     # 运行主程序
     try:
-        asyncio.run(main())
+        asyncio.run(main=main())
     except KeyboardInterrupt:
         logging.info("程序已被用户中断")
     except Exception as e:

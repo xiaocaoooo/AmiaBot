@@ -19,6 +19,7 @@ class RecvMessage:
     message: List["RecvBaseMessage"]  # 消息链，解析后的消息列表
     group_id: Optional[int] = None  # 群组ID(群消息时存在)
     group_name: Optional[str] = None  # 群组名称(群消息时存在)
+    raw: Dict[str, Any]  # 原始消息数据
     bot: Amia  # 机器人实例引用
 
     _instances: ClassVar[Dict[int, "RecvMessage"]] = {}  # 单例缓存
@@ -74,6 +75,8 @@ class RecvMessage:
         
         data = info.get("data", {})
         
+        self.raw = data
+        
         self.self_id = data.get("self_id", 0)
         self.user_id = data.get("user_id", 0)
         self.time = datetime.fromtimestamp(data.get("time", 0))
@@ -93,6 +96,15 @@ class RecvMessage:
         self.message = [RecvBaseMessage.fromDict(item) for item in raw_messages]
 
         return self
+    
+    @property
+    def text(self) -> str:
+        """获取消息的文本内容
+        
+        Returns:
+            str: 消息的文本内容
+        """
+        return "".join([msg.data.get("text", "") for msg in self.message]).strip()
 
     def toDict(self) -> Dict[str, Any]:
         """将消息对象转换为字典格式

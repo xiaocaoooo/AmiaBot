@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import importlib
 import sys
@@ -7,77 +8,93 @@ import json
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List, Union, Set, TypeVar, Callable, Tuple
 
 from amia import Amia
+from amia.recv_message import RecvMessage
 
 
 # 定义项目接口，供插件调用
 class ProjectInterface:
-    """Interface for plugins to interact with the main project."""
+    """插件与主项目交互的接口。"""
 
-    _instance = None
+    _instance: Optional["ProjectInterface"] = None
     bot: Amia | None = None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, **kwargs) -> "ProjectInterface":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
-        pass
+    def __init__(self) -> None:
+        """初始化项目接口实例。"""
+        self.bot = Amia.get_instance()
 
     async def send_data_to_project(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Example: A plugin calls this to send data to the project.
+        示例：插件调用此方法向项目发送数据。
 
         Args:
-            data (Dict[str, Any]): The data to be sent.
+            data (Dict[str, Any]): 要发送的数据。
 
         Returns:
-            Dict[str, Any]: A response dictionary.
+            Dict[str, Any]: 响应字典。
         """
-        logging.info(f"Project received data from plugin: {json.dumps(data)}")
-        # Here, you would implement the specific business logic, like writing to a database or sending a network request.
-        return {"status": "success", "message": "Data received."}
+        logging.info(f"项目接收来自插件的数据: {json.dumps(data)}")
+        # 这里可以实现特定的业务逻辑，如写入数据库或发送网络请求
+        return {"status": "success", "message": "数据已接收"}
 
 
 class Plugin:
-    """Represents a plugin with its metadata, status and functionality."""
-    
-    def __init__(self, plugin_id: str, plugin_info: Dict[str, Any]):
+    """表示一个插件，包含其元数据、状态和功能。"""
+
+    def __init__(self, plugin_id: str, plugin_info: Dict[str, Any]) -> None:
         """
-        Initialize a Plugin instance with its metadata and status.
-        
+        使用插件的元数据和状态初始化Plugin实例。
+
         Args:
-            plugin_id (str): The unique identifier of the plugin.
-            plugin_info (Dict[str, Any]): A dictionary containing plugin metadata and status.
+            plugin_id (str): 插件的唯一标识符。
+            plugin_info (Dict[str, Any]): 包含插件元数据和状态的字典。
         """
-        self.id = plugin_id
-        self.name = plugin_info.get("name", plugin_id)
-        self.description = plugin_info.get("description", "No description available")
-        self.version = plugin_info.get("version", "1.0.0")
-        self.author = plugin_info.get("author", "Unknown")
-        self.triggers = plugin_info.get("triggers", [])
-        self.enabled = plugin_info.get("enabled", False)
-        self.loaded = plugin_info.get("loaded", False)
-        self.file_name = plugin_info.get("file_name", "")
-        self.file_path = plugin_info.get("file_path", "")
-        
-        # Additional plugin metadata
-        self.metadata = {k: v for k, v in plugin_info.items() 
-                        if k not in ["id", "name", "description", "version", "author", 
-                                    "triggers", "enabled", "loaded", "file_name", "file_path"]}
-        
-        # Reference to the loaded module
-        self.module = None
-        
+        self.id: str = plugin_id
+        self.name: str = plugin_info.get("name", plugin_id)
+        self.description: str = plugin_info.get("description", "暂无描述")
+        self.version: str = plugin_info.get("version", "1.0.0")
+        self.author: str = plugin_info.get("author", "Unknown")
+        self.triggers: List[Dict[str, Any]] = plugin_info.get("triggers", [])
+        self.enabled: bool = plugin_info.get("enabled", False)
+        self.loaded: bool = plugin_info.get("loaded", False)
+        self.file_name: str = plugin_info.get("file_name", "")
+        self.file_path: str = plugin_info.get("file_path", "")
+
+        # 额外的插件元数据
+        self.metadata: Dict[str, Any] = {
+            k: v
+            for k, v in plugin_info.items()
+            if k
+            not in [
+                "id",
+                "name",
+                "description",
+                "version",
+                "author",
+                "triggers",
+                "enabled",
+                "loaded",
+                "file_name",
+                "file_path",
+            ]
+        }
+
+        # 加载的模块引用
+        self.module: Any = None
+
     def to_dict(self) -> Dict[str, Any]:
         """
-        Convert plugin information to a dictionary.
-        
+        将插件信息转换为字典。
+
         Returns:
-            Dict[str, Any]: A dictionary containing all plugin information.
+            Dict[str, Any]: 包含所有插件信息的字典。
         """
         return {
             "id": self.id,
@@ -90,64 +107,70 @@ class Plugin:
             "loaded": self.loaded,
             "file_name": self.file_name,
             "file_path": self.file_path,
-            **self.metadata
+            **self.metadata,
         }
-    
+
     async def call_function(self, function_name: str, **kwargs: Any) -> Optional[Any]:
         """
-        Safely call a function within the plugin module.
-        
+        安全地调用插件模块中的函数。
+
         Args:
-            function_name (str): The name of the function to call.
-            **kwargs (Any): Keyword arguments to pass to the function.
-            
+            function_name (str): 要调用的函数名称。
+            **kwargs (Any): 传递给函数的关键字参数。
+
         Returns:
-            Optional[Any]: The return value of the function, or None if an error occurred.
+            Optional[Any]: 函数的返回值，如果发生错误则为None。
         """
         if not self.module or not self.loaded:
-            logging.error(f"Cannot call function '{function_name}' in plugin '{self.id}': Plugin not loaded.")
+            logging.error(
+                f"无法调用插件 '{self.id}' 中的函数 '{function_name}': 插件未加载。"
+            )
             return None
-        
+
         if not hasattr(self.module, function_name):
-            logging.error(f"Function '{function_name}' not found in plugin '{self.id}'.")
+            logging.error(f"在插件 '{self.id}' 中未找到函数 '{function_name}'。")
             return None
-        
+
         try:
             func = getattr(self.module, function_name)
-            # Check if the function is awaitable and call it accordingly
+            # 检查函数是否可等待并相应地调用
             if asyncio.iscoroutinefunction(func):
                 return await func(**kwargs)
             else:
                 return func(**kwargs)
         except Exception as e:
-            logging.error(f"Error calling function '{function_name}' in plugin '{self.id}': {e}")
+            logging.error(
+                f"调用插件 '{self.id}' 中的函数 '{function_name}' 时出错: {e}"
+            )
             return None
-    
+
     def is_triggered(self, trigger_type: str, trigger_data: Dict[str, Any]) -> bool:
         """
-        Check if the plugin is triggered by the given trigger type and data.
-        
+        检查插件是否被给定的触发器类型和数据触发。
+
         Args:
-            trigger_type (str): The type of trigger to check.
-            trigger_data (Dict[str, Any]): The data associated with the trigger.
-            
+            trigger_type (str): 要检查的触发器类型。
+            trigger_data (Dict[str, Any]): 与触发器关联的数据。
+
         Returns:
-            bool: True if the plugin is triggered, False otherwise.
+            bool: 如果插件被触发则为True，否则为False。
         """
         for trigger in self.triggers:
             if trigger.get("type") == trigger_type:
-                # Here you would implement the actual trigger matching logic
-                # This is a placeholder implementation
+                # 这里可以实现实际的触发器匹配逻辑
+                # 这是一个占位符实现
                 return True
         return False
 
 
 class PluginManager:
-    """Manages the lifecycle of plugins, including loading, unloading, and execution."""
+    """管理插件的生命周期，包括加载、卸载和执行。"""
 
-    _instance = None
+    _instance: Optional["PluginManager"] = None
+    _is_init_listener: bool = False
+    _bot: Optional[Amia] = None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, **kwargs) -> "PluginManager":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -156,54 +179,68 @@ class PluginManager:
         self,
         plugins_directory: str = "./plugins",
         cache_directory: str = "./cache/plugins",
-    ):
+    ) -> None:
         """
-        Initializes the PluginManager.
+        初始化PluginManager。
 
         Args:
-            plugins_directory (str): The directory where plugin files are stored.
-            cache_directory (str): The directory for caching extracted plugin files.
+            plugins_directory (str): 存储插件文件的目录。
+            cache_directory (str): 用于缓存提取的插件文件的目录。
         """
-        self.plugins_directory = Path(plugins_directory)
-        self.cache_directory = Path(cache_directory)
-        self.loaded_plugins: Dict[str, Any] = {}
-        self.plugin_file_mapping: Dict[str, str] = {}
-        self.project_interface = ProjectInterface()
+        self.bot: Amia = Amia.get_instance()
+        self.plugins_directory: Path = Path(plugins_directory)
+        self.cache_directory: Path = Path(cache_directory)
+        self.loaded_plugins: Dict[str, Any] = {}  # 存储已加载的插件模块
+        self.plugin_file_mapping: Dict[str, str] = {}  # 映射插件ID到文件名
+        # 添加一个字典来缓存Plugin对象，避免重复读取ZIP文件
+        self._plugins_cache: Dict[str, Plugin] = {}  # 缓存Plugin对象
+        self.project_interface: ProjectInterface = ProjectInterface()
 
-        # Clean up the cache directory on initialization
+        # 初始化时清理缓存目录
         if self.cache_directory.exists():
             shutil.rmtree(self.cache_directory)
 
         self.plugins_directory.mkdir(exist_ok=True)
         self.cache_directory.mkdir(parents=True, exist_ok=True)
 
+        logging.info("PluginManager 初始化完成")
+        if not self._is_init_listener:
+            self.bot.listener(self._process_message)
+            self._is_init_listener = True
+
     async def _extract_plugin(self, plugin_zip_path: Path) -> str:
         """
-        Extracts a plugin ZIP file to the cache directory and returns the plugin ID.
+        将插件ZIP文件提取到缓存目录并返回插件ID。
 
         Args:
-            plugin_zip_path (Path): The path to the plugin's ZIP file.
+            plugin_zip_path (Path): 插件ZIP文件的路径。
 
         Returns:
-            str: The ID of the extracted plugin.
+            str: 提取的插件的ID。
         """
         with zipfile.ZipFile(plugin_zip_path, "r") as zip_ref:
-            # Find the info.json file to get the ID
+            # 查找info.json文件以获取ID
             plugin_info_string = zip_ref.read("info.json").decode("utf-8")
             plugin_info = json.loads(plugin_info_string)
             plugin_id = plugin_info["id"]
 
             extract_path = self.cache_directory / plugin_id
             if extract_path.exists():
-                shutil.rmtree(extract_path)  # Clean up old cache
+                shutil.rmtree(extract_path)  # 清理旧缓存
             os.makedirs(extract_path, exist_ok=True)
             zip_ref.extractall(extract_path)
             return plugin_id
-        
-    async def _setup_plugin_file_mapping(self):
+
+    async def _setup_plugin_file_mapping(self) -> None:
         """
-        Sets up the plugin file mapping by scanning the plugins directory.
+        通过扫描插件目录设置插件文件映射。
+        同时构建_plugins_cache字典，避免后续重复读取ZIP文件
         """
+        # 清空现有映射和缓存
+        self.plugin_file_mapping.clear()
+        self._plugins_cache.clear()
+
+        # 扫描启用的插件
         for plugin_file in self.plugins_directory.glob("*.plugin"):
             try:
                 with zipfile.ZipFile(plugin_file, "r") as zip_ref:
@@ -211,65 +248,189 @@ class PluginManager:
                     plugin_info = json.loads(plugin_info_string)
                     plugin_id = plugin_info["id"]
                     self.plugin_file_mapping[plugin_id] = plugin_file.name
+
+                    # 创建Plugin对象并存储到缓存中
+                    plugin_info.update(
+                        {
+                            "enabled": True,
+                            "loaded": plugin_id in self.loaded_plugins,
+                            "file_name": plugin_file.name,
+                            "file_path": str(plugin_file),
+                        }
+                    )
+                    self._plugins_cache[plugin_id] = Plugin(plugin_id, plugin_info)
             except Exception as e:
-                logging.warning(f"Failed to get plugin ID from {plugin_file.name}: {e}. Using filename stem instead.")
+                logging.warning(
+                    f"无法从 {plugin_file.name} 获取插件ID: {e}。使用文件名主干代替。"
+                )
                 plugin_id = plugin_file.stem
                 self.plugin_file_mapping[plugin_id] = plugin_file.name
 
+                # 创建基础Plugin对象并存储到缓存中
+                self._plugins_cache[plugin_id] = Plugin(
+                    plugin_id,
+                    {
+                        "name": plugin_id,
+                        "description": "无法读取插件信息",
+                        "enabled": True,
+                        "loaded": plugin_id in self.loaded_plugins,
+                        "file_name": plugin_file.name,
+                        "file_path": str(plugin_file),
+                    },
+                )
+
+        # 扫描禁用的插件
         for plugin_file in self.plugins_directory.glob("*.plugin.disabled"):
             try:
                 with zipfile.ZipFile(plugin_file, "r") as zip_ref:
                     plugin_info_string = zip_ref.read("info.json").decode("utf-8")
                     plugin_info = json.loads(plugin_info_string)
                     plugin_id = plugin_info["id"]
-                    self.plugin_file_mapping[plugin_id] = plugin_file.name.replace(".disabled", "")
+                    self.plugin_file_mapping[plugin_id] = plugin_file.name.replace(
+                        ".disabled", ""
+                    )
+
+                    # 创建Plugin对象并存储到缓存中
+                    plugin_info.update(
+                        {
+                            "enabled": False,
+                            "loaded": False,  # 禁用的插件不应被加载
+                            "file_name": plugin_file.name,
+                            "file_path": str(plugin_file),
+                        }
+                    )
+                    self._plugins_cache[plugin_id] = Plugin(plugin_id, plugin_info)
             except Exception as e:
-                logging.warning(f"Failed to get plugin ID from {plugin_file.name}: {e}. Using filename stem instead.")
+                logging.warning(
+                    f"无法从 {plugin_file.name} 获取插件ID: {e}。使用文件名主干代替。"
+                )
                 plugin_id = plugin_file.stem.replace(".disabled", "")
-                self.plugin_file_mapping[plugin_id] = plugin_file.name.replace(".disabled", "")
+                self.plugin_file_mapping[plugin_id] = plugin_file.name.replace(
+                    ".disabled", ""
+                )
+
+                # 创建基础Plugin对象并存储到缓存中
+                self._plugins_cache[plugin_id] = Plugin(
+                    plugin_id,
+                    {
+                        "name": plugin_id,
+                        "description": "无法读取插件信息",
+                        "enabled": False,
+                        "loaded": False,
+                        "file_name": plugin_file.name,
+                        "file_path": str(plugin_file),
+                    },
+                )
+
+    async def _refresh_plugin_cache(self, plugin_id: str) -> None:
+        """
+        刷新特定插件在缓存中的信息
+
+        Args:
+            plugin_id (str): 要刷新的插件ID
+        """
+        if plugin_id not in self.plugin_file_mapping:
+            # 如果插件文件映射中没有该插件，先执行_setup_plugin_file_mapping
+            await self._setup_plugin_file_mapping()
+            return
+
+        # 确定插件文件路径
+        plugin_file_name = self.plugin_file_mapping[plugin_id]
+        is_enabled = True
+
+        # 检查插件是否被禁用
+        if not (self.plugins_directory / plugin_file_name).exists():
+            # 尝试查找禁用的插件文件
+            disabled_path = self.plugins_directory / f"{plugin_file_name}.disabled"
+            if disabled_path.exists():
+                plugin_file_name = disabled_path.name
+                is_enabled = False
+
+        plugin_file = self.plugins_directory / plugin_file_name
+
+        try:
+            # 尝试从插件文件中提取信息
+            with zipfile.ZipFile(plugin_file, "r") as zip_ref:
+                if "info.json" in zip_ref.namelist():
+                    plugin_info_string = zip_ref.read("info.json").decode("utf-8")
+                    plugin_info = json.loads(plugin_info_string)
+
+                    # 更新插件信息
+                    plugin_info.update(
+                        {
+                            "enabled": is_enabled,
+                            "loaded": plugin_id in self.loaded_plugins,
+                            "file_name": plugin_file.name,
+                            "file_path": str(plugin_file),
+                        }
+                    )
+
+                    # 更新缓存
+                    self._plugins_cache[plugin_id] = Plugin(plugin_id, plugin_info)
+        except Exception as e:
+            logging.warning(f"刷新插件 '{plugin_id}' 缓存时出错: {e}")
+            # 如果出错，创建一个基础的Plugin对象
+            self._plugins_cache[plugin_id] = Plugin(
+                plugin_id,
+                {
+                    "name": plugin_id,
+                    "description": "无法读取插件信息",
+                    "enabled": is_enabled,
+                    "loaded": plugin_id in self.loaded_plugins,
+                    "file_name": plugin_file.name,
+                    "file_path": str(plugin_file),
+                },
+            )
 
     async def _load_plugin(self, plugin_zip_path: Path) -> bool:
         """
-        Loads a single plugin from a ZIP file.
+        从ZIP文件加载单个插件。
 
         Args:
-            plugin_zip_path (Path): The path to the plugin's ZIP file.
+            plugin_zip_path (Path): 插件ZIP文件的路径。
 
         Returns:
-            bool: True if the plugin was loaded successfully, False otherwise.
+            bool: 如果插件成功加载则为True，否则为False。
         """
         try:
             plugin_id = await self._extract_plugin(plugin_zip_path)
 
-            # Dynamically load the module
+            # 动态加载模块
             if str(self.cache_directory) not in sys.path:
                 sys.path.append(str(self.cache_directory))
 
             if plugin_id in self.loaded_plugins:
-                # Reload the existing module
+                # 重新加载现有模块
                 module = self.loaded_plugins[plugin_id]
                 importlib.reload(module)
             else:
-                # First time loading the module
+                # 首次加载模块
                 self.plugin_file_mapping[plugin_id] = plugin_zip_path.name
                 module = importlib.import_module(plugin_id)
                 self.loaded_plugins[plugin_id] = module
 
-            # Inject the project interface into the plugin module
+            # 将项目接口注入到插件模块
             setattr(module, "project_api", self.project_interface)
 
-            logging.info(f"Plugin '{plugin_id}' loaded successfully.")
+            # 刷新插件缓存
+            await self._refresh_plugin_cache(plugin_id)
+
+            # 确保缓存中的Plugin对象有正确的模块引用
+            if plugin_id in self._plugins_cache:
+                self._plugins_cache[plugin_id].module = module
+
+            logging.info(f"插件 '{plugin_id}' 加载成功。")
             return True
         except Exception as e:
-            logging.error(f"Failed to load plugin '{plugin_zip_path.name}': {e}")
+            logging.error(f"加载插件 '{plugin_zip_path.name}' 失败: {e}")
             return False
         finally:
-            # Ensure the cache path is removed from sys.path after loading
+            # 确保加载后从sys.path中移除缓存路径
             if str(self.cache_directory) in sys.path:
                 sys.path.remove(str(self.cache_directory))
 
-    async def load_all_plugins(self):
-        """Loads all available plugins from the plugins directory."""
+    async def load_all_plugins(self) -> None:
+        """加载插件目录中的所有可用插件。"""
         await self._setup_plugin_file_mapping()
         self.plugins_directory.mkdir(parents=True, exist_ok=True)
         for plugin_file in self.plugins_directory.glob("*.plugin"):
@@ -277,123 +438,152 @@ class PluginManager:
 
     async def reload_plugin(self, plugin_id: str) -> bool:
         """
-        Hot reloads a specific plugin.
+        热重载特定插件。
 
         Args:
-            plugin_id (str): The ID of the plugin to reload.
+            plugin_id (str): 要重载的插件的ID。
 
         Returns:
-            bool: True if the reload was successful, False otherwise.
+            bool: 如果重载成功则为True，否则为False。
         """
         if plugin_id not in self.loaded_plugins:
-            logging.warning(f"Plugin '{plugin_id}' is not currently loaded.")
+            logging.warning(f"插件 '{plugin_id}' 当前未加载。")
             return False
 
         zip_path = self.plugins_directory / self.plugin_file_mapping[plugin_id]
         if not zip_path.exists():
-            logging.error(f"Plugin file for '{plugin_id}' not found. Cannot reload.")
+            logging.error(f"找不到插件 '{plugin_id}' 的文件。无法重载。")
             return False
 
-        return await self._load_plugin(zip_path)
-    
-    async def reload_all_plugins(self):
-        """Reloads all loaded plugins."""
+        result = await self._load_plugin(zip_path)
+        # 重载后刷新缓存
+        if result:
+            await self._refresh_plugin_cache(plugin_id)
+        return result
+
+    async def reload_all_plugins(self) -> None:
+        """重新加载所有已加载的插件。"""
+        # 重新扫描并设置插件映射和缓存
+        await self._setup_plugin_file_mapping()
+
         for plugin_id in list(self.loaded_plugins.keys()):
             await self.reload_plugin(plugin_id)
 
     async def unload_plugin(self, plugin_id: str) -> bool:
         """
-        Unloads a specific plugin and cleans up its cache.
+        卸载特定插件并清理其缓存。
 
         Args:
-            plugin_id (str): The ID of the plugin to unload.
+            plugin_id (str): 要卸载的插件的ID。
 
         Returns:
-            bool: True if the unload was successful, False otherwise.
+            bool: 如果卸载成功则为True，否则为False。
         """
         if plugin_id in self.loaded_plugins:
             try:
-                # Remove from the dictionary
+                # 从字典中移除
                 del self.loaded_plugins[plugin_id]
-                del self.plugin_file_mapping[plugin_id]
-                # Clean up the cache
+
+                # 从缓存中移除或更新插件状态
+                if plugin_id in self._plugins_cache:
+                    self._plugins_cache[plugin_id].loaded = False
+                    self._plugins_cache[plugin_id].module = None
+
+                # 清理缓存
                 shutil.rmtree(self.cache_directory / plugin_id, ignore_errors=True)
-                logging.info(f"Plugin '{plugin_id}' unloaded successfully.")
+                logging.info(f"插件 '{plugin_id}' 卸载成功。")
                 return True
             except Exception as e:
-                logging.error(f"Failed to unload plugin '{plugin_id}': {e}")
+                logging.error(f"卸载插件 '{plugin_id}' 失败: {e}")
                 return False
         return False
 
-    async def enable_plugin(self, plugin_id: str):
+    async def enable_plugin(self, plugin_id: str) -> bool:
         """
-        Enables a disabled plugin by renaming its file.
+        通过重命名文件启用已禁用的插件。
 
         Args:
-            plugin_id (str): The ID of the plugin to enable.
+            plugin_id (str): 要启用的插件的ID。
+
+        Returns:
+            bool: 如果启用成功则为True，否则为False。
         """
-        print(self.plugin_file_mapping)
         if plugin_id in self.plugin_file_mapping:
-            disabled_path = self.plugins_directory / f"{self.plugin_file_mapping[plugin_id]}.disabled"
+            disabled_path = (
+                self.plugins_directory
+                / f"{self.plugin_file_mapping[plugin_id]}.disabled"
+            )
             if disabled_path.exists():
-                disabled_path.rename(self.plugins_directory / self.plugin_file_mapping[plugin_id])
+                disabled_path.rename(
+                    self.plugins_directory / self.plugin_file_mapping[plugin_id]
+                )
                 await self._load_plugin(disabled_path)
                 await self.reload_plugin(plugin_id)
-                logging.info(f"Plugin '{plugin_id}' enabled.")
+                # 刷新缓存
+                await self._refresh_plugin_cache(plugin_id)
+                logging.info(f"插件 '{plugin_id}' 已启用。")
                 return True
         return False
 
-    async def disable_plugin(self, plugin_id: str):
+    async def disable_plugin(self, plugin_id: str) -> bool:
         """
-        Disables an enabled plugin by renaming its file.
+        通过重命名文件禁用已启用的插件。
 
         Args:
-            plugin_id (str): The ID of the plugin to disable.
+            plugin_id (str): 要禁用的插件的ID。
+
+        Returns:
+            bool: 如果禁用成功则为True，否则为False。
         """
         if plugin_id in self.plugin_file_mapping:
             enabled_path = self.plugins_directory / self.plugin_file_mapping[plugin_id]
             if enabled_path.exists():
-                enabled_path.rename(self.plugins_directory / f"{self.plugin_file_mapping[plugin_id]}.disabled")
+                enabled_path.rename(
+                    self.plugins_directory
+                    / f"{self.plugin_file_mapping[plugin_id]}.disabled"
+                )
                 await self.unload_plugin(plugin_id)
-                logging.info(f"Plugin '{plugin_id}' disabled.")
+                # 刷新缓存
+                await self._refresh_plugin_cache(plugin_id)
+                logging.info(f"插件 '{plugin_id}' 已禁用。")
                 return True
         return False
 
-    async  def call_plugin_function(
+    async def call_plugin_function(
         self, plugin_id: str, function_name: str, **kwargs: Any
     ) -> Optional[Any]:
         """
-        Safely calls a function within a loaded plugin.
+        安全地调用已加载插件中的函数。
 
         Args:
-            plugin_id (str): The ID of the plugin.
-            function_name (str): The name of the function to call.
-            **kwargs (Any): Keyword arguments to pass to the function.
+            plugin_id (str): 插件的ID。
+            function_name (str): 要调用的函数名称。
+            **kwargs (Any): 传递给函数的关键字参数。
 
         Returns:
-            Optional[Any]: The return value of the function, or None if an error occurred.
+            Optional[Any]: 函数的返回值，如果发生错误则为None。
         """
         if plugin_id not in self.loaded_plugins:
-            logging.error(f"Error: Plugin '{plugin_id}' is not loaded.")
+            logging.error(f"错误: 插件 '{plugin_id}' 未加载。")
             return None
 
         module = self.loaded_plugins[plugin_id]
         if not hasattr(module, function_name):
             logging.error(
-                f"Error: Function '{function_name}' not found in plugin '{plugin_id}'."
+                f"错误: 在插件 '{plugin_id}' 中未找到函数 '{function_name}'。"
             )
             return None
 
         try:
             func = getattr(module, function_name)
-            # Check if the function is awaitable and call it accordingly
+            # 检查函数是否可等待并相应地调用
             if asyncio.iscoroutinefunction(func):
                 return await func(**kwargs)
             else:
                 return func(**kwargs)
         except Exception as e:
             logging.error(
-                f"Error calling function '{function_name}' in plugin '{plugin_id}': {e}"
+                f"调用插件 '{plugin_id}' 中的函数 '{function_name}' 时出错: {e}"
             )
             return None
 
@@ -404,49 +594,23 @@ class PluginManager:
         Returns:
             Dict[str, Dict[str, Any]]: 包含所有插件信息的字典，键为插件ID，值为插件的详细信息和状态。
         """
+        # 如果缓存为空，先执行_setup_plugin_file_mapping
+        if not self._plugins_cache:
+            await self._setup_plugin_file_mapping()
+
         plugins_status = {}
-        enabled_count = len(list(self.plugins_directory.glob("*.plugin")))
-        plugins_count = enabled_count + len(
-            list(self.plugins_directory.glob("*.plugin.disabled"))
-        )
+        enabled_count = 0
 
-        # 扫描插件目录中的所有插件文件
-        enabled_plugins = list(self.plugins_directory.glob("*.plugin"))
-        disabled_plugins = list(self.plugins_directory.glob("*.plugin.disabled"))
+        # 从缓存中获取插件状态
+        for plugin_id, plugin in self._plugins_cache.items():
+            plugins_status[plugin_id] = plugin.to_dict()
+            if plugin.enabled:
+                enabled_count += 1
 
-        # 处理所有插件
-        for plugin_file in enabled_plugins + disabled_plugins:
-            is_enabled = plugin_file.suffix == ".plugin"
-            plugin_id = None
-            plugin_info = {}
-
-            try:
-                # 尝试从插件文件中提取信息
-                with zipfile.ZipFile(plugin_file, "r") as zip_ref:
-                    if "info.json" in zip_ref.namelist():
-                        plugin_info_string = zip_ref.read("info.json").decode("utf-8")
-                        plugin_info = json.loads(plugin_info_string)
-                        plugin_id = plugin_info["id"]
-            except Exception as e:
-                # 如果无法读取info.json，尝试从文件名推断插件ID
-                logging.warning(f"无法读取插件文件 '{plugin_file.name}' 的信息: {e}")
-                plugin_id = plugin_file.stem.replace(".plugin", "").replace(
-                    ".disabled", ""
-                )
-
-            if plugin_id:
-                # 收集插件状态
-                plugins_status[plugin_id] = {
-                    **plugin_info,
-                    "enabled": is_enabled,
-                    "loaded": plugin_id in self.loaded_plugins,
-                    "file_name": plugin_file.name,
-                    "file_path": str(plugin_file),
-                }
-
-        # 确保已加载但可能不在插件目录中的插件也被包含
+        # 确保已加载但可能不在缓存中的插件也被包含
         for loaded_plugin_id in self.loaded_plugins:
             if loaded_plugin_id not in plugins_status:
+                # 如果插件不在缓存中，创建基础信息
                 plugins_status[loaded_plugin_id] = {
                     "id": loaded_plugin_id,
                     "enabled": False,
@@ -462,6 +626,8 @@ class PluginManager:
                     ),
                 }
 
+        plugins_count = len(plugins_status)
+
         return {
             "plugins_count": plugins_count,
             "enabled_count": enabled_count,
@@ -470,47 +636,76 @@ class PluginManager:
 
     async def get_plugin(self, plugin_id: str) -> Optional[Plugin]:
         """
-        Get a Plugin instance for the specified plugin ID.
-        
+        获取指定插件ID的Plugin实例。
+
         Args:
-            plugin_id (str): The ID of the plugin to retrieve.
-            
+            plugin_id (str): 要检索的插件的ID。
+
         Returns:
-            Optional[Plugin]: A Plugin instance or None if not found.
+            Optional[Plugin]: Plugin实例，如果未找到则为None。
         """
-        all_plugins_status = await self.get_all_plugins_status()
-        plugins = all_plugins_status.get("plugins", {})
-        
-        if plugin_id in plugins:
-            plugin_info = plugins[plugin_id]
-            plugin = Plugin(plugin_id, plugin_info)
-            
-            # Set the module reference if the plugin is loaded
-            if plugin.loaded and plugin_id in self.loaded_plugins:
+        # 首先检查缓存中是否已有该插件
+        if plugin_id in self._plugins_cache:
+            # 确保缓存中的插件状态是最新的
+            plugin = self._plugins_cache[plugin_id]
+            plugin.loaded = plugin_id in self.loaded_plugins
+            if plugin.loaded:
                 plugin.module = self.loaded_plugins[plugin_id]
-                
             return plugin
-        
+
+        # 如果没有，尝试通过_setup_plugin_file_mapping来刷新并获取
+        await self._setup_plugin_file_mapping()
+
+        # 再次检查缓存
+        if plugin_id in self._plugins_cache:
+            plugin = self._plugins_cache[plugin_id]
+            plugin.loaded = plugin_id in self.loaded_plugins
+            if plugin.loaded:
+                plugin.module = self.loaded_plugins[plugin_id]
+            return plugin
+
         return None
 
     async def get_all_plugins(self) -> List[Plugin]:
         """
-        Get a list of Plugin instances for all available plugins.
-        
+        获取所有可用插件的Plugin实例列表。
+
         Returns:
-            List[Plugin]: A list of Plugin instances.
+            List[Plugin]: Plugin实例列表。
         """
-        all_plugins_status = await self.get_all_plugins_status()
-        plugins = all_plugins_status.get("plugins", {})
-        
-        plugin_instances = []
-        for plugin_id, plugin_info in plugins.items():
-            plugin = Plugin(plugin_id, plugin_info)
-            
-            # Set the module reference if the plugin is loaded
-            if plugin.loaded and plugin_id in self.loaded_plugins:
+        # 如果缓存为空，先执行_setup_plugin_file_mapping
+        if not self._plugins_cache:
+            await self._setup_plugin_file_mapping()
+
+        # 更新缓存中所有插件的加载状态
+        for plugin_id, plugin in self._plugins_cache.items():
+            plugin.loaded = plugin_id in self.loaded_plugins
+            if plugin.loaded:
                 plugin.module = self.loaded_plugins[plugin_id]
-                
-            plugin_instances.append(plugin)
-            
-        return plugin_instances
+
+        # 直接从缓存返回所有Plugin实例
+        return list(self._plugins_cache.values())
+
+    async def _process_message(self, message: Dict[str, Any]) -> None:
+        """
+        处理从Bot接收到的消息。
+        此方法作为监听器注册到Amia实例。
+
+        Args:
+            message (Dict[str, Any]): 接收到的消息数据。
+        """
+        # {'self_id': 904228000, 'user_id': 1509127917, 'time': 1758587927, 'message_id': 1929076288, 'message_seq': 1929076288, 'real_id': 1929076288, 'real_seq': '139516', 'message_type': 'group', 'sender': {'user_id': 1509127917, 'nickname': 'Echo', 'card': '一加', 'role': 'member'}, 'raw_message': '[CQ:at,qq=3265781740] 你女友真的很猛吗', 'font': 14, 'sub_type': 'normal', 'message': [{'type': 'at', 'data': {'qq': '3265781740'}}, {'type': 'text', 'data': {'text': ' 你女友真的很猛吗'}}], 'message_format': 'array', 'post_type': 'message', 'group_id': 868666754, 'group_name': '米加杂鱼大学⑧群'}
+        if message.get("post_type") == "message":
+            if "message_id" in message:
+                msg = RecvMessage(message["message_id"], self.bot)
+                await msg.get_info()
+                for plugin in self._plugins_cache.values():
+                    if plugin.enabled:
+                        for trigger in plugin.triggers:
+                            if trigger["type"] == "text_pattern":
+                                if re.search(trigger["params"]["pattern"], msg.text.lower()):
+                                    asyncio.create_task(
+                                        plugin.call_function(
+                                            trigger["func"], message=msg
+                                        )
+                                    )

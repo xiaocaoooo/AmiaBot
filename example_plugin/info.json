@@ -7,7 +7,11 @@
     "triggers": [
         {
             "type": "text_pattern",
-            "data":{
+            "id": "echo",
+            "func": "echo",
+            "name": "echo",
+            "description": "Echo back the message.",
+            "params":{
                 "pattern": "echo.+"
             }
         }
