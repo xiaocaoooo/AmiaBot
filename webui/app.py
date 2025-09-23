@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 import logging
 import platform
 import time
@@ -69,9 +70,7 @@ def verify_password(input_password: str) -> bool:
         correct_password = config.webui.password  # type: ignore
 
         # 计算正确密码的哈希值
-        correct_password_hash = hashlib.sha256(
-            correct_password.encode()
-        ).hexdigest()
+        correct_password_hash = hashlib.sha256(correct_password.encode()).hexdigest()
         return input_password.lower() == correct_password_hash.lower()
     except Exception as e:
         logger.error(f"Error verifying password: {e}")
@@ -186,7 +185,7 @@ async def login(request):
 
         # 获取客户端IP
         client_ip = request.remote or "unknown"
-        
+
         # 检查失败次数
         if client_ip in failed_login_attempts:
             attempts, timestamp = failed_login_attempts[client_ip]
@@ -214,14 +213,16 @@ async def login(request):
             # 登录成功，清除失败记录
             if client_ip in failed_login_attempts:
                 del failed_login_attempts[client_ip]
-                
+
             # 密码正确，生成会话ID
             session_id = generate_session_id()
-            
+
             # 获取记住我选项，决定会话过期时间
             remember_me = form.get("remember_me", "")
-            expiry_time = datetime.now() + timedelta(hours=2 if not remember_me else 7*24)
-            
+            expiry_time = datetime.now() + timedelta(
+                hours=2 if not remember_me else 7 * 24
+            )
+
             # 存储会话信息
             sessions[session_id] = (expiry_time, {"user": "admin"})
 
@@ -235,18 +236,20 @@ async def login(request):
                 expires=expiry_time.timestamp(),  # type: ignore
                 httponly=True,  # 设置httponly，提高安全性
                 samesite="Strict",  # 设置samesite，防止CSRF攻击
-                secure=request.scheme == "https"  # 条件性设置secure属性
+                secure=request.scheme == "https",  # 条件性设置secure属性
             )
             return response
         else:
             # 记录失败尝试
-            if client_ip not in failed_login_attempts or \
-               (datetime.now() - failed_login_attempts[client_ip][1]).seconds > 300:
+            if (
+                client_ip not in failed_login_attempts
+                or (datetime.now() - failed_login_attempts[client_ip][1]).seconds > 300
+            ):
                 failed_login_attempts[client_ip] = (1, datetime.now())
             else:
                 attempts, timestamp = failed_login_attempts[client_ip]
                 failed_login_attempts[client_ip] = (attempts + 1, timestamp)
-                
+
             # 密码错误，重新显示登录页面并提示错误
             return await render_template_async(
                 "login.html", error="密码错误，请重新输入", url=redirect_url
@@ -271,6 +274,37 @@ async def get_self(request):
         return web.json_response(bot_user.toDict())
     except Exception as e:
         logger.error(f"Error getting bot info: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
+
+async def get_groups(request):
+    """获取群聊列表"""
+    if project_interface.bot is None:
+        return web.json_response({"error": "Bot not initialized"}, status=500)
+    try:
+        from amia.group import Group
+        groups = await Group.get_group_list(project_interface.bot)
+        groups_info = [group.toDict() for group in groups]            
+        return web.json_response(groups_info)
+    except Exception as e:
+        logger.error(f"Error getting groups list: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
+
+async def get_group_info(request):
+    """获取特定群聊信息"""
+    if project_interface.bot is None:
+        return web.json_response({"error": "Bot not initialized"}, status=500)
+    try:
+        from amia.group import Group
+        if "group_id" not in request.query:
+            return web.json_response({"error": "Missing group_id parameter"}, status=400)
+        group_id = int(request.query.get("group_id", 0))
+        group = Group(group_id, bot=project_interface.bot)
+        await group.get_info()
+        return web.json_response(group.toDict())
+    except Exception as e:
+        logger.error(f"Error getting group info: {e}")
         return web.json_response({"error": str(e)}, status=500)
 
 
@@ -504,7 +538,9 @@ async def get_logs(request):
             ]
         if only_message:
             log_buffer_copy = [
-                log for log in log_buffer_copy if log.get("message", "").startswith("Received message: ")
+                log
+                for log in log_buffer_copy
+                if log.get("message", "").startswith("Received message: ")
             ]
 
         # 参数验证
@@ -572,6 +608,87 @@ async def favicon_handler(request):
         logo_data = f.read()
     return web.Response(body=logo_data, content_type="image/svg+xml")
 
+async def get_group_categories(request):
+    """获取群组分类配置
+
+    Returns:
+        JSON响应，包含群组分类配置数据
+    """
+    try:
+        # 获取group_categories.json文件路径
+        file_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "data",
+            "configs",
+            "group_categories.json",
+        )
+
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            return web.json_response(
+                {"code": -1, "message": "Group categories file not found"}, status=404
+            )
+
+        # 读取并解析JSON文件
+        with open(file_path, "r", encoding="utf-8") as f:
+            categories_data = json.load(f)
+
+        # 返回配置数据
+        return web.json_response({"code": 0, "data": categories_data})
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parsing group categories file: {e}")
+        return web.json_response(
+            {"code": -1, "message": f"Invalid JSON format: {str(e)}"}, status=400
+        )
+    except Exception as e:
+        logger.error(f"Error reading group categories: {e}")
+        return web.json_response({"code": -1, "message": str(e)}, status=500)
+
+
+async def update_group_categories(request):
+    """更新群组分类配置
+
+    Args:
+        request: HTTP请求对象，包含JSON数据
+            - data: 群组分类配置数据
+
+    Returns:
+        JSON响应，指示操作结果
+    """
+    try:
+        # 获取请求数据
+        request_data = await request.json()
+        categories_data = request_data.get("data")
+
+        # 验证请求数据
+        if categories_data is None:
+            return web.json_response(
+                {"code": -1, "message": "Categories data is required"}, status=400
+            )
+
+        # 获取group_categories.json文件路径
+        file_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "data",
+            "configs",
+            "group_categories.json",
+        )
+
+        # 确保目录存在
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+        # 写入格式化的JSON内容
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(categories_data, f, ensure_ascii=False)
+
+        # 返回成功响应
+        return web.json_response(
+            {"code": 0, "data": {"message": "Group categories updated successfully"}}
+        )
+    except Exception as e:
+        logger.error(f"Error updating group categories: {e}")
+        return web.json_response({"code": -1, "message": str(e)}, status=500)
+
 
 # 注册路由
 app.router.add_get("/", index)
@@ -587,6 +704,12 @@ app.router.add_post("/api/plugins/reload", reload_plugin)
 app.router.add_post("/api/plugins/enable", enable_plugin)
 app.router.add_post("/api/plugins/disable", disable_plugin)
 app.router.add_get("/api/logs", get_logs)
+# 添加专门的群组分类API路由
+app.router.add_get("/api/group-categories/get", get_group_categories)
+app.router.add_post("/api/group-categories/set", update_group_categories)
+# 添加群聊相关API路由
+app.router.add_get("/api/group/list", get_groups)
+app.router.add_get("/api/group/get", get_group_info)
 
 # 添加静态文件目录
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -598,16 +721,19 @@ async def cleanup_sessions():
     """定期清理过期会话"""
     while True:
         current_time = datetime.now()
-        expired_sessions = [sid for sid, (expiry, _) in sessions.items() if current_time > expiry]
+        expired_sessions = [
+            sid for sid, (expiry, _) in sessions.items() if current_time > expiry
+        ]
         for sid in expired_sessions:
             del sessions[sid]
         await asyncio.sleep(3600)  # 每小时清理一次
+
 
 async def run_web_server_async():
     """异步启动Web服务器"""
     # 启动会话清理任务
     asyncio.create_task(cleanup_sessions())
-    
+
     # 加载插件
     await load_all_plugins()
 

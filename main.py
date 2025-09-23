@@ -1,3 +1,4 @@
+import json
 import logging
 import asyncio
 import shutil
@@ -64,6 +65,13 @@ if __name__ == "__main__":
     
     Path("./plugins").mkdir(exist_ok=True)
     Path("./cache/plugins").mkdir(parents=True, exist_ok=True)
+    Path("./data/configs").mkdir(parents=True, exist_ok=True)
+    
+    group_categories_path = Path("./data/configs/group_categories.json")
+    if not group_categories_path.exists():
+        group_categories_path.touch()
+        with group_categories_path.open("w", encoding="utf-8") as f:
+            json.dump([], f, ensure_ascii=False)
 
     # 启动WebUI（如果可用）
     if has_webui:

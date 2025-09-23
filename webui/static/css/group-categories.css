@@ -1,0 +1,389 @@
+/* 群组分类管理页面专用样式 */
+
+/* 页面标题部分 */
+.page-header {
+    text-align      : center;
+    margin-bottom   : 32px;
+    padding         : 24px;
+    background-color: var(--color-surface-container);
+    border-radius   : 24px;
+}
+
+.page-header h1 {
+    font-size    : 2rem;
+    color        : var(--color-primary);
+    margin-bottom: 8px;
+}
+
+.page-header p {
+    color    : var(--color-on-surface-variant);
+    font-size: 1rem;
+}
+
+/* 内容区域 */
+.content-section {
+    margin-bottom: 24px;
+}
+
+/* 操作按钮容器 */
+.action-buttons {
+    display        : flex;
+    gap            : 16px;
+    margin-bottom  : 24px;
+    justify-content: flex-start;
+    flex-wrap      : wrap;
+}
+
+/* 分类容器 */
+.categories-container {
+    display              : grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap                  : 20px;
+}
+
+/* 分类卡片 */
+.category-card {
+    background-color: var(--color-surface-container);
+    border-radius   : 16px;
+    padding         : 20px;
+    box-shadow      : 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition      : all 0.25s ease;
+    border          : 1px solid var(--color-outline-variant);
+}
+
+.category-card:hover {
+    transform : translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* 分类卡片头部 */
+.category-header {
+    display        : flex;
+    justify-content: space-between;
+    align-items    : center;
+    margin-bottom  : 16px;
+    padding-bottom : 12px;
+    border-bottom  : 1px solid var(--color-outline-variant);
+}
+
+.category-header h3 {
+    margin   : 0;
+    font-size: 1.25rem;
+    color    : var(--color-on-surface);
+}
+
+/* 分类操作按钮 */
+.category-actions {
+    display: flex;
+    gap    : 8px;
+}
+
+/* 按钮样式 - 使用style.css中定义的样式，这里只添加额外需要的样式 */
+.btn-sm {
+    padding  : 6px 12px;
+    font-size: 12px;
+}
+
+/* 分类卡片主体 */
+.category-body {
+    color: var(--color-on-surface-variant);
+}
+
+.category-description {
+    margin-bottom: 12px;
+    line-height  : 1.5;
+}
+
+.category-groups {
+    font-size: 0.9rem;
+    color    : var(--color-primary);
+}
+
+/* 加载指示器 */
+.loading-indicator {
+    display        : flex;
+    flex-direction : column;
+    align-items    : center;
+    justify-content: center;
+    padding        : 48px 24px;
+    color          : var(--color-on-surface-variant);
+}
+
+.spinner {
+    width           : 40px;
+    height          : 40px;
+    border          : 3px solid var(--color-outline-variant);
+    border-top-color: var(--color-primary);
+    border-radius   : 50%;
+    animation       : spin 1s linear infinite;
+    margin-bottom   : 16px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 空状态显示 */
+.empty-state {
+    display        : flex;
+    flex-direction : column;
+    align-items    : center;
+    justify-content: center;
+    padding        : 64px 24px;
+    color          : var(--color-on-surface-variant);
+    text-align     : center;
+}
+
+.empty-state i {
+    font-size    : 3rem;
+    margin-bottom: 16px;
+    color        : var(--color-outline);
+}
+
+/* 模态框样式 - 使用style.css中定义的样式，这里只添加特定需要的样式 */
+.modal {
+    position        : fixed;
+    top             : 0;
+    left            : 0;
+    width           : 100%;
+    height          : 100%;
+    background-color: var(--color-scrim);
+    opacity         : 0.5;
+    display         : none;
+    align-items     : center;
+    justify-content : center;
+    z-index         : 1000;
+    backdrop-filter : blur(8px);
+    transition      : backdrop-filter 0.2s ease-in-out;
+}
+
+.modal-content {
+    background-color: var(--color-surface-container);
+    border-radius   : 16px;
+    width           : 90%;
+    max-width       : 600px;
+    max-height      : 90vh;
+    overflow-y      : auto;
+    position        : relative;
+    animation       : modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity  : 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+
+    to {
+        opacity  : 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* 模态框头部 */
+.modal-header {
+    display        : flex;
+    justify-content: space-between;
+    align-items    : center;
+    padding        : 20px 24px;
+    border-bottom  : 1px solid var(--color-outline-variant);
+}
+
+.modal-header h2 {
+    margin: 0;
+    color : var(--color-on-surface);
+}
+
+/* 模态框主体 */
+.modal-body {
+    padding: 24px;
+}
+
+/* 表单组 - 这些是group-categories.css特定的样式 */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display      : block;
+    margin-bottom: 8px;
+    font-weight  : 500;
+    color        : var(--color-on-surface);
+}
+
+/* 表单控件 - 使用style.css中定义的样式，这里只添加额外需要的样式 */
+.form-control {
+    width : 100%;
+    resize: vertical;
+}
+
+.form-text {
+    display   : block;
+    margin-top: 4px;
+    font-size : 12px;
+    color     : var(--color-on-surface-variant);
+}
+
+/* 模态框底部 */
+.modal-footer {
+    display        : flex;
+    justify-content: flex-end;
+    gap            : 12px;
+    padding        : 20px 24px;
+    border-top     : 1px solid var(--color-outline-variant);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .categories-container {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .modal-content {
+        width : 95%;
+        margin: 10px;
+    }
+
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+}
+
+/* 群聊选择器样式 */
+.groups-selector {
+    display   : flex;
+    gap       : 24px;
+    margin-top: 20px;
+}
+
+.groups-selector-column {
+    flex          : 1;
+    display       : flex;
+    flex-direction: column;
+}
+
+.groups-selector-column h4 {
+    margin   : 0 0 12px 0;
+    color    : var(--color-on-surface);
+    font-size: 1rem;
+}
+
+.groups-list {
+    flex            : 1;
+    max-height      : 300px;
+    overflow-y      : auto;
+    border          : 1px solid var(--color-outline);
+    border-radius   : 8px;
+    background-color: var(--color-surface);
+    padding         : 8px;
+}
+
+
+
+.group-item {
+    display      : flex;
+    align-items  : center;
+    padding      : 8px 12px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    cursor       : pointer;
+    transition   : all 0.2s ease;
+}
+
+.group-item:hover {
+    background-color: var(--color-surface-container-low);
+}
+
+.group-item.selected {
+    background-color: rgba(131, 76, 117, 0.1);
+    border          : 1px solid var(--color-primary);
+}
+
+.group-avatar {
+    width           : 32px;
+    height          : 32px;
+    border-radius   : 50%;
+    background-color: var(--color-primary);
+    color           : var(--color-on-primary);
+    display         : flex;
+    align-items     : center;
+    justify-content : center;
+    font-weight     : 500;
+    margin-right    : 12px;
+    flex-shrink     : 0;
+}
+
+.group-info {
+    flex     : 1;
+    min-width: 0;
+}
+
+.group-name {
+    font-weight  : 500;
+    color        : var(--color-on-surface);
+    overflow     : hidden;
+    text-overflow: ellipsis;
+    white-space  : nowrap;
+}
+
+.group-stats {
+    font-size : 0.85rem;
+    color     : var(--color-on-surface-variant);
+    margin-top: 2px;
+}
+
+.group-actions {
+    display    : flex;
+    align-items: center;
+}
+
+.add-group-btn,
+.remove-group-btn {
+    width          : 24px;
+    height         : 24px;
+    border-radius  : 50%;
+    border         : none;
+    display        : flex;
+    align-items    : center;
+    justify-content: center;
+    cursor         : pointer;
+    font-size      : 16px;
+    line-height    : 1;
+    transition     : all 0.2s ease;
+}
+
+.add-group-btn {
+    background-color: var(--color-primary);
+    color           : var(--color-on-primary);
+}
+
+.add-group-btn:hover {
+    background-color: var(--color-primary-container);
+}
+
+.remove-group-btn {
+    background-color: var(--color-error);
+    color           : var(--color-on-error);
+}
+
+.remove-group-btn:hover {
+    background-color: var(--color-error-container);
+}
+
+.empty-text {
+    text-align: center;
+    color     : var(--color-on-surface-variant);
+    padding   : 24px;
+    font-style: italic;
+}
+
+/* 群聊搜索样式 */
+.group-search {
+    margin-bottom: 12px;
+}

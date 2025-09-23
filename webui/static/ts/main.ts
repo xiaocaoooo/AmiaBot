@@ -178,8 +178,55 @@ class AlertManager {
             this.removeAlert(alertContainer as HTMLElement);
           }
         }
+        // 处理带有data-dismiss="alert"属性的元素点击事件
+        else if (target.closest('[data-dismiss="alert"]')) {
+          const alertContainer = target.closest('.alert-container');
+          if (alertContainer) {
+            this.removeAlert(alertContainer as HTMLElement);
+          }
+        }
+        // Handle elements with data-action attribute
+        const actionElement = target.closest('[data-action]');
+        if (actionElement) {
+          const action = actionElement.getAttribute('data-action');
+          if (action) {
+            const alertContainer = target.closest('.alert-container');
+            if (alertContainer) {
+              // Trigger a custom event based on the action, allowing the caller to handle the logic
+              const actionEvent = new CustomEvent(`alert-${action}`, {
+                bubbles: true,
+                detail: {
+                  alertElement: alertContainer
+                }
+              });
+              alertContainer.dispatchEvent(actionEvent);
+            }
+          }
+        }
+        // 点击遮罩层（非弹窗内容区域）关闭弹窗
+        else if (target === this.alertsContainer) {
+          // 获取当前显示的弹窗
+          const alertElement = this.alertsContainer.querySelector('.alert-container');
+          if (alertElement) {
+            this.removeAlert(alertElement as HTMLElement);
+          }
+        }
       });
     }
+
+    // 添加键盘事件监听，支持Esc键关闭弹窗
+    document.addEventListener('keydown', (event: KeyboardEvent) => {
+      // 当按下Esc键时关闭当前弹窗
+      if (event.key === 'Escape') {
+        const container = this.alertsContainer;
+        if (container) {
+          const alertElement = container.querySelector('.alert-container');
+          if (alertElement) {
+            this.removeAlert(alertElement as HTMLElement);
+          }
+        }
+      }
+    });
   }
 
   /**
@@ -215,28 +262,28 @@ class AlertManager {
     // 创建标题和内容容器
     const titleElement = document.createElement('div');
     titleElement.className = 'alert-title';
-    
+
     const closeElement = document.createElement('div');
     closeElement.className = 'alert-close';
     closeElement.innerHTML = `<i class="fas fa-times"></i>`;
-    
+
     const contentElement = document.createElement('div');
     contentElement.className = 'alert-content';
-    
+
     // 设置弹窗标题
     if (typeof title === 'string') {
       titleElement.innerHTML = title;
     } else {
       titleElement.appendChild(title);
     }
-    
+
     // 设置弹窗内容
     if (typeof content === 'string') {
       contentElement.innerHTML = content;
     } else {
       contentElement.appendChild(content);
     }
-    
+
     // 将元素添加到弹窗中
     alertElement.appendChild(titleElement);
     alertElement.appendChild(closeElement);
@@ -295,7 +342,7 @@ class AlertManager {
   private getAlertsContainer(): HTMLElement | null {
     if (!this.alertsContainer) {
       this.alertsContainer = document.getElementById('alerts-container');
-      
+
       // 如果容器不存在，则创建一个
       if (!this.alertsContainer) {
         const newContainer = document.createElement('div');
@@ -354,7 +401,7 @@ function showAlert(
     const tempDiv = document.createElement('div');
     return tempDiv;
   }
-  
+
   return alertManager.showAlert(title, content, type, autoClose, duration);
 }
 

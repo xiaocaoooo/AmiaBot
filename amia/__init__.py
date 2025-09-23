@@ -60,7 +60,7 @@ class Amia:
                         retry_delay = 1  # 成功连接后重置重试延迟
                         async for msg in ws:
                             if msg.type == aiohttp.WSMsgType.TEXT:
-                                # logging.info(f"Received message: {msg.data}")
+                                logging.info(f"Received message: {msg.data}")
                                 asyncio.create_task(
                                     self.process_message(json.loads(msg.data))
                                 )

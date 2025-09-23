@@ -265,7 +265,7 @@ class PluginManager {
             const result = await response.json();
 
             if (result.code === 0) {
-                alert('所有插件重载成功！');
+                showAlert('成功', '所有插件重载成功！', 'success', true, 3000);
                 // 重载成功后重新获取插件信息
                 this.fetchPluginsInfo();
             } else {
@@ -273,7 +273,7 @@ class PluginManager {
             }
         } catch (error) {
             console.error('Failed to reload all plugins:', error);
-            alert(`所有插件重载失败：${error instanceof Error ? error.message : String(error)}`);
+            showAlert('错误', `所有插件重载失败：${error instanceof Error ? error.message : String(error)}`, 'error');
         } finally {
             // 恢复按钮状态
             this.reloadAllPluginsButton.disabled = false;
@@ -303,7 +303,7 @@ class PluginManager {
             const result = await response.json();
 
             if (result.code === 0) {
-                alert(`插件 ${pluginId} 重载成功！`);
+                showAlert('成功', `插件 ${pluginId} 重载成功！`, 'success', true, 3000);
                 // 重载成功后重新获取插件信息
                 this.fetchPluginsInfo();
             } else {
@@ -311,7 +311,7 @@ class PluginManager {
             }
         } catch (error) {
             console.error(`Failed to reload plugin ${pluginId}:`, error);
-            alert(`插件 ${pluginId} 重载失败：${error instanceof Error ? error.message : String(error)}`);
+            showAlert('错误', `插件 ${pluginId} 重载失败：${error instanceof Error ? error.message : String(error)}`, 'error');
         }
     }
 
@@ -337,7 +337,7 @@ class PluginManager {
             const result = await response.json();
 
             if (result.code === 0) {
-                alert(`插件 ${pluginId} 启用成功！`);
+                showAlert('成功', `插件 ${pluginId} 启用成功！`, 'success', true, 3000);
                 // 启用成功后重新获取插件信息
                 this.fetchPluginsInfo();
             } else {
@@ -345,7 +345,7 @@ class PluginManager {
             }
         } catch (error) {
             console.error(`Failed to enable plugin ${pluginId}:`, error);
-            alert(`插件 ${pluginId} 启用失败：${error instanceof Error ? error.message : String(error)}`);
+            showAlert('错误', `插件 ${pluginId} 启用失败：${error instanceof Error ? error.message : String(error)}`, 'error');
         }
     }
 
@@ -371,7 +371,7 @@ class PluginManager {
             const result = await response.json();
 
             if (result.code === 0) {
-                alert(`插件 ${pluginId} 禁用成功！`);
+                showAlert('成功', `插件 ${pluginId} 禁用成功！`, 'success', true, 3000);
                 // 禁用成功后重新获取插件信息
                 this.fetchPluginsInfo();
             } else {
@@ -379,7 +379,7 @@ class PluginManager {
             }
         } catch (error) {
             console.error(`Failed to disable plugin ${pluginId}:`, error);
-            alert(`插件 ${pluginId} 禁用失败：${error instanceof Error ? error.message : String(error)}`);
+            showAlert('错误', `插件 ${pluginId} 禁用失败：${error instanceof Error ? error.message : String(error)}`, 'error');
         }
     }
 

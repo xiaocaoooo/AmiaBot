@@ -1,0 +1,32 @@
+<link rel="stylesheet" href="/static/css/group-categories.css">
+
+<div class="page-header">
+    <h1>群组分类管理</h1>
+    <p>管理机器人的群组分类配置，对不同群组进行分类管理</p>
+</div>
+
+<div class="content-section">
+    <div class="action-buttons">
+        <button id="add-category-btn" class="btn btn-primary">
+            <i class="fas fa-plus"></i> 添加分类
+        </button>
+        <button id="save-changes-btn" class="btn btn-success">
+            <i class="fas fa-save"></i> 保存配置
+        </button>
+    </div>
+
+    <div id="categories-container" class="categories-container">
+        <div class="loading-indicator" id="loading-indicator">
+            <div class="spinner"></div>
+            <p>加载中...</p>
+        </div>
+        <div id="no-categories" class="empty-state" style="display: none;">
+            <i class="fas fa-folder-open"></i>
+            <p>暂无分类配置，请添加新分类</p>
+        </div>
+    </div>
+</div>
+
+
+
+<script src="/static/js/group-categories.js"></script>

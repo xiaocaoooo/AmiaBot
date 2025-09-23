@@ -315,7 +315,7 @@ class UserInfoManager {
       const result = await response.json();
       
       if (result.code === 0) {
-        alert('插件重载成功！');
+        showAlert('成功', '插件重载成功！', 'success', true, 3000);
         // 重载成功后重新获取插件信息
         this.fetchPluginInfo();
       } else {
@@ -323,7 +323,7 @@ class UserInfoManager {
       }
     } catch (error) {
       console.error('Failed to reload plugins:', error);
-      alert(`插件重载失败：${error instanceof Error ? error.message : String(error)}`);
+      showAlert('错误', `插件重载失败：${error instanceof Error ? error.message : String(error)}`, 'error');
     } finally {
       // 恢复按钮状态
       this.reloadPluginsButton.disabled = false;
