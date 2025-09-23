@@ -225,8 +225,15 @@ class PluginManager {
         reloadButton.textContent = '重载';
         reloadButton.addEventListener('click', () => this.reloadPlugin(plugin.id));
 
+        // 设置按钮 - 新增的设置按钮
+        const settingsButton = document.createElement('button');
+        settingsButton.className = 'action-button settings-button';
+        settingsButton.textContent = '设置';
+        settingsButton.addEventListener('click', () => this.openPluginSettings(plugin.id));
+
         actionsCell.appendChild(toggleButton);
         actionsCell.appendChild(reloadButton);
+        actionsCell.appendChild(settingsButton);
 
         // 组装插件行
         row.appendChild(nameCell);
@@ -236,6 +243,237 @@ class PluginManager {
         row.appendChild(actionsCell);
 
         return row;
+    }
+
+    /**
+     * 打开插件设置弹窗
+     * @param pluginId 插件ID
+     */
+    private async openPluginSettings(pluginId: string): Promise<void> {
+        try {
+            // 获取插件配置
+            const response = await fetch(`/api/plugin-config/get?id=${encodeURIComponent(pluginId)}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+
+            if (result.code === 0 && result.data) {
+                const config = result.data;
+
+                // 创建配置编辑表单
+                const configForm = this.createConfigForm(pluginId, config);
+
+                // 显示设置弹窗
+                const alertElement = showAlert(
+                    '插件设置',
+                    configForm,
+                    'info',
+                    false,
+                    0
+                );
+
+                // 添加保存按钮点击事件监听
+                const saveButton = alertElement.querySelector('.save-config-button');
+                if (saveButton) {
+                    saveButton.addEventListener('click', () => this.savePluginConfig(pluginId, alertElement));
+                }
+            } else {
+                throw new Error(result.message || '获取插件配置失败');
+            }
+        } catch (error) {
+            console.error(`Failed to get plugin config for ${pluginId}:`, error);
+            showAlert('错误', `获取插件配置失败：${error instanceof Error ? error.message : String(error)}`, 'error');
+        }
+    }
+
+    /**
+     * 创建配置编辑表单
+     * @param pluginId 插件ID
+     * @param config 当前配置对象
+     * @returns 表单HTML元素
+     */
+    private createConfigForm(pluginId: string, config: any): HTMLElement {
+        const formContainer = document.createElement('div');
+        formContainer.className = 'config-form-container';
+
+        // 插件ID显示
+        const pluginIdElement = document.createElement('div');
+        pluginIdElement.className = 'plugin-id-display';
+        pluginIdElement.textContent = `插件ID: ${pluginId}`;
+        formContainer.appendChild(pluginIdElement);
+
+        // 如果配置为空，初始化默认结构
+        if (!config.triggers) {
+            config = { triggers: {} };
+        }
+
+        // 创建触发器配置区域
+        const triggersContainer = document.createElement('div');
+        triggersContainer.className = 'triggers-container';
+        triggersContainer.innerHTML = '<h4>触发器配置</h4>';
+
+        // 如果没有触发器配置，显示提示
+        if (Object.keys(config.triggers).length === 0) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'empty-state';
+            emptyState.textContent = '该插件暂无触发器配置';
+            triggersContainer.appendChild(emptyState);
+        } else {
+            // 为每个触发器创建配置项
+            Object.entries(config.triggers).forEach(([triggerId, triggerConfig]: [string, any]) => {
+                const triggerSection = document.createElement('div');
+                triggerSection.className = 'trigger-section';
+                // 添加数据属性以便JS操作
+                triggerSection.setAttribute('data-trigger-id', triggerId);
+
+                // 触发器标题
+                const triggerTitle = document.createElement('h5');
+                triggerTitle.textContent = `触发器: ${triggerId}`;
+                triggerSection.appendChild(triggerTitle);
+
+                // 启用状态
+                const enabledContainer = document.createElement('div');
+                enabledContainer.className = 'config-item';
+                enabledContainer.innerHTML = `
+                    <label>
+                        <input type="checkbox" name="${triggerId}_enabled" class="trigger-enabled" 
+                               data-trigger-id="${triggerId}" ${triggerConfig.enabled ? 'checked' : ''}>
+                        启用触发器
+                    </label>
+                `;
+                triggerSection.appendChild(enabledContainer);
+
+                // 私聊支持
+                const privateContainer = document.createElement('div');
+                privateContainer.className = 'config-item';
+                privateContainer.innerHTML = `
+                    <label>
+                        <input type="checkbox" name="${triggerId}_can_private" class="trigger-can-private" 
+                               data-trigger-id="${triggerId}" ${triggerConfig.can_private ? 'checked' : ''}>
+                        允许私聊使用
+                    </label>
+                `;
+                triggerSection.appendChild(privateContainer);
+
+                // 群组配置
+                const groupsContainer = document.createElement('div');
+                groupsContainer.className = 'config-item';
+                groupsContainer.innerHTML = `
+                    <label>适用群组ID (用逗号分隔):</label>
+                    <input type="text" name="${triggerId}_groups" class="trigger-groups" 
+                           data-trigger-id="${triggerId}" value="${Array.isArray(triggerConfig.groups) ? triggerConfig.groups.join(', ') : ''}">
+                    <small>留空表示适用于所有群组</small>
+                `;
+                triggerSection.appendChild(groupsContainer);
+
+                triggersContainer.appendChild(triggerSection);
+            });
+        }
+
+        formContainer.appendChild(triggersContainer);
+
+        // 创建保存按钮
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'button-container';
+
+        const saveButton = document.createElement('button');
+        saveButton.className = 'save-config-button';
+        saveButton.textContent = '保存配置';
+        saveButton.setAttribute('data-action', 'save');
+        // 添加微交互效果的辅助类
+        saveButton.setAttribute('data-button-type', 'primary');
+
+        buttonContainer.appendChild(saveButton);
+        formContainer.appendChild(buttonContainer);
+
+        return formContainer;
+    }
+
+    /**
+     * 保存插件配置
+     * @param pluginId 插件ID
+     * @param alertElement 弹窗元素
+     */
+    private async savePluginConfig(pluginId: string, alertElement: HTMLElement): Promise<void> {
+        try {
+            // 获取保存按钮并显示加载状态
+            const saveButton = alertElement.querySelector('.save-config-button[data-action="save"]') as HTMLButtonElement;
+            if (saveButton) {
+                // 保存原始文本并禁用按钮
+                const originalText = saveButton.textContent;
+                saveButton.textContent = '保存中...';
+                saveButton.disabled = true;
+
+                try {
+                    // 构建新的配置对象
+                    const newConfig: any = { triggers: {} };
+
+                    // 获取所有触发器配置
+                    const triggerSections = alertElement.querySelectorAll('.trigger-section');
+                    triggerSections.forEach(section => {
+                        // 使用数据属性获取触发器ID，提高代码健壮性
+                        const triggerId = section.getAttribute('data-trigger-id') || '';
+
+                        if (triggerId) {
+                            // 获取配置值
+                            const enabledCheckbox = section.querySelector(`.trigger-enabled[data-trigger-id="${triggerId}"]`) as HTMLInputElement;
+                            const privateCheckbox = section.querySelector(`.trigger-can-private[data-trigger-id="${triggerId}"]`) as HTMLInputElement;
+                            const groupsInput = section.querySelector(`.trigger-groups[data-trigger-id="${triggerId}"]`) as HTMLInputElement;
+
+                            // 解析群组ID
+                            let groups: string[] = [];
+                            if (groupsInput && groupsInput.value.trim()) {
+                                groups = groupsInput.value.split(',').map(group => group.trim()).filter(Boolean);
+                            }
+
+                            // 添加到配置对象
+                            newConfig.triggers[triggerId] = {
+                                enabled: enabledCheckbox ? enabledCheckbox.checked : false,
+                                can_private: privateCheckbox ? privateCheckbox.checked : false,
+                                groups: groups
+                            };
+                        }
+                    });
+
+                    // 发送保存请求
+                    const response = await fetch('/api/plugin-config/set', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            plugin_id: pluginId,
+                            config: newConfig
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP错误! 状态码: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.code === 0) {
+                        showAlert('成功', `插件配置保存成功！`, 'success', true, 3000);
+                        // 关闭设置弹窗
+                        removeAlert(alertElement);
+                    } else {
+                        throw new Error(result.message || '保存插件配置失败');
+                    }
+                } catch (error) {
+                    console.error(`保存插件配置失败 (${pluginId}):`, error);
+                    // 恢复按钮状态
+                    saveButton.textContent = originalText;
+                    saveButton.disabled = false;
+                    // 显示错误提示
+                    showAlert('错误', `保存插件配置失败：${error instanceof Error ? error.message : String(error)}`, 'error');
+                }
+            }
+        } catch (error) {
+            console.error(`保存插件配置时发生异常 (${pluginId}):`, error);
+            showAlert('错误', `保存插件配置时发生异常：${error instanceof Error ? error.message : String(error)}`, 'error');
+        }
     }
 
     /**

@@ -65,7 +65,7 @@ if __name__ == "__main__":
     
     Path("./plugins").mkdir(exist_ok=True)
     Path("./cache/plugins").mkdir(parents=True, exist_ok=True)
-    Path("./data/configs").mkdir(parents=True, exist_ok=True)
+    Path("./data/configs/plugins").mkdir(parents=True, exist_ok=True)
     
     group_categories_path = Path("./data/configs/group_categories.json")
     if not group_categories_path.exists():

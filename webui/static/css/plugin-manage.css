@@ -12,11 +12,11 @@
 }
 
 .plugin {
-    min-width    : 300px;
-    max-width    : 400px;
-    padding      : 16px;
-    box-sizing   : border-box;
-    transition   : all 0.25s ease;
+    min-width : 300px;
+    max-width : 400px;
+    padding   : 16px;
+    box-sizing: border-box;
+    transition: all 0.25s ease;
 }
 
 .plugin:hover {

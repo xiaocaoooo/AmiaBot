@@ -269,9 +269,51 @@ button::after {
     opacity         : 0;
     border-radius   : 8px;
     transition      : all 0.25s ease;
+    pointer-events  : none;
 }
 
 button:hover::after {
+    opacity: 0.2;
+}
+
+
+label:has(input[type="checkbox"]) {
+    position        : relative;
+    outline         : none;
+    background-color: var(--color-secondary);
+    color           : var(--color-on-secondary);
+    border          : none;
+    border-radius   : 8px;
+    padding         : 12px 24px;
+    font-size       : 14px;
+    font-weight     : 500;
+    cursor          : pointer;
+    transition      : all 0.25s ease;
+}
+
+label:has(input[type="checkbox"]:checked) {
+    background-color: var(--color-primary);
+}
+
+label input[type="checkbox"] {
+    display: none;
+}
+
+label:has(input[type="checkbox"])::after {
+    content         : '';
+    position        : absolute;
+    left            : 0;
+    top             : 0;
+    width           : 100%;
+    height          : 100%;
+    background-color: black;
+    opacity         : 0;
+    border-radius   : 8px;
+    transition      : all 0.25s ease;
+    pointer-events  : none;
+}
+
+label:has(input[type="checkbox"]):hover::after {
     opacity: 0.2;
 }
 

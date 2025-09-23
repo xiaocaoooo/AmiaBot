@@ -283,8 +283,9 @@ async def get_groups(request):
         return web.json_response({"error": "Bot not initialized"}, status=500)
     try:
         from amia.group import Group
+
         groups = await Group.get_group_list(project_interface.bot)
-        groups_info = [group.toDict() for group in groups]            
+        groups_info = [group.toDict() for group in groups]
         return web.json_response(groups_info)
     except Exception as e:
         logger.error(f"Error getting groups list: {e}")
@@ -297,8 +298,11 @@ async def get_group_info(request):
         return web.json_response({"error": "Bot not initialized"}, status=500)
     try:
         from amia.group import Group
+
         if "group_id" not in request.query:
-            return web.json_response({"error": "Missing group_id parameter"}, status=400)
+            return web.json_response(
+                {"error": "Missing group_id parameter"}, status=400
+            )
         group_id = int(request.query.get("group_id", 0))
         group = Group(group_id, bot=project_interface.bot)
         await group.get_info()
@@ -608,6 +612,7 @@ async def favicon_handler(request):
         logo_data = f.read()
     return web.Response(body=logo_data, content_type="image/svg+xml")
 
+
 async def get_group_categories(request):
     """获取群组分类配置
 
@@ -690,6 +695,110 @@ async def update_group_categories(request):
         return web.json_response({"code": -1, "message": str(e)}, status=500)
 
 
+async def get_plugin_config(request):
+    """获取插件配置
+
+    Args:
+        request: HTTP请求对象，包含查询参数
+            - id: 插件ID
+
+    Returns:
+        JSON响应，包含插件配置数据
+    """
+    try:
+        # 获取插件ID
+        plugin_id = request.query.get("id")
+        if not plugin_id:
+            return web.json_response(
+                {"code": -1, "message": "Plugin ID is required"}, status=400
+            )
+
+        # 获取插件配置文件路径
+        file_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "data",
+            "configs",
+            "plugins",
+            f"{plugin_id}.json",
+        )
+
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            return web.json_response(
+                {"code": -1, "message": "Plugin config file not found"}, status=404
+            )
+
+        # 读取并解析JSON文件
+        with open(file_path, "r", encoding="utf-8") as f:
+            config_data = json.load(f)
+
+        # 返回配置数据
+        return web.json_response({"code": 0, "data": config_data})
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parsing plugin config file: {e}")
+        return web.json_response(
+            {"code": -1, "message": f"Invalid JSON format: {str(e)}"}, status=400
+        )
+    except Exception as e:
+        logger.error(f"Error reading plugin config: {e}")
+        return web.json_response({"code": -1, "message": str(e)}, status=500)
+
+
+async def update_plugin_config(request):
+    """更新插件配置
+
+    Args:
+        request: HTTP请求对象，包含JSON数据
+            - plugin_id: 插件ID
+            - config: 插件配置数据
+
+    Returns:
+        JSON响应，指示操作结果
+    """
+    try:
+        # 获取请求数据
+        request_data = await request.json()
+        plugin_id = request_data.get("plugin_id")
+        config_data = request_data.get("config")
+
+        # 验证请求数据
+        if not plugin_id:
+            return web.json_response(
+                {"code": -1, "message": "Plugin ID is required"}, status=400
+            )
+        if config_data is None:
+            return web.json_response(
+                {"code": -1, "message": "Config data is required"}, status=400
+            )
+
+        # 获取插件配置文件路径
+        file_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "data",
+            "configs",
+            "plugins",
+            f"{plugin_id}.json",
+        )
+
+        # 确保目录存在
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+        # 写入格式化的JSON内容
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(config_data, f, ensure_ascii=False, indent=2)
+
+        # 返回成功响应
+        return web.json_response(
+            {
+                "code": 0,
+                "data": {"message": f"Plugin {plugin_id} config updated successfully"},
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error updating plugin config: {e}")
+        return web.json_response({"code": -1, "message": str(e)}, status=500)
+
+
 # 注册路由
 app.router.add_get("/", index)
 app.router.add_route("*", "/login", login)
@@ -707,6 +816,9 @@ app.router.add_get("/api/logs", get_logs)
 # 添加专门的群组分类API路由
 app.router.add_get("/api/group-categories/get", get_group_categories)
 app.router.add_post("/api/group-categories/set", update_group_categories)
+# 添加插件配置API路由
+app.router.add_get("/api/plugin-config/get", get_plugin_config)
+app.router.add_post("/api/plugin-config/set", update_plugin_config)
 # 添加群聊相关API路由
 app.router.add_get("/api/group/list", get_groups)
 app.router.add_get("/api/group/get", get_group_info)

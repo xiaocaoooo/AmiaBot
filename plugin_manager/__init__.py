@@ -179,6 +179,7 @@ class PluginManager:
         self,
         plugins_directory: str = "./plugins",
         cache_directory: str = "./cache/plugins",
+        config_directory: str = "./data/configs/plugins",
     ) -> None:
         """
         初始化PluginManager。
@@ -186,10 +187,12 @@ class PluginManager:
         Args:
             plugins_directory (str): 存储插件文件的目录。
             cache_directory (str): 用于缓存提取的插件文件的目录。
+            config_directory (str): 存储插件配置文件的目录。
         """
         self.bot: Amia = Amia.get_instance()
         self.plugins_directory: Path = Path(plugins_directory)
         self.cache_directory: Path = Path(cache_directory)
+        self.config_directory: Path = Path(config_directory)
         self.loaded_plugins: Dict[str, Any] = {}  # 存储已加载的插件模块
         self.plugin_file_mapping: Dict[str, str] = {}  # 映射插件ID到文件名
         # 添加一个字典来缓存Plugin对象，避免重复读取ZIP文件
@@ -202,6 +205,7 @@ class PluginManager:
 
         self.plugins_directory.mkdir(exist_ok=True)
         self.cache_directory.mkdir(parents=True, exist_ok=True)
+        self.config_directory.mkdir(parents=True, exist_ok=True)
 
         logging.info("PluginManager 初始化完成")
         if not self._is_init_listener:
@@ -231,6 +235,39 @@ class PluginManager:
             zip_ref.extractall(extract_path)
             return plugin_id
 
+    async def _generate_plugin_config(
+        self, plugin_id: str, plugin_info: Dict[str, Any]
+    ) -> None:
+        """
+        为插件生成默认配置文件。
+
+        Args:
+            plugin_id (str): 插件的ID。
+            plugin_info (Dict[str, Any]): 插件的信息。
+        """
+        config_file_path = self.config_directory / f"{plugin_id}.json"
+
+        # 如果配置文件已存在，则不覆盖
+        if config_file_path.exists():
+            return
+
+        # 从插件信息中提取triggers并生成默认配置
+        default_config = {"triggers": {}}
+
+        for trigger in plugin_info.get("triggers", []):
+            trigger_id = trigger.get("id", trigger.get("name", "unknown"))
+            default_config["triggers"][trigger_id] = {
+                "enabled": True,
+                "groups": [],
+                "can_private": plugin_info.get("can_private", False),
+            }
+
+        # 写入配置文件
+        with open(config_file_path, "w", encoding="utf-8") as f:
+            json.dump(default_config, f, ensure_ascii=False, indent=4)
+
+        logging.info(f"为插件 '{plugin_id}' 生成了默认配置文件")
+
     async def _setup_plugin_file_mapping(self) -> None:
         """
         通过扫描插件目录设置插件文件映射。
@@ -259,6 +296,9 @@ class PluginManager:
                         }
                     )
                     self._plugins_cache[plugin_id] = Plugin(plugin_id, plugin_info)
+
+                    # 生成默认配置文件
+                    await self._generate_plugin_config(plugin_id, plugin_info)
             except Exception as e:
                 logging.warning(
                     f"无法从 {plugin_file.name} 获取插件ID: {e}。使用文件名主干代替。"
@@ -300,6 +340,9 @@ class PluginManager:
                         }
                     )
                     self._plugins_cache[plugin_id] = Plugin(plugin_id, plugin_info)
+
+                    # 生成默认配置文件
+                    await self._generate_plugin_config(plugin_id, plugin_info)
             except Exception as e:
                 logging.warning(
                     f"无法从 {plugin_file.name} 获取插件ID: {e}。使用文件名主干代替。"
@@ -367,6 +410,9 @@ class PluginManager:
 
                     # 更新缓存
                     self._plugins_cache[plugin_id] = Plugin(plugin_id, plugin_info)
+
+                    # 生成默认配置文件
+                    await self._generate_plugin_config(plugin_id, plugin_info)
         except Exception as e:
             logging.warning(f"刷新插件 '{plugin_id}' 缓存时出错: {e}")
             # 如果出错，创建一个基础的Plugin对象
@@ -703,7 +749,9 @@ class PluginManager:
                     if plugin.enabled:
                         for trigger in plugin.triggers:
                             if trigger["type"] == "text_pattern":
-                                if re.search(trigger["params"]["pattern"], msg.text.lower()):
+                                if re.search(
+                                    trigger["params"]["pattern"], msg.text.lower()
+                                ):
                                     asyncio.create_task(
                                         plugin.call_function(
                                             trigger["func"], message=msg

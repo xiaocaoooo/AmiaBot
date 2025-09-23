@@ -1,0 +1,222 @@
+.config-form-container {
+    font-size     : 14px;
+    overflow-y    : auto;
+    padding       : 16px;
+    border-radius : 12px;
+}
+
+.plugin-id-display {
+    margin-bottom   : 16px;
+    padding         : 12px;
+    background-color: var(--color-primary-container);
+    border-radius   : 8px;
+    font-weight     : 600;
+    color           : var(--color-on-primary-container);
+    font-size       : 13px;
+    font-family     : 'Consolas', 'Monaco', monospace;
+}
+
+.triggers-container {
+    margin-top: 16px;
+}
+
+.triggers-container h4 {
+    margin-top    : 0;
+    margin-bottom : 16px;
+    color         : var(--color-on-surface);
+    font-size     : 16px;
+    font-weight   : 600;
+    border-bottom : 1px solid var(--color-outline-variant);
+    padding-bottom: 8px;
+}
+
+.trigger-section {
+    margin-bottom   : 20px;
+    padding         : 16px;
+    background-color: var(--color-surface-container-low);
+    border-radius   : 8px;
+    border          : 1px solid var(--color-outline-variant);
+    transition      : all 0.25s ease;
+}
+
+.trigger-section:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transform : translateY(-1px);
+}
+
+.trigger-section h5 {
+    margin-top   : 0;
+    margin-bottom: 12px;
+    color        : var(--color-on-surface);
+    font-size    : 14px;
+    font-weight  : 600;
+    font-family  : 'Consolas', 'Monaco', monospace;
+}
+
+.config-item {
+    margin-bottom: 16px;
+}
+
+.config-item label {
+    display      : block;
+    margin-bottom: 8px;
+    color        : var(--color-on-surface-variant);
+    font-weight  : 500;
+    font-size    : 14px;
+}
+
+.config-item input[type="checkbox"] {
+    margin-right  : 8px;
+    vertical-align: middle;
+    transform     : scale(1.1);
+    accent-color  : var(--color-primary);
+}
+
+.config-item input[type="text"] {
+    width           : 100%;
+    padding         : 10px 12px;
+    border          : 1px solid var(--color-outline-variant);
+    border-radius   : 8px;
+    background-color: var(--color-surface);
+    color           : var(--color-on-surface);
+    font-size       : 14px;
+    transition      : all 0.2s ease;
+    box-sizing      : border-box;
+    font-family     : 'Consolas', 'Monaco', monospace;
+}
+
+.config-item input[type="text"]:focus {
+    outline     : none;
+    border-color: var(--color-primary);
+    box-shadow  : 0 0 0 2px rgba(131, 76, 117, 0.2);
+}
+
+/* 输入错误状态 */
+.config-item input[type="text"].input-error,
+.config-item input[type="text"].input-error:focus {
+    border-color: var(--color-error);
+    box-shadow  : 0 0 0 2px rgba(186, 26, 26, 0.2);
+    background-color: rgba(186, 26, 26, 0.04);
+}
+
+/* 添加错误动画 */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.config-item input[type="text"].input-error {
+    animation: shake 0.5s ease-in-out;
+}
+
+.config-item small {
+    display   : block;
+    margin-top: 6px;
+    color     : var(--color-on-surface-variant);
+    font-size : 12px;
+    opacity   : 0.8;
+}
+
+.empty-state {
+    padding         : 24px;
+    text-align      : center;
+    color           : var(--color-on-surface-variant);
+    font-style      : italic;
+    background-color: var(--color-surface-container-low);
+    border-radius   : 8px;
+    border          : 1px dashed var(--color-outline-variant);
+}
+
+.button-container {
+    margin-top : 24px;
+    text-align : center;
+    padding-top: 20px;
+    border-top : 1px solid var(--color-outline-variant);
+}
+
+.save-config-button {
+    background-color: var(--color-primary);
+    color           : var(--color-on-primary);
+    border          : none;
+    padding         : 10px 24px;
+    border-radius   : 8px;
+    cursor          : pointer;
+    font-size       : 14px;
+    font-weight     : 600;
+    transition      : all 0.25s ease;
+    box-shadow      : 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.save-config-button:hover {
+    background-color: var(--color-primary-container);
+    color           : var(--color-on-primary-container);
+    transform       : translateY(-1px);
+    box-shadow      : 0 4px 8px rgba(131, 76, 117, 0.2);
+}
+
+.save-config-button:active {
+    transform       : translateY(0);
+    box-shadow      : 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.save-config-button:disabled {
+    background-color: var(--color-surface-container-low);
+    color           : var(--color-on-surface-variant);
+    cursor          : not-allowed;
+    transform       : none;
+    box-shadow      : none;
+}
+
+/* 滚动条样式 */
+.config-form-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.config-form-container::-webkit-scrollbar-track {
+    background   : var(--color-surface-container-low);
+    border-radius: 3px;
+}
+
+.config-form-container::-webkit-scrollbar-thumb {
+    background   : var(--color-outline-variant);
+    border-radius: 3px;
+    transition   : background-color 0.2s ease;
+}
+
+.config-form-container::-webkit-scrollbar-thumb:hover {
+    background: var(--color-outline);
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.trigger-section {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* 辅助类 */
+.mt-8 {
+    margin-top: 8px;
+}
+
+.mt-16 {
+    margin-top: 16px;
+}
+
+.mb-8 {
+    margin-bottom: 8px;
+}
+
+.mb-16 {
+    margin-bottom: 16px;
+}
