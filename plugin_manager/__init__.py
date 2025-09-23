@@ -19,7 +19,7 @@ class ProjectInterface:
     """插件与主项目交互的接口。"""
 
     _instance: Optional["ProjectInterface"] = None
-    bot: Amia | None = None
+    bot: Amia
 
     def __new__(cls, *args, **kwargs) -> "ProjectInterface":
         if cls._instance is None:
