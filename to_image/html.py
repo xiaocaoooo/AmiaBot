@@ -129,6 +129,9 @@ async def htmlToImage(
 
     # 设置页面内容
     await page.setContent(html_content)
+    
+    with open("test.html", "w") as f:
+        f.write(html_content)
 
     # 等待页面加载完成
     await page.waitForSelector("#app")

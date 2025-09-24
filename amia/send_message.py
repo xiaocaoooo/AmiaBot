@@ -17,17 +17,21 @@ class SendMessage:
         """发送消息"""
         assert self.user_id or self.group_id, "user_id or group_id is required"
         if self.user_id:
-            await self.bot.doAction("send_private_msg", params={"user_id": self.user_id, "message": [m.toDict() for m in self.messages]})
+            data = await self.bot.doAction("send_private_msg", params={"user_id": self.user_id, "message": [m.toDict() for m in self.messages]})
+            return RecvMessage(data["data"]["message_id"], self.bot)
         elif self.group_id:
-            await self.bot.doAction("send_group_msg", params={"group_id": self.group_id, "message": [m.toDict() for m in self.messages]})
+            data = await self.bot.doAction("send_group_msg", params={"group_id": self.group_id, "message": [m.toDict() for m in self.messages]})
+            return RecvMessage(data["data"]["message_id"], self.bot)
 
     async def reply(self, recv_message: RecvMessage):
         """回复消息"""
         new_messages = [SendReplyMessage(message_id=recv_message.message_id)]+self.messages
         if recv_message.group_id:
-            await self.bot.doAction("send_group_msg", params={"group_id": recv_message.group_id, "message": [m.toDict() for m in new_messages]})
+            data = await self.bot.doAction("send_group_msg", params={"group_id": recv_message.group_id, "message": [m.toDict() for m in new_messages]})
+            return RecvMessage(data["data"]["message_id"], self.bot)
         elif recv_message.user_id:
-            await self.bot.doAction("send_private_msg", params={"user_id": recv_message.user_id, "message": [m.toDict() for m in new_messages]})
+            data = await self.bot.doAction("send_private_msg", params={"user_id": recv_message.user_id, "message": [m.toDict() for m in new_messages]})
+            return RecvMessage(data["data"]["message_id"], self.bot)
 
 class SendBaseMessage:
     def __init__(self, type: str, data: Dict[str, Any]|None=None) -> None:

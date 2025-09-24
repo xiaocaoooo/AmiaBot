@@ -1,3 +1,4 @@
+from amia.group import Group
 from . import Amia
 from .user import User
 from datetime import datetime
@@ -19,6 +20,7 @@ class RecvMessage:
     raw_message: str  # 原始消息内容
     message: List["RecvBaseMessage"]  # 消息链，解析后的消息列表
     group_id: Optional[int] = None  # 群组ID(群消息时存在)
+    group: Optional[Group] = None  # 群组信息(群消息时存在)
     group_name: Optional[str] = None  # 群组名称(群消息时存在)
     raw: Dict[str, Any]  # 原始消息数据
     bot: Amia  # 机器人实例引用
@@ -72,7 +74,7 @@ class RecvMessage:
         Returns:
             RecvMessage: 消息实例
         """
-        msg = RecvMessage(message_id, bot)
+        msg = RecvMessage(data.get("message_id", 0), bot)
         msg.raw = data
 
         msg.self_id = data.get("self_id", 0)
@@ -84,7 +86,7 @@ class RecvMessage:
         msg.message_type = data.get("message_type", "")
 
         sender_user_id = data.get("sender", {}).get("user_id")
-        msg.sender = User(sender_user_id, bot=bot) if sender_user_id else None
+        msg.sender = User(sender_user_id, group_id=data.get("group_id"), bot=bot) if sender_user_id else None
 
         msg.raw_message = data.get("raw_message", "")
         msg.group_id = data.get("group_id")
@@ -141,10 +143,12 @@ class RecvMessage:
         self.message_type = data.get("message_type", "")
 
         sender_user_id = data.get("sender", {}).get("user_id")
-        self.sender = User(sender_user_id, bot=self.bot) if sender_user_id else None
+        self.sender = User(sender_user_id, group_id=data.get("group_id"), bot=self.bot) if sender_user_id else None
 
         self.raw_message = data.get("raw_message", "")
         self.group_id = data.get("group_id")
+        if self.group_id:
+            self.group = Group(self.group_id, bot=self.bot)
         self.group_name = data.get("group_name")
 
         raw_messages = data.get("message", [])
@@ -160,6 +164,10 @@ class RecvMessage:
             str: 消息的文本内容
         """
         return "".join([msg.data.get("text", "") for msg in self.message]).strip()
+
+    async def delete(self) -> Dict[str, Any]:
+        """删除消息"""
+        return await self.bot.doAction("delete_msg", params={"message_id": self.message_id})
 
     def toDict(self) -> Dict[str, Any]:
         """将消息对象转换为字典格式
@@ -190,9 +198,9 @@ class RecvMessage:
 
         return result
 
-    async def reply(self, send_message: "SendMessage"):  # type: ignore # noqa: F821
+    async def reply(self, send_message: "SendMessage")->"RecvMessage":  # type: ignore # noqa: F821
         """回复消息"""
-        await send_message.reply(self)
+        return await send_message.reply(self)
 
 
 class RecvBaseMessage:

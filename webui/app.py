@@ -696,7 +696,7 @@ async def update_group_categories(request):
         
         # 写入格式化的JSON内容
         with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(categories_data, f, ensure_ascii=False, indent=2)
+            json.dump(categories_data, f, ensure_ascii=False)
 
         # 返回成功响应
         return web.json_response(
@@ -797,7 +797,7 @@ async def update_plugin_config(request):
 
         # 写入格式化的JSON内容
         with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(config_data, f, ensure_ascii=False, indent=2)
+            json.dump(config_data, f, ensure_ascii=False)
 
         # 返回成功响应
         return web.json_response(
@@ -859,7 +859,7 @@ async def run_web_server_async():
     asyncio.create_task(cleanup_sessions())
 
     # 加载插件
-    await load_all_plugins()
+    # await load_all_plugins()
 
     runner = web.AppRunner(app)
     await runner.setup()

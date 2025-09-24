@@ -2,8 +2,6 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Set, cast
 from enum import Enum
-
-from amia.recv_message import RecvMessage
 from . import Amia
 from .user import User
 
@@ -22,6 +20,7 @@ class Group:
     group_name: str  # 群名称
     member_count: int  # 成员数量
     max_member_count: int  # 最大成员数量
+    raw: Dict[str, Any]  # 原始数据
     _last_update_time: datetime  # 最后更新时间
 
     _instances: Dict[int, "Group"] = {}  # 群组实例缓存
@@ -95,6 +94,7 @@ class Group:
         info = await self.bot.doAction("get_group_info", {"group_id": self.group_id})
 
         data = cast(Dict[str, Any], info.get("data", {}))
+        self.raw = data
 
         # 映射基础属性
         self.group_id = int(data.get("group_id", 0))
@@ -106,7 +106,7 @@ class Group:
 
         return self
 
-    async def get_member_list(self) -> List[Dict[str, Any]]:
+    async def get_member_list_raw(self) -> List[Dict[str, Any]]:
         """获取群成员列表
 
         Returns:
@@ -114,6 +114,15 @@ class Group:
         """
         result = await self.bot.doAction("get_group_member_list", {"group_id": self.group_id})
         return cast(List[Dict[str, Any]], result.get("data", []))
+
+    async def get_member_list(self) -> List[User]:
+        """获取群成员列表
+
+        Returns:
+            List[User]: 群成员列表
+        """
+        member_list_raw = await self.get_member_list_raw()
+        return [User(member["user_id"], bot=self.bot) for member in member_list_raw]
 
     async def get_member_info(self, user_id: int) -> Dict[str, Any]:
         """获取群成员信息
@@ -274,8 +283,31 @@ class Group:
             {"group_id": self.group_id, "content": content, "pinned": pinned}
         )
         return result.get("status", False) is True
+
+    async def get_messages_raw(self, message_id: int|None = None, count: int|None = None) -> List[Dict[str, Any]]:
+        """获取群消息原始数据
+
+        Args:
+            message_id: 起始消息ID
+            count: 获取消息数量
+
+        Returns:
+            List[Dict[str, Any]]: 原始消息数据列表
+        """
+        params = {"group_id": self.group_id}
+        if message_id is not None:
+            params["message_id"] = message_id
+        if count is not None:
+            params["count"] = count
+        result = await self.bot.doAction(
+            "get_group_msg_history", 
+            params
+        )
+        if result.get("retcode") == 0:
+            return result.get("data", {}).get("messages", [])
+        return []
     
-    async def get_messages(self, message_id: int, count: int = 10) -> List[RecvMessage]:
+    async def get_messages(self, message_id: int|None = None, count: int|None = None) -> List["RecvMessage"]:  # type: ignore # noqa: F821
         """获取群消息
 
         Args:
@@ -285,6 +317,7 @@ class Group:
         Returns:
             List[RecvMessage]: 消息列表
         """
+        from .recv_message import RecvMessage
         result = await self.bot.doAction(
             "get_group_msg_history", 
             {"group_id": self.group_id, "message_id": message_id, "count": count}

@@ -50,6 +50,7 @@ class User:
     group_level: Optional[str]  # 群等级
     shut_up_timestamp: Optional[int]  # 禁言时间戳
     join_time: Optional[datetime]  # 加入群时间
+    raw: Dict[str, Any]  # 原始数据
 
     _instances: Dict[str, "User"] = {}  # 用户实例缓存
 
@@ -79,6 +80,17 @@ class User:
             str: 头像URL
         """
         return f"https://q1.qlogo.cn/g?b=qq&nk={self.qq}&s=0"
+
+    @property
+    def name(self) -> str:
+        """获取用户名称，优先使用备注名，否则使用昵称
+
+        Returns:
+            str: 用户名称
+        """
+        if hasattr(self, "card") and self.card:
+            return self.card
+        return self.nick
 
     def __init__(
         self, user_id: int, *, group_id: Optional[int] = None, bot: Amia
@@ -114,6 +126,7 @@ class User:
         info = await self.bot.doAction("get_stranger_info", {"user_id": self.user_id})
 
         data = cast(Dict[str, Any], info.get("data", {}))
+        self.raw=data
 
         # 映射基础属性
         self.qq = int(data.get("uin", 0))

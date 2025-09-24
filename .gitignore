@@ -64,3 +64,8 @@ docs/
 data/
 plugins_src/
 logs/
+amia_data/
+cover_amia_data.py
+test.html
+test.py
+test.txt

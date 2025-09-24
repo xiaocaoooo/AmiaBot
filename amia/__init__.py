@@ -60,7 +60,7 @@ class Amia:
                         retry_delay = 1  # 成功连接后重置重试延迟
                         async for msg in ws:
                             if msg.type == aiohttp.WSMsgType.TEXT:
-                                logging.info(f"Received message: {msg.data}")
+                                # logging.info(f"Received message: {msg.data}")
                                 asyncio.create_task(
                                     self.process_message(json.loads(msg.data))
                                 )
@@ -142,3 +142,14 @@ class Amia:
         user = User(qq, bot=self)
         await user.get_info()
         return user
+
+    async def ocr(self, image:str)->Dict[str, Any]:
+        """调用OCR API识别图片中的文字
+
+        Args:
+            image: 图片URL或Base64编码的图片数据
+
+        Returns:
+            识别结果的字典
+        """
+        return (await self.doAction("ocr_image", {"image": image})).get("data", {})

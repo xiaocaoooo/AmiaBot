@@ -9,6 +9,7 @@ from pathlib import Path
 from amia import Amia
 from cache_manager import CacheManager
 from config import Config
+from openai import OpenAI
 from plugin_manager import PluginManager, ProjectInterface
 
 
@@ -25,6 +26,8 @@ date_format = "%Y-%m-%d %H:%M:%S"
 
 Path("./logs").mkdir(parents=True, exist_ok=True)
 
+OpenAI(config.openai)
+
 # 配置根日志记录器
 logging.basicConfig(
     level=logging.INFO,
@@ -38,8 +41,8 @@ logging.basicConfig(
 
 # 尝试导入WebUI模块
 try:
+    # from webui.app import run_web_server_async
     from webui.app import run_web_server
-
     has_webui = True
 except ImportError:
     has_webui = False
@@ -47,7 +50,19 @@ except ImportError:
 
 
 async def main():
-    """主程序入口"""    
+    """主程序入口"""
+    # 启动WebUI（如果可用）
+    if has_webui:
+        try:
+            # 在单独的线程中启动WebUI
+            webui_thread = threading.Thread(target=run_web_server, daemon=True)  # type: ignore
+            webui_thread.start()
+            # asyncio.create_task(run_web_server_async()) # type: ignore
+            logging.info("WebUI已启动，请访问 http://localhost:5000")
+        except Exception as e:
+            logging.error(f"启动WebUI失败: {e}")
+    else:
+        logging.info("WebUI不可用，仅运行核心功能")
     # 初始化插件管理器
     plugin_manager = PluginManager()
     # 加载所有插件
@@ -76,22 +91,6 @@ if __name__ == "__main__":
         group_categories_path.touch()
         with group_categories_path.open("w", encoding="utf-8") as f:
             json.dump([], f, ensure_ascii=False)
-            
-    usage_path = Path("./data/configs/usage.jsonl")
-    if not usage_path.exists():
-        usage_path.touch()
-
-    # 启动WebUI（如果可用）
-    if has_webui:
-        try:
-            # 在单独的线程中启动WebUI
-            webui_thread = threading.Thread(target=run_web_server, daemon=True)  # type: ignore
-            webui_thread.start()
-            logging.info("WebUI已启动，请访问 http://localhost:5000")
-        except Exception as e:
-            logging.error(f"启动WebUI失败: {e}")
-    else:
-        logging.info("WebUI不可用，仅运行核心功能")
 
     # 运行主程序
     try:

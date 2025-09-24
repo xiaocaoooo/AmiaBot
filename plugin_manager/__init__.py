@@ -14,6 +14,7 @@ from typing import Dict, Any, Optional, List, Union, Set, TypeVar, Callable, Tup
 from amia import Amia
 from amia.recv_message import RecvMessage
 from config import Config
+from utools.match import recursive_match
 
 
 # 定义项目接口，供插件调用
@@ -142,7 +143,7 @@ class Plugin:
                 return func(**kwargs)
         except Exception as e:
             logging.error(
-                f"调用插件 '{self.id}' 中的函数 '{function_name}' 时出错: {e}\n" \
+                f"调用插件 '{self.id}' 中的函数 '{function_name}' 时出错: {e}\n"
                 f"错误堆栈:\n{traceback.format_exc()}"
             )
             return None
@@ -172,6 +173,7 @@ class PluginManager:
     _instance: Optional["PluginManager"] = None
     _is_init_listener: bool = False
     _bot: Optional[Amia] = None
+    _init: bool = False
 
     def __new__(cls, *args, **kwargs) -> "PluginManager":
         if cls._instance is None:
@@ -192,6 +194,8 @@ class PluginManager:
             cache_directory (str): 用于缓存提取的插件文件的目录。
             config_directory (str): 存储插件配置文件的目录。
         """
+        if self._init:
+            return
         self.bot: Amia = Amia.get_instance()
         self.plugins_directory: Path = Path(plugins_directory)
         self.cache_directory: Path = Path(cache_directory)
@@ -216,6 +220,7 @@ class PluginManager:
         if not self._is_init_listener:
             self.bot.listener(self._process_message)
             self._is_init_listener = True
+        self._init = True
 
     async def _extract_plugin(self, plugin_zip_path: Path) -> str:
         """
@@ -234,7 +239,7 @@ class PluginManager:
             plugin_id = plugin_info["id"]
 
             extract_path = self.cache_directory / plugin_id
-            
+
             # 增强的目录清理逻辑
             if extract_path.exists():
                 retry_count = 0
@@ -250,13 +255,16 @@ class PluginManager:
                         else:
                             # 等待一段时间后重试
                             await asyncio.sleep(0.1)
-            
+
+            if extract_path.exists():
+                shutil.rmtree(extract_path)
+
             # 确保目录存在，使用exist_ok=True避免创建已存在的目录时出错
             try:
                 os.makedirs(extract_path, exist_ok=True)
             except Exception as e:
                 logging.warning(f"创建插件缓存目录失败，将尝试继续: {e}")
-                
+
             # 解压文件
             zip_ref.extractall(extract_path)
             return plugin_id
@@ -290,13 +298,15 @@ class PluginManager:
             if trigger.get("type") == "text_command":
                 default_config["triggers"][trigger_id].update(
                     {
-                        "must_prefix": True,
+                        "must_prefix": trigger.get("params", {}).get(
+                            "must_prefix", True
+                        ),
                     }
                 )
 
         # 写入配置文件
         with open(config_file_path, "w", encoding="utf-8") as f:
-            json.dump(default_config, f, ensure_ascii=False, indent=4)
+            json.dump(default_config, f, ensure_ascii=False)
 
         logging.info(f"为插件 '{plugin_id}' 生成了默认配置文件")
 
@@ -470,46 +480,58 @@ class PluginManager:
         Returns:
             bool: 如果插件成功加载则为True，否则为False。
         """
-        try:
-            plugin_id = await self._extract_plugin(plugin_zip_path)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                plugin_id = await self._extract_plugin(plugin_zip_path)
 
-            # 动态加载模块
-            if str(self.cache_directory) not in sys.path:
-                sys.path.append(str(self.cache_directory))
+                # 动态加载模块
+                if str(self.cache_directory) not in sys.path:
+                    sys.path.append(str(self.cache_directory))
 
-            if plugin_id in self.loaded_plugins:
-                # 重新加载现有模块
-                module = self.loaded_plugins[plugin_id]
-                importlib.reload(module)
-            else:
-                # 首次加载模块
-                self.plugin_file_mapping[plugin_id] = plugin_zip_path.name
-                module = importlib.import_module(plugin_id)
-                self.loaded_plugins[plugin_id] = module
+                if plugin_id in self.loaded_plugins:
+                    # 重新加载现有模块
+                    module = self.loaded_plugins[plugin_id]
+                    importlib.reload(module)
+                else:
+                    # 首次加载模块
+                    self.plugin_file_mapping[plugin_id] = plugin_zip_path.name
+                    module = importlib.import_module(plugin_id)
+                    self.loaded_plugins[plugin_id] = module
 
-            # 将项目接口注入到插件模块
-            setattr(module, "project_api", self.project_interface)
+                # 将项目接口注入到插件模块
+                setattr(module, "project_api", self.project_interface)
 
-            # 刷新插件缓存
-            await self._refresh_plugin_cache(plugin_id)
+                # 刷新插件缓存
+                await self._refresh_plugin_cache(plugin_id)
 
-            # 确保缓存中的Plugin对象有正确的模块引用
-            if plugin_id in self._plugins_cache:
-                self._plugins_cache[plugin_id].module = module
+                # 确保缓存中的Plugin对象有正确的模块引用
+                if plugin_id in self._plugins_cache:
+                    self._plugins_cache[plugin_id].module = module
 
-            logging.info(f"插件 '{plugin_id}' 加载成功。")
-            return True
-        except Exception as e:
-            logging.error(f"加载插件 '{plugin_zip_path.name}' 失败: {e}")
-            return False
-        finally:
-            # 确保加载后从sys.path中移除缓存路径
-            if str(self.cache_directory) in sys.path:
-                sys.path.remove(str(self.cache_directory))
+                logging.info(f"插件 '{plugin_id}' 加载成功。")
+                return True
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    logging.warning(
+                        f"加载插件 '{plugin_zip_path.name}' 失败(尝试 {attempt + 1}/{max_retries}): {e}\n错误堆栈:\n{traceback.format_exc()}"
+                    )
+                    await asyncio.sleep(0.1)  # Wait a short time before retrying
+                else:
+                    logging.error(
+                        f"加载插件 '{plugin_zip_path.name}' 失败，已达到最大重试次数 {max_retries}: {e}\n错误堆栈:\n{traceback.format_exc()}"
+                    )
+            finally:
+                # 确保加载后从sys.path中移除缓存路径
+                if str(self.cache_directory) in sys.path:
+                    sys.path.remove(str(self.cache_directory))
+
+        return False
 
     async def load_all_plugins(self) -> None:
         """加载插件目录中的所有可用插件。"""
         await self._setup_plugin_file_mapping()
+        shutil.rmtree(self.cache_directory, ignore_errors=True)
         self.plugins_directory.mkdir(parents=True, exist_ok=True)
         for plugin_file in self.plugins_directory.glob("*.plugin"):
             await self._load_plugin(plugin_file)
@@ -661,7 +683,7 @@ class PluginManager:
                 return func(**kwargs)
         except Exception as e:
             logging.error(
-                f"调用插件 '{plugin_id}' 中的函数 '{function_name}' 时出错: {e}\n" \
+                f"调用插件 '{plugin_id}' 中的函数 '{function_name}' 时出错: {e}\n"
                 f"错误堆栈:\n{traceback.format_exc()}"
             )
             return None
@@ -778,7 +800,8 @@ class PluginManager:
             if "message_id" in message:
                 msg = RecvMessage(message["message_id"], self.bot)
                 await msg.get_info()
-                if msg.user_id!=3381464350:return
+                if msg.user_id != 3381464350:
+                    return
                 for plugin in self._plugins_cache.values():
                     if plugin.enabled:
                         plugin_config = Config(
@@ -863,4 +886,66 @@ class PluginManager:
                                                 trigger["func"], message=msg
                                             )
                                         )
-        logging.info(f"处理消息结束: {message}")
+        # if message.get("user_id") == 337374551:
+        #     breakpoint()
+        for plugin in self._plugins_cache.values():
+            if plugin.enabled:
+                plugin_config = Config(
+                    self.plugin_config_directory / f"{plugin.id}.json"
+                )
+                for trigger in plugin.triggers:
+                    trigger_config = plugin_config.triggers[trigger["id"]]
+                    # 检查群组是否在指定的分类中
+                    is_in_valid_group = False
+                    if message.get("group_id") and trigger_config.groups:
+                        # 将分类ID转换为分类对象，再检查群组ID是否在其中
+                        for category_id in trigger_config.groups:
+                            if category_id in group_categories and message.get(
+                                "group_id"
+                            ) in group_categories[category_id].get("groups", []):
+                                is_in_valid_group = True
+                                logging.info(
+                                    f"检查群组 {message.get('group_id')} 是否在分类 {category_id} 中: {is_in_valid_group}"
+                                )
+                                break
+
+                    if trigger_config.enabled and (
+                        is_in_valid_group
+                        or (
+                            message.get("group_id") is None
+                            and trigger_config.can_private
+                        )
+                    ):
+                        if trigger["type"] == "match_message":
+                            # 检查触发器是否匹配
+                            is_trigger_matched = False
+
+                            # 处理字段精确匹配
+                            if "matches" in trigger["params"]:
+                                is_trigger_matched = recursive_match(
+                                    message,
+                                    trigger["params"]["matches"],
+                                    trigger["params"].get("array_match_type", "all"),
+                                )
+
+                            # 如果触发器匹配，则执行相应的函数
+                            if is_trigger_matched:
+                                with (self.data_directory / "usage.jsonl").open(
+                                    "a", encoding="utf-8"
+                                ) as f:
+                                    json.dump(
+                                        {
+                                            "plugin_id": plugin.id,
+                                            "trigger_id": trigger["id"],
+                                            "message": message,
+                                        },
+                                        f,
+                                        ensure_ascii=False,
+                                    )
+                                    f.write("\n")
+                                asyncio.create_task(
+                                    plugin.call_function(
+                                        trigger["func"], message=message
+                                    )
+                                )
+        # logging.info(f"处理消息结束: {message}")
