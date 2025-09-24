@@ -7,6 +7,7 @@ import zipfile
 import json
 import asyncio
 import logging
+import traceback
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union, Set, TypeVar, Callable, Tuple
 
@@ -141,7 +142,8 @@ class Plugin:
                 return func(**kwargs)
         except Exception as e:
             logging.error(
-                f"调用插件 '{self.id}' 中的函数 '{function_name}' 时出错: {e}"
+                f"调用插件 '{self.id}' 中的函数 '{function_name}' 时出错: {e}\n" \
+                f"错误堆栈:\n{traceback.format_exc()}"
             )
             return None
 
@@ -232,9 +234,30 @@ class PluginManager:
             plugin_id = plugin_info["id"]
 
             extract_path = self.cache_directory / plugin_id
+            
+            # 增强的目录清理逻辑
             if extract_path.exists():
-                shutil.rmtree(extract_path)  # 清理旧缓存
-            os.makedirs(extract_path, exist_ok=True)
+                retry_count = 0
+                max_retries = 3
+                while retry_count < max_retries:
+                    try:
+                        shutil.rmtree(extract_path)
+                        break  # 成功删除，跳出循环
+                    except Exception as e:
+                        retry_count += 1
+                        if retry_count >= max_retries:
+                            logging.warning(f"清理插件缓存失败，将尝试直接覆盖: {e}")
+                        else:
+                            # 等待一段时间后重试
+                            await asyncio.sleep(0.1)
+            
+            # 确保目录存在，使用exist_ok=True避免创建已存在的目录时出错
+            try:
+                os.makedirs(extract_path, exist_ok=True)
+            except Exception as e:
+                logging.warning(f"创建插件缓存目录失败，将尝试继续: {e}")
+                
+            # 解压文件
             zip_ref.extractall(extract_path)
             return plugin_id
 
@@ -262,8 +285,14 @@ class PluginManager:
             default_config["triggers"][trigger_id] = {
                 "enabled": True,
                 "groups": [],
-                "can_private": plugin_info.get("can_private", False),
+                "can_private": trigger.get("can_private", False),
             }
+            if trigger.get("type") == "text_command":
+                default_config["triggers"][trigger_id].update(
+                    {
+                        "must_prefix": True,
+                    }
+                )
 
         # 写入配置文件
         with open(config_file_path, "w", encoding="utf-8") as f:
@@ -632,7 +661,8 @@ class PluginManager:
                 return func(**kwargs)
         except Exception as e:
             logging.error(
-                f"调用插件 '{plugin_id}' 中的函数 '{function_name}' 时出错: {e}"
+                f"调用插件 '{plugin_id}' 中的函数 '{function_name}' 时出错: {e}\n" \
+                f"错误堆栈:\n{traceback.format_exc()}"
             )
             return None
 
@@ -748,10 +778,12 @@ class PluginManager:
             if "message_id" in message:
                 msg = RecvMessage(message["message_id"], self.bot)
                 await msg.get_info()
-                # if msg.user_id!=3381464350:return
+                if msg.user_id!=3381464350:return
                 for plugin in self._plugins_cache.values():
                     if plugin.enabled:
-                        plugin_config = Config(self.plugin_config_directory / f"{plugin.id}.json")
+                        plugin_config = Config(
+                            self.plugin_config_directory / f"{plugin.id}.json"
+                        )
                         for trigger in plugin.triggers:
                             trigger_config = plugin_config.triggers[trigger["id"]]
                             # 检查群组是否在指定的分类中
@@ -759,16 +791,73 @@ class PluginManager:
                             if msg.is_group and trigger_config.groups:
                                 # 将分类ID转换为分类对象，再检查群组ID是否在其中
                                 for category_id in trigger_config.groups:
-                                    if category_id in group_categories and msg.group_id in group_categories[category_id].get("groups", []):
+                                    if (
+                                        category_id in group_categories
+                                        and msg.group_id
+                                        in group_categories[category_id].get(
+                                            "groups", []
+                                        )
+                                    ):
                                         is_in_valid_group = True
-                                        logging.info(f"检查群组 {msg.group_id} 是否在分类 {category_id} 中: {is_in_valid_group}")
+                                        logging.info(
+                                            f"检查群组 {msg.group_id} 是否在分类 {category_id} 中: {is_in_valid_group}"
+                                        )
                                         break
-                            
-                            if trigger_config.enabled and (is_in_valid_group or (msg.is_private and trigger_config.can_private)):
+
+                            if trigger_config.enabled and (
+                                is_in_valid_group
+                                or (msg.is_private and trigger_config.can_private)
+                            ):
                                 if trigger["type"] == "text_pattern":
                                     if re.search(
                                         trigger["params"]["pattern"], msg.text.lower()
                                     ):
+                                        with (self.data_directory / "usage.jsonl").open(
+                                            "a", encoding="utf-8"
+                                        ) as f:
+                                            json.dump(
+                                                {
+                                                    "plugin_id": plugin.id,
+                                                    "trigger_id": trigger["id"],
+                                                    "message": msg.raw,
+                                                },
+                                                f,
+                                                ensure_ascii=False,
+                                            )
+                                            f.write("\n")
+                                        asyncio.create_task(
+                                            plugin.call_function(
+                                                trigger["func"], message=msg
+                                            )
+                                        )
+                                elif trigger["type"] == "text_command":
+                                    if (
+                                        msg.text.lower().startswith(
+                                            tuple(self.bot.config.prefixes)
+                                        )
+                                        and msg.text
+                                        and msg.text.lower()[1:].startswith(
+                                            trigger["params"]["command"]
+                                        )
+                                    ) or (
+                                        not trigger_config.get("must_prefix", True)
+                                        and msg.text.lower().startswith(
+                                            trigger["params"]["command"]
+                                        )
+                                    ):
+                                        with (self.data_directory / "usage.jsonl").open(
+                                            "a", encoding="utf-8"
+                                        ) as f:
+                                            json.dump(
+                                                {
+                                                    "plugin_id": plugin.id,
+                                                    "trigger_id": trigger["id"],
+                                                    "message": msg.raw,
+                                                },
+                                                f,
+                                                ensure_ascii=False,
+                                            )
+                                            f.write("\n")
                                         asyncio.create_task(
                                             plugin.call_function(
                                                 trigger["func"], message=msg

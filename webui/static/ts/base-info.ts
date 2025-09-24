@@ -20,6 +20,7 @@ class UserInfoManager {
   private cpuUsageBarElement: HTMLElement | null = null;
   private memoryUsageElement: HTMLElement | null = null;
   private memoryUsageBarElement: HTMLElement | null = null;
+  private memoryUsageBarProjectElement: HTMLElement | null = null;
   private diskUsageElement: HTMLElement | null = null;
   private diskUsageBarElement: HTMLElement | null = null;
   private uptimeElement: HTMLElement | null = null;
@@ -52,6 +53,7 @@ class UserInfoManager {
     this.cpuUsageBarElement = document.getElementById('cpu-usage-bar');
     this.memoryUsageElement = document.getElementById('memory-usage');
     this.memoryUsageBarElement = document.getElementById('memory-usage-bar');
+    this.memoryUsageBarProjectElement = document.getElementById('memory-usage-bar-project');
     this.diskUsageElement = document.getElementById('disk-usage');
     this.diskUsageBarElement = document.getElementById('disk-usage-bar');
     this.uptimeElement = document.getElementById('uptime');
@@ -293,12 +295,12 @@ class UserInfoManager {
    */
   private async reloadPlugins(): Promise<void> {
     if (!this.reloadPluginsButton) return;
-    
+
     // 禁用按钮并显示加载状态
     const originalText = this.reloadPluginsButton.textContent;
     this.reloadPluginsButton.disabled = true;
     this.reloadPluginsButton.textContent = '重载中...';
-    
+
     try {
       // 调用重载插件的API路由
       const response = await fetch('/api/plugins/reload-all', {
@@ -307,13 +309,13 @@ class UserInfoManager {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
-      
+
       if (result.code === 0) {
         showAlert('成功', '插件重载成功！', 'success', true, 3000);
         // 重载成功后重新获取插件信息
@@ -338,6 +340,7 @@ class UserInfoManager {
   private updateSystemInfoDisplay(systemInfo: SystemInfo): void {
     // 计算百分比值
     const memoryUsagePercent = Math.round(systemInfo.memory.used * 100 / systemInfo.memory.total * 10) / 10;
+    const projectMemoryPercent = Math.round((systemInfo.project_memory + systemInfo.qq_memory) * 100 / systemInfo.memory.total * 10) / 10;
     const diskUsagePercent = Math.round(systemInfo.disk.used * 100 / systemInfo.disk.total * 10) / 10;
 
     // 格式化内存和磁盘大小为GB
@@ -361,6 +364,9 @@ class UserInfoManager {
     }
     if (this.memoryUsageBarElement) {
       this.memoryUsageBarElement.style.width = `${memoryUsagePercent}%`;
+    }
+    if (this.memoryUsageBarProjectElement) {
+      this.memoryUsageBarProjectElement.style.width = `${projectMemoryPercent}%`;
     }
 
     // 更新磁盘空间信息

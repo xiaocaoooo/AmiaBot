@@ -2,6 +2,8 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Set, cast
 from enum import Enum
+
+from amia.recv_message import RecvMessage
 from . import Amia
 from .user import User
 
@@ -272,6 +274,24 @@ class Group:
             {"group_id": self.group_id, "content": content, "pinned": pinned}
         )
         return result.get("status", False) is True
+    
+    async def get_messages(self, message_id: int, count: int = 10) -> List[RecvMessage]:
+        """获取群消息
+
+        Args:
+            message_id: 起始消息ID
+            count: 获取消息数量，默认为10条
+
+        Returns:
+            List[RecvMessage]: 消息列表
+        """
+        result = await self.bot.doAction(
+            "get_group_msg_history", 
+            {"group_id": self.group_id, "message_id": message_id, "count": count}
+        )
+        if result.get("status", False) is True:
+            return [RecvMessage.fromDict(msg, self.bot) for msg in result.get("messages", [])]
+        return []
 
     def toDict(self) -> Dict[str, Any]:
         """将群组信息转换为字典

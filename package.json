@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "AmiaBot - QQ机器人Web管理界面",
   "scripts": {
-    "compile-ts": "tsc -p webui/static/ts/tsconfig.json",
-    "watch-ts": "tsc -w -p webui/static/ts/tsconfig.json"
+    "compile-ts": "tsc -p tsconfig.json",
+    "watch-ts": "tsc -w -p tsconfig.json"
   },
   "devDependencies": {
     "typescript": "^5.5.4"

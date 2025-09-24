@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any, Dict, List, Union
 from . import Amia
 from .recv_message import RecvMessage
@@ -44,13 +45,15 @@ class SendTextMessage(SendBaseMessage):
         super().__init__("text", data={"text": text})
 
 class SendImageMessage(SendBaseMessage):
-    def __init__(self, image: str) -> None:
+    def __init__(self, image: str|Path) -> None:
+        if isinstance(image, Path):
+            image = str(image)
         if urlparse(image).scheme in ('http', 'https', 'file'):
             img_path = image
         else:
             abs_path = os.path.abspath(image)
             img_path = f'file://{abs_path.replace(os.sep, "/")}'
-        super().__init__("image", data={"image": img_path})
+        super().__init__("image", data={"file": img_path})
 
 class SendFaceMessage(SendBaseMessage):
     def __init__(self, face_id: int) -> None:
@@ -62,12 +65,14 @@ class SendFaceMessage(SendBaseMessage):
         super().__init__("face", data={"id": face_id})
 
 class SendRecordMessage(SendBaseMessage):
-    def __init__(self, file_path: str) -> None:
+    def __init__(self, file_path: str|Path) -> None:
         """发送语音消息
         
         Args:
             file_path: 语音文件路径，可以是本地路径、网络路径
         """
+        if isinstance(file_path, Path):
+            file_path = str(file_path)
         if urlparse(file_path).scheme in ('http', 'https', 'file'):
             audio_path = file_path
         else:
@@ -76,12 +81,14 @@ class SendRecordMessage(SendBaseMessage):
         super().__init__("record", data={"file": audio_path})
 
 class SendVideoMessage(SendBaseMessage):
-    def __init__(self, file_path: str) -> None:
+    def __init__(self, file_path: str|Path) -> None:
         """发送视频消息
         
         Args:
             file_path: 视频文件路径，可以是本地路径、网络路径
         """
+        if isinstance(file_path, Path):
+            file_path = str(file_path)
         if urlparse(file_path).scheme in ('http', 'https', 'file'):
             video_path = file_path
         else:
@@ -134,13 +141,15 @@ class SendDiceMessage(SendBaseMessage):
         super().__init__("dice", data=data)
 
 class SendFileMessage(SendBaseMessage):
-    def __init__(self, file_path: str, file_name: str|None=None) -> None:
+    def __init__(self, file_path: str|Path, file_name: str|None=None) -> None:
         """发送文件消息
         
         Args:
             file_path: 文件路径，可以是本地路径、网络路径或base64编码
             file_name: 可选，显示的文件名
         """
+        if isinstance(file_path, Path):
+            file_path = str(file_path)
         if urlparse(file_path).scheme not in ('http', 'https', 'file') and not file_path.startswith('data:'):
             abs_path = os.path.abspath(file_path)
             file_path = f'file://{abs_path.replace(os.sep, "/")}'

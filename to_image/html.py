@@ -1,13 +1,16 @@
+import logging
 from pathlib import Path
 from pyppeteer import launch
 import sys
 import os
 import base64
 
+from cache_manager import CacheManager
+
 
 async def htmlToImage(
     content: str,
-    filename: Path,
+    filename: Path | None = None,
     *,
     header: str = "",
     script: str = "",
@@ -25,6 +28,13 @@ async def htmlToImage(
     Returns:
         Path: 保存的图片路径
     """
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"htmlToImage content: {content}")
+    
+    if filename is None:
+        filename = CacheManager.get_instance().get_cache("png")
+    filename.parent.mkdir(parents=True, exist_ok=True)
     # 获取模板文件路径
     template_path = os.path.join(os.path.dirname(__file__), "template.html")
 
@@ -41,6 +51,9 @@ async def htmlToImage(
     YurukaStd_path = os.path.join(os.path.dirname(__file__), "..", "fonts", "YurukaStd.ttf")
     with open(YurukaStd_path, "rb") as f:
         YurukaStd_data = base64.b64encode(f.read()).decode("utf-8")
+    AaCute_path = os.path.join(os.path.dirname(__file__), "..", "fonts", "AaCute.woff")
+    with open(AaCute_path, "rb") as f:
+        AaCute_data = base64.b64encode(f.read()).decode("utf-8")
 
     # 创建字体CSS
     font_css = f"""
@@ -58,9 +71,16 @@ async def htmlToImage(
             font-weight: normal;
             font-style: normal;
         }}
+        
+        @font-face {{
+            font-family: 'AaCute';
+            src: url('data:font/woff;base64,{AaCute_data}') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }}
 
         body {{
-            font-family: 'ShangShouFangTangTi', 'YurukaStd', sans-serif;
+            font-family: 'AaCute', 'ShangShouFangTangTi', 'YurukaStd', 'Microsoft YaHei UI', sans-serif;
         }}
     </style>
     """
@@ -99,7 +119,7 @@ async def htmlToImage(
 
     # 启动浏览器
     browser = await launch(
-        headless=False,
+        headless=True,
         executablePath=chrome_path,
         args=["--no-sandbox", "--disable-setuid-sandbox"],
     )
@@ -142,8 +162,11 @@ async def htmlToImage(
                 await element.screenshot(
                     {
                         "path": str(filename),
+                        "type": "png"
                     }
                 )
+                
+    # await page.waitFor(800000)
 
     # 关闭浏览器
     await browser.close()

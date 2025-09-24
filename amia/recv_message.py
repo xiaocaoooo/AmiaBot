@@ -61,6 +61,40 @@ class RecvMessage:
             self.message = []
             self._initialized = True
             
+    @staticmethod
+    def fromDict(data: Dict[str, Any], bot: Amia) -> "RecvMessage":
+        """从字典创建RecvMessage实例
+
+        Args:
+            data: 包含消息数据的字典
+            bot: 机器人实例
+
+        Returns:
+            RecvMessage: 消息实例
+        """
+        msg = RecvMessage(message_id, bot)
+        msg.raw = data
+
+        msg.self_id = data.get("self_id", 0)
+        msg.user_id = data.get("user_id", 0)
+        msg.time = datetime.fromtimestamp(data.get("time", 0))
+        msg.message_seq = data.get("message_seq", 0)
+        msg.real_id = data.get("real_id", 0)
+        msg.real_seq = data.get("real_seq", "")
+        msg.message_type = data.get("message_type", "")
+
+        sender_user_id = data.get("sender", {}).get("user_id")
+        msg.sender = User(sender_user_id, bot=bot) if sender_user_id else None
+
+        msg.raw_message = data.get("raw_message", "")
+        msg.group_id = data.get("group_id")
+        msg.group_name = data.get("group_name")
+
+        raw_messages = data.get("message", [])
+        msg.message = [RecvBaseMessage.fromDict(item) for item in raw_messages]
+        
+        return msg
+            
     @property
     def is_group(self) -> bool:
         """判断消息是否为群消息

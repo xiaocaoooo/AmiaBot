@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import logging
 import asyncio
@@ -6,6 +7,7 @@ import sys
 import threading
 from pathlib import Path
 from amia import Amia
+from cache_manager import CacheManager
 from config import Config
 from plugin_manager import PluginManager, ProjectInterface
 
@@ -21,6 +23,8 @@ log_format = "[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d] %(message)
 # 设置日期时间格式
 date_format = "%Y-%m-%d %H:%M:%S"
 
+Path("./logs").mkdir(parents=True, exist_ok=True)
+
 # 配置根日志记录器
 logging.basicConfig(
     level=logging.INFO,
@@ -28,8 +32,7 @@ logging.basicConfig(
     datefmt=date_format,
     handlers=[
         logging.StreamHandler(sys.stdout),
-        # 如果需要文件日志，可以添加下面这行
-        # logging.FileHandler('app.log')
+        logging.FileHandler(f"./logs/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
     ],
 )
 
@@ -62,6 +65,7 @@ if __name__ == "__main__":
     cache_path = Path("./cache")
     if cache_path.exists():
         shutil.rmtree(cache_path)
+    CacheManager(cache_path)
     
     Path("./plugins").mkdir(exist_ok=True)
     Path("./cache/plugins").mkdir(parents=True, exist_ok=True)
@@ -72,6 +76,10 @@ if __name__ == "__main__":
         group_categories_path.touch()
         with group_categories_path.open("w", encoding="utf-8") as f:
             json.dump([], f, ensure_ascii=False)
+            
+    usage_path = Path("./data/configs/usage.jsonl")
+    if not usage_path.exists():
+        usage_path.touch()
 
     # 启动WebUI（如果可用）
     if has_webui:
