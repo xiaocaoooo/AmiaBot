@@ -8,3 +8,4 @@ six>=1.16.0
 aiohttp
 psutil
 pyppeteer
+pillow

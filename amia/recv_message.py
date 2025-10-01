@@ -198,6 +198,10 @@ class RecvMessage:
 
         return result
 
+    async def send(self, send_message: "SendMessage") -> "RecvMessage":  # type: ignore # noqa: F821
+        """发送消息"""
+        return await send_message.send(recv_message=self)
+
     async def reply(self, send_message: "SendMessage")->"RecvMessage":  # type: ignore # noqa: F821
         """回复消息"""
         return await send_message.reply(self)

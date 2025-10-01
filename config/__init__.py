@@ -251,7 +251,7 @@ class Config(ConfigObject):
             # 确保_last_update_time和_filename已经初始化
             if hasattr(self, '_last_update_time') and hasattr(self, '_filename'):
                 self._last_update_time = datetime.now()
-                self._filename.write_text(json.dumps(self.toDict()))
+                self._filename.write_text(json.dumps(self.toDict(), ensure_ascii=False))
 
     def fresh(self) -> None:
         """刷新配置缓存，重新从文件加载配置

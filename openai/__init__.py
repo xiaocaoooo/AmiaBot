@@ -1,3 +1,4 @@
+import uuid
 import aiohttp
 import logging
 from typing import Dict, Any, List, Optional, Union
@@ -293,7 +294,11 @@ class OpenAI:
         Raises:
             ValueError: 当没有提供API密钥时
         """
+        uid = uuid.uuid4()
+        logger.info(f"OpenAI chat completion request [{uid}]: {messages}")
         response = await self.chat_completion(
             messages, temperature=temperature, max_tokens=max_tokens, **kwargs
         )
-        return response["choices"][0]["message"]["content"]
+        resp=response["choices"][0]["message"]["content"]
+        logger.info(f"OpenAI chat completion response [{uid}]: {resp}")
+        return resp

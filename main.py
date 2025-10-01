@@ -11,6 +11,7 @@ from cache_manager import CacheManager
 from config import Config
 from openai import OpenAI
 from plugin_manager import PluginManager, ProjectInterface
+from to_image.html import get_browser_instance
 
 
 config = Config(Path("./config.json"))
@@ -69,6 +70,7 @@ async def main():
     await plugin_manager.load_all_plugins()
     
     asyncio.create_task(bot.run())
+    asyncio.create_task(get_browser_instance())
 
     # 保持主程序运行
     while True:

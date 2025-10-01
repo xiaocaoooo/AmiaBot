@@ -9,8 +9,7 @@ import asyncio
 import logging
 import traceback
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Union, Set, TypeVar, Callable, Tuple
-
+from typing import Dict, Any, Optional, List
 from amia import Amia
 from amia.recv_message import RecvMessage
 from config import Config
@@ -43,7 +42,7 @@ class ProjectInterface:
         Returns:
             Dict[str, Any]: 响应字典。
         """
-        logging.info(f"项目接收来自插件的数据: {json.dumps(data)}")
+        logging.info(f"项目接收来自插件的数据: {json.dumps(data, ensure_ascii=False)}")
         # 这里可以实现特定的业务逻辑，如写入数据库或发送网络请求
         return {"status": "success", "message": "数据已接收"}
 
@@ -286,7 +285,7 @@ class PluginManager:
             return
 
         # 从插件信息中提取triggers并生成默认配置
-        default_config = {"triggers": {}}
+        default_config: Dict[str, Dict] = {"triggers": {}}
 
         for trigger in plugin_info.get("triggers", []):
             trigger_id = trigger.get("id", trigger.get("name", "unknown"))
@@ -795,157 +794,245 @@ class PluginManager:
         Args:
             message (Dict[str, Any]): 接收到的消息数据。
         """
+        # 加载群组分类配置（只加载一次）
         group_categories = Config(self.config_directory / "group_categories.json")
-        if message.get("post_type") == "message":
-            if "message_id" in message:
-                msg = RecvMessage(message["message_id"], self.bot)
-                await msg.get_info()
-                if msg.user_id != 3381464350:
-                    return
-                for plugin in self._plugins_cache.values():
-                    if plugin.enabled:
-                        plugin_config = Config(
-                            self.plugin_config_directory / f"{plugin.id}.json"
-                        )
-                        for trigger in plugin.triggers:
-                            trigger_config = plugin_config.triggers[trigger["id"]]
-                            # 检查群组是否在指定的分类中
-                            is_in_valid_group = False
-                            if msg.is_group and trigger_config.groups:
-                                # 将分类ID转换为分类对象，再检查群组ID是否在其中
-                                for category_id in trigger_config.groups:
-                                    if (
-                                        category_id in group_categories
-                                        and msg.group_id
-                                        in group_categories[category_id].get(
-                                            "groups", []
-                                        )
-                                    ):
-                                        is_in_valid_group = True
-                                        logging.info(
-                                            f"检查群组 {msg.group_id} 是否在分类 {category_id} 中: {is_in_valid_group}"
-                                        )
-                                        break
 
-                            if trigger_config.enabled and (
-                                is_in_valid_group
-                                or (msg.is_private and trigger_config.can_private)
-                            ):
-                                if trigger["type"] == "text_pattern":
-                                    if re.search(
-                                        trigger["params"]["pattern"], msg.text.lower()
-                                    ):
-                                        with (self.data_directory / "usage.jsonl").open(
-                                            "a", encoding="utf-8"
-                                        ) as f:
-                                            json.dump(
-                                                {
-                                                    "plugin_id": plugin.id,
-                                                    "trigger_id": trigger["id"],
-                                                    "message": msg.raw,
-                                                },
-                                                f,
-                                                ensure_ascii=False,
-                                            )
-                                            f.write("\n")
-                                        asyncio.create_task(
-                                            plugin.call_function(
-                                                trigger["func"], message=msg
-                                            )
-                                        )
-                                elif trigger["type"] == "text_command":
-                                    if (
-                                        msg.text.lower().startswith(
-                                            tuple(self.bot.config.prefixes)
-                                        )
-                                        and msg.text
-                                        and msg.text.lower()[1:].startswith(
-                                            trigger["params"]["command"]
-                                        )
-                                    ) or (
-                                        not trigger_config.get("must_prefix", True)
-                                        and msg.text.lower().startswith(
-                                            trigger["params"]["command"]
-                                        )
-                                    ):
-                                        with (self.data_directory / "usage.jsonl").open(
-                                            "a", encoding="utf-8"
-                                        ) as f:
-                                            json.dump(
-                                                {
-                                                    "plugin_id": plugin.id,
-                                                    "trigger_id": trigger["id"],
-                                                    "message": msg.raw,
-                                                },
-                                                f,
-                                                ensure_ascii=False,
-                                            )
-                                            f.write("\n")
-                                        asyncio.create_task(
-                                            plugin.call_function(
-                                                trigger["func"], message=msg
-                                            )
-                                        )
-        # if message.get("user_id") == 337374551:
-        #     breakpoint()
-        for plugin in self._plugins_cache.values():
-            if plugin.enabled:
-                plugin_config = Config(
-                    self.plugin_config_directory / f"{plugin.id}.json"
-                )
+        # 处理普通消息类型 (text_pattern 和 text_command)
+        if message.get("post_type") == "message" and "message_id" in message:
+            await self._process_text_message(message, group_categories)
+
+        # 处理match_message类型的触发器
+        await self._process_match_message_triggers(message, group_categories)
+
+    async def _process_text_message(
+        self, message: Dict[str, Any], group_categories: Config
+    ) -> None:
+        """
+        处理文本类型的消息，包括text_pattern和text_command触发器
+
+        Args:
+            message (Dict[str, Any]): 消息数据
+            group_categories (Config): 群组分类配置
+        """
+        try:
+            msg = RecvMessage(message["message_id"], self.bot)
+            await msg.get_info()
+
+            # 预加载所有插件配置以提高性能
+            plugin_configs = {}
+
+            for plugin in self._plugins_cache.values():
+                if not plugin.enabled:
+                    continue
+
+                # 只加载一次插件配置
+                if plugin.id not in plugin_configs:
+                    plugin_configs[plugin.id] = Config(
+                        self.plugin_config_directory / f"{plugin.id}.json"
+                    )
+
+                plugin_config = plugin_configs[plugin.id]
+
                 for trigger in plugin.triggers:
                     trigger_config = plugin_config.triggers[trigger["id"]]
-                    # 检查群组是否在指定的分类中
-                    is_in_valid_group = False
-                    if message.get("group_id") and trigger_config.groups:
-                        # 将分类ID转换为分类对象，再检查群组ID是否在其中
-                        for category_id in trigger_config.groups:
-                            if category_id in group_categories and message.get(
-                                "group_id"
-                            ) in group_categories[category_id].get("groups", []):
-                                is_in_valid_group = True
-                                logging.info(
-                                    f"检查群组 {message.get('group_id')} 是否在分类 {category_id} 中: {is_in_valid_group}"
-                                )
-                                break
 
-                    if trigger_config.enabled and (
-                        is_in_valid_group
-                        or (
-                            message.get("group_id") is None
-                            and trigger_config.can_private
-                        )
+                    # 检查消息是否符合触发器的群组或私聊条件
+                    if not self._check_trigger_conditions(
+                        msg.is_group,
+                        msg.group_id or 0,
+                        trigger_config,
+                        group_categories,
                     ):
-                        if trigger["type"] == "match_message":
-                            # 检查触发器是否匹配
-                            is_trigger_matched = False
+                        continue
 
-                            # 处理字段精确匹配
-                            if "matches" in trigger["params"]:
-                                is_trigger_matched = recursive_match(
-                                    message,
-                                    trigger["params"]["matches"],
-                                    trigger["params"].get("array_match_type", "all"),
-                                )
+                    # 根据触发器类型处理
+                    if trigger["type"] == "text_pattern":
+                        if re.search(
+                            trigger["params"]["pattern"],
+                            (
+                                msg.raw_message
+                                if trigger["params"]["raw"]
+                                else msg.text.lower()
+                            ),
+                        ):
+                            self._record_usage(plugin.id, trigger["id"], msg.raw)
+                            asyncio.create_task(
+                                plugin.call_function(trigger["func"], message=msg)
+                            )
 
-                            # 如果触发器匹配，则执行相应的函数
-                            if is_trigger_matched:
-                                with (self.data_directory / "usage.jsonl").open(
-                                    "a", encoding="utf-8"
-                                ) as f:
-                                    json.dump(
-                                        {
-                                            "plugin_id": plugin.id,
-                                            "trigger_id": trigger["id"],
-                                            "message": message,
-                                        },
-                                        f,
-                                        ensure_ascii=False,
-                                    )
-                                    f.write("\n")
-                                asyncio.create_task(
-                                    plugin.call_function(
-                                        trigger["func"], message=message
-                                    )
-                                )
-        # logging.info(f"处理消息结束: {message}")
+                    elif trigger["type"] == "text_command":
+                        if self._match_text_command(msg.text, trigger, trigger_config):
+                            self._record_usage(plugin.id, trigger["id"], msg.raw)
+                            asyncio.create_task(
+                                plugin.call_function(trigger["func"], message=msg)
+                            )
+
+        except Exception as e:
+            # 记录异常但不中断处理流程
+            logging.error(f"处理文本消息时发生错误: {e}")
+
+    async def _process_match_message_triggers(
+        self, message: Dict[str, Any], group_categories: Config
+    ) -> None:
+        """
+        处理match_message类型的触发器
+
+        Args:
+            message (Dict[str, Any]): 消息数据
+            group_categories (Config): 群组分类配置
+        """
+        # 预加载所有插件配置以提高性能
+        plugin_configs = {}
+
+        for plugin in self._plugins_cache.values():
+            if not plugin.enabled:
+                continue
+
+            # 只加载一次插件配置
+            if plugin.id not in plugin_configs:
+                plugin_configs[plugin.id] = Config(
+                    self.plugin_config_directory / f"{plugin.id}.json"
+                )
+
+            plugin_config = plugin_configs[plugin.id]
+
+            for trigger in plugin.triggers:
+                if trigger["type"] != "match_message":
+                    continue
+
+                trigger_config = plugin_config.triggers[trigger["id"]]
+                group_id = message.get("group_id")
+
+                # 检查消息是否符合触发器的群组或私聊条件
+                if not self._check_trigger_conditions(
+                    group_id is not None,
+                    group_id or 0,
+                    trigger_config,
+                    group_categories,
+                ):
+                    continue
+
+                # 检查触发器是否匹配
+                is_trigger_matched = False
+                if "matches" in trigger["params"]:
+                    is_trigger_matched = recursive_match(
+                        message,
+                        trigger["params"]["matches"],
+                        trigger["params"].get("array_match_type", "all"),
+                    )
+
+                if is_trigger_matched:
+                    self._record_usage(plugin.id, trigger["id"], message)
+                    asyncio.create_task(
+                        plugin.call_function(trigger["func"], message=message)
+                    )
+
+    def _check_trigger_conditions(
+        self,
+        is_group: bool,
+        group_id: int,
+        trigger_config: Any,
+        group_categories: Config,
+    ) -> bool:
+        """
+        检查消息是否满足触发器的条件
+
+        Args:
+            is_group (bool): 是否为群组消息
+            group_id (int): 群组ID
+            trigger_config: 触发器配置
+            group_categories (Config): 群组分类配置
+
+        Returns:
+            bool: 是否满足条件
+        """
+        # 首先检查触发器是否启用
+        if not trigger_config.enabled:
+            return False
+
+        # 检查是否在有效的群组中
+        is_in_valid_group = False
+        if is_group and trigger_config.groups:
+            is_in_valid_group = self._is_in_valid_group(
+                group_id, trigger_config.groups, group_categories
+            )
+
+        # 检查是否为私聊消息且允许私聊
+        is_valid_private = not is_group and trigger_config.can_private
+
+        return is_in_valid_group or is_valid_private
+
+    def _is_in_valid_group(
+        self, group_id: int, category_ids: List[str], group_categories: Config
+    ) -> bool:
+        """
+        检查群组ID是否在指定的分类中
+
+        Args:
+            group_id (int): 群组ID
+            category_ids (List[str]): 分类ID列表
+            group_categories (Config): 群组分类配置
+
+        Returns:
+            bool: 是否在有效群组中
+        """
+        for category_id in category_ids:
+            if category_id in group_categories and group_id in group_categories[
+                category_id
+            ].get("groups", []):
+                return True
+        return False
+
+    def _match_text_command(
+        self, text: str, trigger: Dict[str, Any], trigger_config: Any
+    ) -> bool:
+        """
+        检查文本是否匹配命令触发器
+
+        Args:
+            text (str): 消息文本
+            trigger (Dict[str, Any]): 触发器配置
+            trigger_config: 触发器配置对象
+
+        Returns:
+            bool: 是否匹配
+        """
+        command = trigger["params"]["command"]
+        must_prefix = trigger_config.get("must_prefix", True)
+
+        # 如果不需要前缀，直接检查命令是否匹配
+        if not must_prefix:
+            return text.lower().startswith(command)
+
+        # 需要前缀的情况
+        if not text or not text.lower().startswith(tuple(self.bot.config.prefixes)):
+            return False
+
+        # 提取前缀后的文本并检查是否以命令开头
+        prefix_len = 1  # 假设前缀长度为1
+        return len(text) > prefix_len and text.lower()[prefix_len:].startswith(command)
+
+    def _record_usage(self, plugin_id: str, trigger_id: str, message: Any) -> None:
+        """
+        记录插件使用情况到日志文件
+
+        Args:
+            plugin_id (str): 插件ID
+            trigger_id (str): 触发器ID
+            message (Any): 消息数据
+        """
+        try:
+            with (self.data_directory / "usage.jsonl").open("a", encoding="utf-8") as f:
+                json.dump(
+                    {
+                        "plugin_id": plugin_id,
+                        "trigger_id": trigger_id,
+                        "message": message,
+                    },
+                    f,
+                    ensure_ascii=False,
+                )
+                f.write("\n")
+        except Exception as e:
+            # 记录错误但不中断流程
+            logging.error(f"记录插件使用情况失败: {e}")

@@ -95,7 +95,7 @@ class Amia:
         Args:
             msg: 消息字典
         """
-        await asyncio.gather(*(listener(msg) for listener in self._listeners))
+        await asyncio.gather(*(listener_(msg) for listener_ in self._listeners))
 
     async def doAction(
         self,
@@ -113,7 +113,7 @@ class Amia:
         Returns:
             API响应结果（JSON解析后的字典）
         """
-        logging.info(f"执行操作 {action} {json.dumps(params)}")
+        logging.info(f"执行操作 {action} {json.dumps(params, ensure_ascii=False)}")
         async with aiohttp.ClientSession() as session:
             async with session.request(
                 methods,
@@ -121,7 +121,7 @@ class Amia:
                 json=params or {},
             ) as resp:
                 data = cast(Dict[str, Any], await resp.json())
-                logging.info(f"操作 {action} 响应: {json.dumps(data)}")
+                logging.info(f"操作 {action} 响应: {json.dumps(data, ensure_ascii=False)}")
                 return data
 
     async def getBotUser(self) -> "User":  # type: ignore  # noqa: F821
