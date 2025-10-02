@@ -250,7 +250,7 @@ class Group:
             "set_group_whole_ban", 
             {"group_id": self.group_id, "enable": enable}
         )
-        return result.get("status", False) is True
+        return result.get("retcode") == 0
 
     async def set_admin(self, user_id: int, enable: bool) -> bool:
         """设置群管理员
@@ -266,7 +266,7 @@ class Group:
             "set_group_admin", 
             {"group_id": self.group_id, "user_id": user_id, "enable": enable}
         )
-        return result.get("status", False) is True
+        return result.get("retcode") == 0
 
     async def send_announcement(self, content: str, pinned: bool = False) -> bool:
         """发送群公告
@@ -307,7 +307,7 @@ class Group:
             return result.get("data", {}).get("messages", [])
         return []
     
-    async def get_messages(self, message_id: int|None = None, count: int|None = None) -> List["RecvMessage"]:  # type: ignore # noqa: F821
+    async def get_messages(self, message_id: int|None = None, count: int|None = None, seq: int|None = None) -> List["RecvMessage"]:  # type: ignore # noqa: F821
         """获取群消息
 
         Args:
@@ -318,12 +318,19 @@ class Group:
             List[RecvMessage]: 消息列表
         """
         from .recv_message import RecvMessage
+        params = {"group_id": self.group_id}
+        if message_id is not None:
+            params["message_id"] = message_id
+        if count is not None:
+            params["count"] = count
+        if seq is not None:
+            params["message_seq"] = seq
         result = await self.bot.doAction(
             "get_group_msg_history", 
-            {"group_id": self.group_id, "message_id": message_id, "count": count}
+            params
         )
-        if result.get("status", False) is True:
-            return [RecvMessage.fromDict(msg, self.bot) for msg in result.get("messages", [])]
+        if result.get("retcode") == 0:
+            return [RecvMessage.fromDict(msg, self.bot) for msg in result.get("data", {}).get("messages", [])]
         return []
 
     def toDict(self) -> Dict[str, Any]:
@@ -339,6 +346,18 @@ class Group:
             "max_member_count": self.max_member_count,
             "avatar": self.avatar,
         }
+
+    def __str__(self) -> str:
+        # 把所有有的信息都包含在字符串中
+        info_list = [
+            f"群号：{self.group_id}",
+            f"群名称：{self.group_name}",
+            f"成员数量：{self.member_count}/{self.max_member_count}",
+            f"群头像：{self.avatar}",
+        ]
+        # 把所有有的信息用换行符连接起来
+        info_str = "\n".join(info_list)
+        return info_str
 
 
 class GroupMember:

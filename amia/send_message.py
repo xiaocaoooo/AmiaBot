@@ -5,6 +5,7 @@ from .recv_message import RecvMessage
 import os
 from urllib.parse import urlparse
 
+message_history:Dict[int, List[int]]={} # 被回复ID -> 回复ID列表
 
 class SendMessage:
     def __init__(
@@ -43,12 +44,18 @@ class SendMessage:
                 }
                 | self.messages[0].data,
             )
+            if recv_message:
+                message_history.setdefault(recv_message.message_id, []).append(data["data"]["message_id"])
             return RecvMessage(data["data"]["message_id"], self.bot)
         if is_private:
             data = await self.bot.doAction("send_private_msg", params={"user_id": self.user_id or user_id or recv_message.user_id, "message": [m.toDict() for m in self.messages]})  # type: ignore
+            if recv_message:
+                message_history.setdefault(recv_message.message_id, []).append(data["data"]["message_id"])
             return RecvMessage(data["data"]["message_id"], self.bot)
         elif is_group:
             data = await self.bot.doAction("send_group_msg", params={"group_id": self.group_id or group_id or recv_message.group_id, "message": [m.toDict() for m in self.messages]})  # type: ignore
+            if recv_message:
+                message_history.setdefault(recv_message.message_id, []).append(data["data"]["message_id"])
             return RecvMessage(data["data"]["message_id"], self.bot)
 
     async def reply(self, recv_message: RecvMessage):
@@ -66,6 +73,8 @@ class SendMessage:
                     "message": [m.toDict() for m in new_messages],
                 },
             )
+            if recv_message.message_id:
+                message_history.setdefault(recv_message.message_id, []).append(data["data"]["message_id"])
             return RecvMessage(data["data"]["message_id"], self.bot)
         elif recv_message.user_id:
             data = await self.bot.doAction(
@@ -75,6 +84,8 @@ class SendMessage:
                     "message": [m.toDict() for m in new_messages],
                 },
             )
+            if recv_message.message_id:
+                message_history.setdefault(recv_message.message_id, []).append(data["data"]["message_id"])
             return RecvMessage(data["data"]["message_id"], self.bot)
 
 
@@ -82,6 +93,21 @@ class SendBaseMessage:
     def __init__(self, type: str, data: Dict[str, Any] | None = None) -> None:
         self.type = type
         self.data = data or {}
+        
+    @classmethod
+    def fromDict(cls, data: Dict[str, Any]) -> "SendBaseMessage":
+        if data["type"] == "text":
+            return SendTextMessage(data["data"]["text"])
+        elif data["type"] == "image":
+            return SendImageMessage(data["data"]["file"])
+        elif data["type"] == "face":
+            return SendFaceMessage(data["data"]["id"])
+        elif data["type"] == "record":
+            return SendRecordMessage(data["data"]["file"])
+        elif data["type"] == "video":
+            return SendVideoMessage(data["data"]["file"])
+        else:
+            return cls(data["type"], data["data"])
 
     def toDict(self) -> Dict[str, Any]:
         return {"type": self.type, "data": self.data}

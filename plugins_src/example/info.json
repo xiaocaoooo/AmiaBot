@@ -1,0 +1,19 @@
+{
+    "id": "example",
+    "name": "示例插件",
+    "description": "示例插件",
+    "version": "1.0.0",
+    "author": "Amia",
+    "triggers": [
+        {
+            "type": "text_command",
+            "id": "example",
+            "func": "example",
+            "name": "示例",
+            "description": "示例",
+            "params":{
+                "command": "example"
+            }
+        }
+    ]
+}

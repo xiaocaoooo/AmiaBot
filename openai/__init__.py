@@ -3,8 +3,7 @@ import aiohttp
 import logging
 from typing import Dict, Any, List, Optional, Union
 from config import ConfigObject
-
-logger = logging.getLogger(__name__)
+from utools.tries import tries
 
 
 class ChatMessage:
@@ -35,7 +34,7 @@ class ChatMessage:
         return f"{self.role}: {self.content}"
 
     def __repr__(self) -> str:
-        return f"ChatMessage(role='{self.role}', content='{self.content}')"
+        return f"ChatMessage(role='{self.role}', content='{self.content if len(self.content) < 100 else self.content[:97]+'...'}')"
 
 
 class ChatMessageList:
@@ -215,12 +214,14 @@ class OpenAI:
             async with session.request(method, url, **kwargs) as response:
                 if response.status != 200:
                     error_msg = await response.text()
-                    logger.error(f"OpenAI API请求失败: {response.status} - {error_msg}")
+                    logging.error(
+                        f"OpenAI API请求失败: {response.status} - {error_msg}"
+                    )
                     response.raise_for_status()
 
                 return await response.json()
         except Exception as e:
-            logger.error(f"OpenAI API调用错误: {str(e)}")
+            logging.error(f"OpenAI API调用错误: {str(e)}")
             raise
 
     async def chat_completion(
@@ -278,6 +279,7 @@ class OpenAI:
         messages: Union[List[Dict[str, str]], ChatMessageList, List[ChatMessage]],
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
+        try_times: int = 3,
         **kwargs,
     ) -> str:
         """调用OpenAI聊天完成API并返回生成的文本
@@ -286,6 +288,7 @@ class OpenAI:
             messages: 消息列表，可以是字典列表或ChatMessageList对象
             temperature: 采样温度
             max_tokens: 最大生成token数
+            try_times: 重试次数
             **kwargs: 其他API参数
 
         Returns:
@@ -295,10 +298,10 @@ class OpenAI:
             ValueError: 当没有提供API密钥时
         """
         uid = uuid.uuid4()
-        logger.info(f"OpenAI chat completion request [{uid}]: {messages}")
-        response = await self.chat_completion(
+        logging.info(f"OpenAI chat completion request [{uid}]: {messages}")
+        response = await tries(try_times)(self.chat_completion)(
             messages, temperature=temperature, max_tokens=max_tokens, **kwargs
         )
-        resp=response["choices"][0]["message"]["content"]
-        logger.info(f"OpenAI chat completion response [{uid}]: {resp}")
+        resp = response["choices"][0]["message"]["content"]
+        logging.info(f"OpenAI chat completion response [{uid}]: {resp}")
         return resp

@@ -1,6 +1,19 @@
 # AmiaBot
 
-AmiaBot 是一个基于 OneBot 协议的 QQ 机器人框架，提供灵活的插件系统、Web 管理界面和丰富的功能支持。
+![Python](https://img.shields.io/badge/Python-3.8+-brightgreen.svg)
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
+
+AmiaBot 是一个功能强大、易于扩展的 QQ 机器人框架，基于 OneBot 协议实现，提供灵活的插件系统、直观的 Web 管理界面和丰富的功能支持。它采用异步编程模式，性能优异，适合构建各类 QQ 机器人应用。
+
+## ✨ 主要功能
+
+- **完整的消息处理系统**：支持收发文本、图片、表情、语音、视频等多种消息类型
+- **灵活的插件机制**：支持动态加载、卸载插件，便于功能扩展
+- **OpenAI 集成**：内置对 OpenAI API 的支持，可以轻松接入 AI 功能
+- **Web 管理界面**：提供直观的 Web 界面，方便管理机器人和插件
+- **高效的缓存管理**：优化数据访问性能，提升机器人响应速度
+- **丰富的工具库**：提供多种实用工具，简化开发流程
+- **异步编程模式**：基于 Python 的异步特性，性能优异
 
 ## 目录结构
 
@@ -73,22 +86,62 @@ AmiaBot/
   - psutil
   - pyppeteer
 
-## 安装步骤
+## 🚀 快速开始
 
-1. 克隆项目到本地：
+### 安装步骤
+
+1. **克隆项目**
    ```bash
    git clone https://github.com/yourusername/AmiaBot.git
    cd AmiaBot
    ```
 
-2. 安装项目依赖：
+2. **安装依赖**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. 配置 OneBot 客户端（如 go-cqhttp）并确保其正常运行。
+3. **配置 OneBot 客户端**
+   配置 OneBot 客户端（如 go-cqhttp）并确保其正常运行。
 
-4. 编辑 `config.json` 文件，设置相应的连接参数和配置选项。
+4. **编辑配置文件**
+   编辑 `config.json` 文件，设置相应的连接参数和配置选项。
+
+### 配置说明
+
+编辑项目根目录下的 `config.json` 文件，根据实际需求进行配置：
+
+```json
+{
+    "onebot": {
+        "host": "127.0.0.1",
+        "http_port": 3000,
+        "ws_port": 3001
+    },
+    "webui": {
+        "host": "127.0.0.1",
+        "port": 8080,
+        "password": "admin"
+    },
+    "info_cache_time": 60000,
+    "openai": {
+        "api_key": "sk-",
+        "api_base": "http://127.0.0.1:3902/v1",
+        "model": "gpt-3.5-turbo"
+    },
+    "prefixes": [
+        "/", ",", "，", ".", "。", ":", "：", ";", "；", 
+        "!", "！", "?", "？", "#", "~", "*", "%", "-"
+    ]
+}
+```
+
+**配置项说明：**
+- `onebot`：OneBot 协议配置，需与 QQ 客户端配置一致
+- `webui`：Web 管理界面配置，包括主机地址、端口和访问密码
+- `info_cache_time`：信息缓存时间（毫秒）
+- `openai`：OpenAI API 配置，包括 API 密钥、基础 URL 和使用的模型
+- `prefixes`：命令前缀列表，用于触发机器人响应
 
 ## 运行方法
 
@@ -118,63 +171,76 @@ WebUI 提供以下功能：
 - 查看日志
 - 配置机器人参数
 
-## 插件开发
+## 🧩 插件开发
+
+AmiaBot 提供了灵活的插件系统，使开发者能够轻松扩展机器人功能。
 
 ### 插件结构
 
-一个标准的 AmiaBot 插件应包含以下文件：
+每个插件需要包含两个必要文件：
 
 ```
 plugin_name/
-├── __init__.py    # 插件主要功能实现
-└── info.json      # 插件元数据和配置
+├── __init__.py    # 插件的主要实现代码
+└── info.json      # 插件的元信息配置
 ```
 
-### 创建 info.json
+### 插件示例
 
-`info.json` 定义了插件的元数据和触发器配置：
+以下是一个简单的回显插件示例：
+
+#### `info.json`（插件配置文件）
 
 ```json
 {
-  "id": "example_plugin_id",
-  "name": "Example Plugin",
-  "description": "A test plugin.",
-  "version": "1.0.0",
-  "author": "Amia",
-  "triggers": [
-    {
-      "id": "echo",
-      "type": "text_pattern",
-      "func": "echo",
-      "params": {
-        "pattern": "echo.+"
-      }
-    }
-  ]
+    "id": "example_plugin_id",
+    "name": "Example Plugin",
+    "description": "A test plugin.",
+    "version": "1.0.0",
+    "author": "Amia",
+    "triggers": [
+        {
+            "type": "text_pattern",
+            "id": "echo",
+            "func": "echo",
+            "name": "echo",
+            "description": "Echo back the message.",
+            "params": {
+                "pattern": "echo.+"
+            }
+        }
+    ]
 }
 ```
 
-### 创建 __init__.py
-
-`__init__.py` 包含插件的主要功能实现：
+#### `__init__.py`（插件实现代码）
 
 ```python
-from amia.send_message import SendMessage, SendTextMessage
 from amia.recv_message import RecvMessage
+from amia.send_message import SendMessage, SendTextMessage
 from plugin_manager import ProjectInterface
 
-# 由 PluginManager 自动注入的项目接口
-default_export = {}
-project_api: ProjectInterface = None  # type: ignore
+
+project_api: ProjectInterface = None  # 由 PluginManager 自动注入
 
 
-async def echo(message: RecvMessage) -> None:
-    """处理回显命令的异步函数"""
-    # 提取消息文本中 "echo" 后的内容
-    text = message.text[4:].strip()
-    # 发送回复消息
-    await message.reply(SendTextMessage(content=f"Echo: {text}"))
+async def echo(message: RecvMessage):
+    """回显插件主函数"""
+    # 提取用户输入的内容（去掉命令前缀）
+    content = message.text.split("echo", 1)[1].strip()
+    
+    # 回复消息
+    await message.reply(
+        SendMessage(
+            SendTextMessage(content),  # 创建文本消息
+            bot=project_api.bot,       # 传入机器人实例
+        )
+    )
 ```
+
+### 插件安装与加载
+
+将编写好的插件放入 `plugins` 目录中，机器人启动时会自动扫描并加载所有有效的插件。你也可以通过 Web 管理界面管理插件的启用和禁用状态。
 
 ### 触发器类型
 
@@ -210,77 +276,108 @@ AmiaBot 支持以下几种触发器类型：
    }
    ```
 
+## 📚 核心 API 介绍
+
+### 消息处理
+
+#### 接收消息
+
+`RecvMessage` 类提供了丰富的方法来处理接收到的消息：
+- `text`: 获取消息的纯文本内容
+- `is_group`: 判断是否为群消息
+- `is_private`: 判断是否为私聊消息
+- `reply()`: 回复消息
+- `delete()`: 删除消息
+- `get_at_users()`: 获取消息中 @ 的用户列表
+
+#### 发送消息
+
+`SendMessage` 类支持发送多种类型的消息：
+- `SendTextMessage`: 文本消息
+- `SendImageMessage`: 图片消息
+- `SendFaceMessage`: 表情消息
+- `SendRecordMessage`: 语音消息
+- `SendVideoMessage`: 视频消息
+- `SendAtMessage`: @消息
+- `SendReplyMessage`: 回复消息
+
+### OpenAI 集成
+
+`OpenAI` 类提供了对 OpenAI API 的封装：
+- 支持异步调用
+- 提供消息列表管理
+- 支持自定义模型和 API 端点
+
 ### 插件 API
 
 插件可以通过 `project_api` 对象与主程序交互，主要方法包括：
-
 - `send_data_to_project(data_type: str, data: dict)`: 向主程序发送数据
 
-## 消息对象
+## 🔧 插件打包与管理
 
-### 接收消息对象 (RecvMessage)
+### 打包插件
 
-当接收到消息时，插件会收到一个 `RecvMessage` 对象，包含以下主要属性：
+开发完成的插件可以打包为 `.zip` 文件便于分发：
 
-- `message_id`: 消息 ID
-- `user_id`: 发送者 QQ 号
-- `group_id`: 群组 ID（私聊时为 None）
-- `text`: 消息文本内容
-- `raw_message`: 原始消息内容
-- `sender`: 发送者信息
-- `time`: 消息时间戳
+1. 使用项目提供的 `build_plugin.ps1` 脚本进行打包：
+   ```powershell
+   powershell -File build_plugin.ps1 -PluginPath .\example_plugin\
+   ```
+2. **注意**：打包脚本中包含硬编码的绝对路径，使用前请根据您的实际环境修改脚本中的路径配置
+3. 确保插件目录结构正确，包含所有必要的 `info.json` 和 `__init__.py` 文件
 
-主要方法：
+### 安装插件
 
-- `reply(message: SendMessage)`: 回复消息
-- `get_at_users()`: 获取消息中 @ 的用户列表
+有两种安装插件的方式：
 
-### 发送消息对象
+1. **Web 界面安装**：通过 Web 管理界面上传插件 `.zip` 文件
+2. **手动安装**：将解压后的插件文件夹直接放入 `plugins` 目录
 
-发送消息时可使用以下类型的对象：
+### 插件状态管理
 
-- `SendTextMessage(content: str)`: 文本消息
-- `SendImageMessage(image_path: str)`: 图片消息
-- `SendAtMessage(user_id: int)`: @ 消息
-
-## 插件打包
-
-完成插件开发后，可以使用项目提供的 `build_plugin.ps1` 脚本将插件打包成 ZIP 文件：
-
-```powershell
-powershell -File build_plugin.ps1 -PluginPath .\example_plugin\
-```
-
-**注意**：打包脚本中包含硬编码的绝对路径，使用前请根据您的实际环境修改脚本中的路径配置。
-
-## 插件管理
-
-### 启用/禁用插件
-
-AmiaBot 通过修改插件文件名来控制插件的启用状态：
-- 启用插件：保持原文件名（如 `plugin_name.py`）
-- 禁用插件：添加 `.disabled` 后缀（如 `plugin_name.py.disabled`）
+AmiaBot 通过文件名后缀控制插件的启用状态：
+- **启用插件**：保持原文件名（如 `plugin_name`）
+- **禁用插件**：添加 `.disabled` 后缀（如 `plugin_name.disabled`）
 
 ### 热重载插件
 
 可以通过以下方式热重载插件：
-1. 通过 WebUI 界面操作
-2. 直接修改插件文件，机器人会自动检测并重载
+1. 通过 WebUI 界面进行操作
+2. 直接修改插件文件内容，机器人会自动检测并重载
 
-## 日志系统
+## 📝 日志系统
 
-AmiaBot 的日志保存在 `logs` 目录下，主要包括：
-- 运行日志：记录机器人运行状态和错误信息
-- 访问日志：记录 API 调用和请求信息
-- 使用日志：记录插件使用情况
+AmiaBot 使用 Python 内置的 `logging` 模块记录日志，具有以下特点：
 
-## 注意事项
+### 日志类型
 
-1. 确保 OneBot 客户端正确配置并与 AmiaBot 建立连接
-2. 首次运行时，程序会自动创建必要的目录结构
-3. 修改配置文件后需要重启机器人才能生效
-4. 开发插件时，请遵循项目的代码规范和类型注解要求
-5. 插件应处理可能出现的异常，避免影响机器人的整体运行
+日志保存在 `logs` 目录下，主要分为三类：
+- **运行日志**：记录机器人运行状态和错误信息
+- **访问日志**：记录 API 调用和请求信息
+- **使用日志**：记录插件使用情况
+
+### 日志级别
+
+支持多种日志级别，从低到高：
+- `DEBUG`: 调试信息，用于开发阶段
+- `INFO`: 一般信息，记录正常运行状态
+- `WARNING`: 警告信息，可能出现问题但不影响运行
+- `ERROR`: 错误信息，功能无法正常执行
+- `CRITICAL`: 严重错误，需要立即处理
+
+## 🌟 总结
+
+AmiaBot 是一个功能强大、易于扩展的 QQ 机器人框架，它具备：
+
+- 完整的消息处理系统，支持多种消息类型
+- 灵活的插件机制，让功能扩展变得简单
+- OpenAI 集成，支持 AI 能力增强
+- Web 管理界面，提供直观的操作体验
+- 高效的缓存管理，提升性能
+- 丰富的工具库，简化开发过程
+- 异步编程模式，确保响应迅速
+
+通过插件系统，开发者可以轻松为 AmiaBot 添加新功能，打造专属的智能机器人助手！
 
 ## 免责声明
 

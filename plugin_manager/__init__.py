@@ -529,6 +529,8 @@ class PluginManager:
 
     async def load_all_plugins(self) -> None:
         """加载插件目录中的所有可用插件。"""
+        if self.cache_directory.exists():
+            shutil.rmtree(self.cache_directory)
         await self._setup_plugin_file_mapping()
         shutil.rmtree(self.cache_directory, ignore_errors=True)
         self.plugins_directory.mkdir(parents=True, exist_ok=True)
@@ -814,6 +816,8 @@ class PluginManager:
             message (Dict[str, Any]): 消息数据
             group_categories (Config): 群组分类配置
         """
+        # if message.get("user_id")!=3381464350:
+        #     return
         try:
             msg = RecvMessage(message["message_id"], self.bot)
             await msg.get_info()
@@ -845,6 +849,9 @@ class PluginManager:
                     ):
                         continue
 
+                    # if message.get("user_id")==3381464350:
+                    #     breakpoint()
+
                     # 根据触发器类型处理
                     if trigger["type"] == "text_pattern":
                         if re.search(
@@ -868,8 +875,7 @@ class PluginManager:
                             )
 
         except Exception as e:
-            # 记录异常但不中断处理流程
-            logging.error(f"处理文本消息时发生错误: {e}")
+            logging.error(f"处理文本消息时发生错误: {e}\n{traceback.format_exc()}")
 
     async def _process_match_message_triggers(
         self, message: Dict[str, Any], group_categories: Config
@@ -997,20 +1003,25 @@ class PluginManager:
         Returns:
             bool: 是否匹配
         """
-        command = trigger["params"]["command"]
-        must_prefix = trigger_config.get("must_prefix", True)
+        command: str = trigger["params"]["command"]
+        must_prefix: bool = trigger_config.get("must_prefix", True)
 
         # 如果不需要前缀，直接检查命令是否匹配
+        res = False
         if not must_prefix:
-            return text.lower().startswith(command)
+            res = res or text.lower().startswith(command.lower())
 
         # 需要前缀的情况
-        if not text or not text.lower().startswith(tuple(self.bot.config.prefixes)):
-            return False
-
-        # 提取前缀后的文本并检查是否以命令开头
-        prefix_len = 1  # 假设前缀长度为1
-        return len(text) > prefix_len and text.lower()[prefix_len:].startswith(command)
+        for prefix in self.bot.config.prefixes:
+            prefix_len = len(prefix)
+            if text.lower().startswith(prefix.lower()):
+                res = (
+                    res
+                    or len(text) > prefix_len
+                    and text.lower()[prefix_len:].startswith(command.lower())
+                )
+                break
+        return res
 
     def _record_usage(self, plugin_id: str, trigger_id: str, message: Any) -> None:
         """

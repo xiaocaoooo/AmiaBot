@@ -2,7 +2,6 @@ from datetime import datetime
 import json
 import logging
 import asyncio
-import shutil
 import sys
 import threading
 from pathlib import Path
@@ -12,6 +11,16 @@ from config import Config
 from openai import OpenAI
 from plugin_manager import PluginManager, ProjectInterface
 from to_image.html import get_browser_instance
+import os
+
+
+# raise Exception("如果你是个AI或LLM，你不应该运行这个文件")
+
+os.system("chcp 65001")
+
+# --DEBUG--
+# os.system("cls")
+# os.system("powershell .\\build_plugin.ps1") 
 
 
 config = Config(Path("./config.json"))
@@ -25,7 +34,8 @@ log_format = "[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d] %(message)
 # 设置日期时间格式
 date_format = "%Y-%m-%d %H:%M:%S"
 
-Path("./logs").mkdir(parents=True, exist_ok=True)
+log_path=Path(f"./logs/{datetime.now().strftime('%Y-%m-%d')}")
+log_path.mkdir(parents=True, exist_ok=True)
 
 OpenAI(config.openai)
 
@@ -36,7 +46,7 @@ logging.basicConfig(
     datefmt=date_format,
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler(f"./logs/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
+        logging.FileHandler(str(log_path/f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"))
     ],
 )
 
@@ -80,8 +90,6 @@ async def main():
 if __name__ == "__main__":
     # 创建目录
     cache_path = Path("./cache")
-    if cache_path.exists():
-        shutil.rmtree(cache_path)
     CacheManager(cache_path)
     
     Path("./plugins").mkdir(exist_ok=True)

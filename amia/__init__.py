@@ -114,7 +114,8 @@ class Amia:
             API响应结果（JSON解析后的字典）
         """
         logging.info(f"执行操作 {action} {json.dumps(params, ensure_ascii=False)}")
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=180)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.request(
                 methods,
                 f"http://{self.host}:{self.http_port}/{action}",

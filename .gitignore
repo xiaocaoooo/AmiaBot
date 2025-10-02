@@ -63,6 +63,9 @@ docs/
 .mypy_cache
 data/
 plugins_src/
+plugins_src_disabled/
+*.plugin
+*.plugin.disabled
 logs/
 amia_data/
 cover_amia_data.py
@@ -72,3 +75,6 @@ test.txt
 netease/
 bilibili/
 debug.lyric.json
+async_github/
+pjsk_sticker/
+AmiaOld/

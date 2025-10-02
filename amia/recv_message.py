@@ -62,6 +62,8 @@ class RecvMessage:
             self.raw_message = ""
             self.message = []
             self._initialized = True
+            self.sender = User(self.user_id, group_id=self.group_id, bot=bot)
+            self.group = Group(self.group_id, bot=bot) if self.group_id else None
             
     @staticmethod
     def fromDict(data: Dict[str, Any], bot: Amia) -> "RecvMessage":
@@ -96,6 +98,31 @@ class RecvMessage:
         msg.message = [RecvBaseMessage.fromDict(item) for item in raw_messages]
         
         return msg
+    
+    _seq_cache: ClassVar[Dict[tuple, "RecvMessage"]] = {}  # Cache for messages retrieved by group_id and seq
+
+    @staticmethod
+    async def fromSeq(group_id: int, seq: int, bot: Amia) -> Optional["RecvMessage"]:
+        """从消息序列号创建RecvMessage实例
+
+        Args:
+            group_id: 群组ID
+            seq: 消息序列号
+            bot: 机器人实例
+
+        Returns:
+            RecvMessage: 消息实例
+        """
+        cache_key = (group_id, seq)
+        if cache_key in RecvMessage._seq_cache:
+            return RecvMessage._seq_cache[cache_key]
+
+        group = Group(group_id, bot=bot)
+        msg = await group.get_messages(seq=seq, count=1)
+        if msg:
+            RecvMessage._seq_cache[cache_key] = msg[0]
+            return msg[0]
+        return None
             
     @property
     def is_group(self) -> bool:
@@ -205,6 +232,14 @@ class RecvMessage:
     async def reply(self, send_message: "SendMessage")->"RecvMessage":  # type: ignore # noqa: F821
         """回复消息"""
         return await send_message.reply(self)
+    
+    def __str__(self) -> str:
+        """将消息对象转换为字符串格式
+
+        Returns:
+            str: 消息的字符串表示
+        """
+        return f"({self.user_id})[{self.time.strftime('%Y-%m-%d %H:%M:%S')}]{self.raw_message}"
 
 
 class RecvBaseMessage:

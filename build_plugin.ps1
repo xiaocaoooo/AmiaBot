@@ -9,8 +9,8 @@
 #>
 
 # 配置参数
-$pluginsSrcDir = "D:\code\python\qqbot\AmiaBot\plugins_src"
-$pluginsDir = "D:\code\python\qqbot\AmiaBot\plugins"
+$pluginsSrcDir = "plugins_src"
+$pluginsDir = "plugins"
 $baseTempDir = Join-Path $env:TEMP "amia_plugin_temp"
 
 # 确保plugins目录存在
