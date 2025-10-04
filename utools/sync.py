@@ -2,7 +2,7 @@ import asyncio
 import logging
 import threading
 import traceback
-from typing import Any, Awaitable
+from typing import Any, Awaitable, Callable
 
 
 def syncRun(future):
@@ -26,7 +26,7 @@ def syncRun(future):
         return res
 
 
-def syncRunWithNewThread(future):
+def syncRunAsyncWithNewThread(future):
     """同步运行异步函数，在新线程中执行
 
     Args:
@@ -53,6 +53,26 @@ def syncRunWithNewThread(future):
     thread.join()
     return result
 
+def syncRunSyncWithNewThreadWrapper(func: Callable[..., Any]) -> Callable[..., Any]:
+    """在新线程中异步运行同步函数的包装器。
+
+    Args:
+        func: 要运行的同步函数。
+
+    Returns:
+        同步函数的执行结果。
+    """
+    def wrapper(*args, **kwargs):
+        result = None
+        def run_and_set_result():
+            nonlocal result
+            result = func(*args, **kwargs)
+        thread = threading.Thread(target=run_and_set_result)
+        thread.start()
+        thread.join()
+        return result
+    return wrapper
+
 
 async def asyncRunWithNewThread(future: Awaitable[Any]) -> Any:
     """在新线程中异步运行异步函数。
@@ -63,4 +83,17 @@ async def asyncRunWithNewThread(future: Awaitable[Any]) -> Any:
     Returns:
         异步函数的执行结果。
     """
-    return await asyncio.to_thread(syncRunWithNewThread, future)
+    return await asyncio.to_thread(syncRunAsyncWithNewThread, future)
+
+def asyncRunWithNewThreadWrapper(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    """在新线程中异步运行异步函数的包装器。
+
+    Args:
+        func: 要运行的异步函数。
+
+    Returns:
+        异步函数的执行结果。
+    """
+    async def wrapper(*args, **kwargs) -> Callable[..., Awaitable[Any]]:
+        return await asyncRunWithNewThread(func(*args, **kwargs))
+    return wrapper

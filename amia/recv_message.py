@@ -17,6 +17,7 @@ class RecvMessage:
     real_seq: str  # 真实消息序列号
     message_type: str  # 消息类型(private/group)
     sender: Optional[User]  # 发送者信息
+    nickname: Optional[str]  # 发送者昵称(
     raw_message: str  # 原始消息内容
     message: List["RecvBaseMessage"]  # 消息链，解析后的消息列表
     group_id: Optional[int] = None  # 群组ID(群消息时存在)
@@ -59,6 +60,7 @@ class RecvMessage:
             self.real_seq = ""
             self.message_type = ""
             self.sender = None
+            self.nickname = None
             self.raw_message = ""
             self.message = []
             self._initialized = True
@@ -89,6 +91,7 @@ class RecvMessage:
 
         sender_user_id = data.get("sender", {}).get("user_id")
         msg.sender = User(sender_user_id, group_id=data.get("group_id"), bot=bot) if sender_user_id else None
+        msg.nickname = data.get("sender", {}).get("nickname")
 
         msg.raw_message = data.get("raw_message", "")
         msg.group_id = data.get("group_id")
@@ -171,6 +174,7 @@ class RecvMessage:
 
         sender_user_id = data.get("sender", {}).get("user_id")
         self.sender = User(sender_user_id, group_id=data.get("group_id"), bot=self.bot) if sender_user_id else None
+        self.nickname = data.get("sender", {}).get("nickname")
 
         self.raw_message = data.get("raw_message", "")
         self.group_id = data.get("group_id")
@@ -239,7 +243,7 @@ class RecvMessage:
         Returns:
             str: 消息的字符串表示
         """
-        return f"({self.user_id})[{self.time.strftime('%Y-%m-%d %H:%M:%S')}]{self.raw_message}"
+        return f"({self.nickname}/{self.user_id})[{self.time.strftime('%Y-%m-%d %H:%M:%S')}]{self.raw_message}"
 
 
 class RecvBaseMessage:

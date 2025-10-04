@@ -125,7 +125,7 @@ class User:
 
         info = await self.bot.doAction("get_stranger_info", {"user_id": self.user_id})
 
-        data = cast(Dict[str, Any], info.get("data", {}))
+        data = cast(Dict[str, Any], info.get("data", {}) or {})
         self.raw=data
 
         # 映射基础属性

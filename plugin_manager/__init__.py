@@ -1,8 +1,10 @@
+from datetime import datetime
 import os
 import re
 import shutil
 import importlib
 import sys
+import uuid
 import zipfile
 import json
 import asyncio
@@ -12,8 +14,10 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 from amia import Amia
 from amia.recv_message import RecvMessage
+from amia.send_message import SendMessage, SendTextMessage
 from config import Config
 from utools.match import recursive_match
+from utools.sync import asyncRunWithNewThread
 
 
 # 定义项目接口，供插件调用
@@ -479,6 +483,7 @@ class PluginManager:
         Returns:
             bool: 如果插件成功加载则为True，否则为False。
         """
+        logging.info(f"插件 '{plugin_zip_path.name}' 正在加载。")
         max_retries = 3
         for attempt in range(max_retries):
             try:
@@ -534,8 +539,17 @@ class PluginManager:
         await self._setup_plugin_file_mapping()
         shutil.rmtree(self.cache_directory, ignore_errors=True)
         self.plugins_directory.mkdir(parents=True, exist_ok=True)
-        for plugin_file in self.plugins_directory.glob("*.plugin"):
-            await self._load_plugin(plugin_file)
+        # for plugin_file in self.plugins_directory.glob("*.plugin"):
+        #     await self._load_plugin(plugin_file)
+        await asyncio.gather(
+            *[
+                asyncRunWithNewThread(self._load_plugin(plugin_file))
+                for plugin_file in self.plugins_directory.glob("*.plugin")
+            ]
+        )
+        # await self._load_plugin(
+        #     self.plugins_directory / "query.plugin"
+        # )  # TODO 调试用，后续删除
 
     async def reload_plugin(self, plugin_id: str) -> bool:
         """
@@ -816,7 +830,7 @@ class PluginManager:
             message (Dict[str, Any]): 消息数据
             group_categories (Config): 群组分类配置
         """
-        # if message.get("user_id")!=3381464350:
+        # if message.get("user_id") != 3381464350:  # TODO 调试用，后续删除
         #     return
         try:
             msg = RecvMessage(message["message_id"], self.bot)
@@ -857,22 +871,79 @@ class PluginManager:
                         if re.search(
                             trigger["params"]["pattern"],
                             (
-                                msg.raw_message
+                                msg.raw_message.lower()
                                 if trigger["params"]["raw"]
                                 else msg.text.lower()
                             ),
                         ):
                             self._record_usage(plugin.id, trigger["id"], msg.raw)
-                            asyncio.create_task(
-                                plugin.call_function(trigger["func"], message=msg)
-                            )
+                            uid = uuid.uuid4()
+                            async def func(self, uid, plugin, trigger, msg):
+                                await self.logToGroup(
+                                    f"""
+{plugin.id}-{trigger["id"]}
+开始处理消息
+UUID: {uid}
+时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+插件ID: {plugin.id}
+触发器ID: {trigger["id"]}
+群组ID: {msg.group_id}
+用户ID: {msg.user_id}
+消息SEQ: {msg.real_seq}
+触发器详情: {json.dumps(trigger, ensure_ascii=False, indent=2)}
+消息内容: {msg.raw_message}
+--------
+{str(msg)}
+--------
+{json.dumps(msg.raw, ensure_ascii=False, indent=2)}
+"""
+                                )
+                                await plugin.call_function(trigger["func"], message=msg)
+                                await self.logToGroup(
+                                    f"""
+处理完成
+UUID: {uid}
+时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+"""
+                                )
+                            if trigger["params"]["pattern"]!=".":
+                                asyncio.create_task(func(self, uid, plugin, trigger, msg))
+                            else:
+                                asyncio.create_task(plugin.call_function(trigger["func"], message=msg))
 
                     elif trigger["type"] == "text_command":
                         if self._match_text_command(msg.text, trigger, trigger_config):
                             self._record_usage(plugin.id, trigger["id"], msg.raw)
-                            asyncio.create_task(
-                                plugin.call_function(trigger["func"], message=msg)
-                            )
+                            uid = uuid.uuid4()
+                            async def func(self, uid, plugin, trigger, msg):
+                                await self.logToGroup(
+                                    f"""
+{plugin.id}-{trigger["id"]}
+开始处理消息
+UUID: {uid}
+时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+插件ID: {plugin.id}
+触发器ID: {trigger["id"]}
+群组ID: {msg.group_id}
+用户ID: {msg.user_id}
+消息SEQ: {msg.real_seq}
+触发器详情: {json.dumps(trigger, ensure_ascii=False, indent=2)}
+消息内容: {msg.raw_message}
+--------
+{str(msg)}
+--------
+{json.dumps(msg.raw, ensure_ascii=False, indent=2)}
+"""
+                                )
+                                await plugin.call_function(trigger["func"], message=msg)
+                                await self.logToGroup(
+                                    f"""
+处理完成
+UUID: {uid}
+时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+"""
+                                )
+                            await func(self, uid, plugin, trigger, msg)
 
         except Exception as e:
             logging.error(f"处理文本消息时发生错误: {e}\n{traceback.format_exc()}")
@@ -929,9 +1000,34 @@ class PluginManager:
 
                 if is_trigger_matched:
                     self._record_usage(plugin.id, trigger["id"], message)
-                    asyncio.create_task(
-                        plugin.call_function(trigger["func"], message=message)
-                    )
+                    uid = uuid.uuid4()
+                    async def func(uid, plugin, trigger, group_id, message):
+                        await self.logToGroup(
+                            f"""
+{plugin.id}-{trigger["id"]}
+开始处理消息
+UUID: {uid}
+时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+插件ID: {plugin.id}
+触发器ID: {trigger["id"]}
+群组ID: {group_id}
+用户ID: {message.get("user_id", 0)}
+消息SEQ: {message.get("real_seq", 0)}
+触发器详情: {json.dumps(trigger, ensure_ascii=False, indent=2)}
+消息内容: {message.get("raw_message", "")}
+--------
+{json.dumps(message, ensure_ascii=False, indent=2)}
+"""
+                        )
+                        await plugin.call_function(trigger["func"], message=message)
+                        await self.logToGroup(
+                            f"""
+处理完成
+UUID: {uid}
+时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+"""
+                        )
+                    asyncio.create_task(func(uid, plugin, trigger, group_id, message))
 
     def _check_trigger_conditions(
         self,
@@ -1047,3 +1143,20 @@ class PluginManager:
         except Exception as e:
             # 记录错误但不中断流程
             logging.error(f"记录插件使用情况失败: {e}")
+
+    async def logToGroup(self, message: str) -> None:
+        """
+        向日志群组发送消息
+
+        Args:
+            message (str): 要发送的消息
+        """
+        try:
+            if self.bot.config.log_group:
+                await SendMessage(
+                    SendTextMessage(message.strip()),
+                    group_id=self.bot.config.log_group,
+                    bot=self.bot,
+                ).send()
+        except Exception as e:
+            logging.error(f"向日志群组发送消息失败: {e}")

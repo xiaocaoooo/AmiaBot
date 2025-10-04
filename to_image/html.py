@@ -410,78 +410,55 @@ async def urlToImage(
         filename = cache_manager.get_cache("png")  # type: ignore
     filename.parent.mkdir(parents=True, exist_ok=True)
 
-    # 检查是否有缓存
-    if filename.exists():
-        return str(filename)
+    # 获取浏览器实例（使用全局单例）
+    browser = await get_browser_instance()
 
-    try:
-        # 获取浏览器实例（使用全局单例）
-        browser = await get_browser_instance()
+    # 创建一个新页面
+    page = await browser.newPage()
 
-        # 创建一个新页面
-        page = await browser.newPage()
+    # 设置默认视口大小
+    await page.setViewport(
+        {"width": width, "height": height, "deviceScaleFactor": scale}
+    )
 
-        # 设置默认视口大小
-        await page.setViewport(
-            {"width": width, "height": height, "deviceScaleFactor": scale}
+    # 导航到指定URL
+    await page.goto(url, waitUntil="networkidle2", timeout=60000)
+
+    await page.waitForSelector("body")
+
+    # 如果提供了等待元素选择器，等待该元素出现
+    if waitFor:
+        await page.waitForSelector(waitFor, timeout=10000)
+
+    # 等待页面加载完成
+    # await page.waitFor(1000)  # 额外等待1秒确保页面完全加载
+    await page.waitFor(wait)
+
+    # 如果提供了自定义样式，注入样式
+    if style:
+        await page.addStyleTag(content=style)
+
+    if script:
+        await page.evaluate(script)
+
+    # 根据是否指定选择器决定截图方式
+    if selector:
+        # 等待选择器对应的元素出现
+        await page.waitForSelector(selector, timeout=10000)
+
+        # 获取元素
+        element = await page.querySelector(selector)
+        if not element:
+            raise ValueError(f"未找到选择器 '{selector}' 对应的元素")
+
+        # 对元素进行截图
+        await element.screenshot({"path": str(filename), "type": "png"})
+    else:
+        # 对整个页面进行截图
+        await page.screenshot(
+            {"path": str(filename), "type": "png", "fullPage": True}
         )
 
-        # 导航到指定URL
-        await page.goto(url, waitUntil="networkidle2", timeout=60000)
+    await page.close()
 
-        await page.waitForSelector("body")
-
-        # 如果提供了等待元素选择器，等待该元素出现
-        if waitFor:
-            await page.waitForSelector(waitFor, timeout=10000)
-
-        # 等待页面加载完成
-        # await page.waitFor(1000)  # 额外等待1秒确保页面完全加载
-        await page.waitFor(wait)
-
-        # 如果提供了自定义样式，注入样式
-        if style:
-            await page.addStyleTag(content=style)
-
-        if script:
-            await page.evaluate(script)
-
-        # 根据是否指定选择器决定截图方式
-        if selector:
-            # 等待选择器对应的元素出现
-            await page.waitForSelector(selector, timeout=10000)
-
-            # 获取元素
-            element = await page.querySelector(selector)
-            if not element:
-                raise ValueError(f"未找到选择器 '{selector}' 对应的元素")
-
-            # 对元素进行截图
-            await element.screenshot({"path": str(filename), "type": "png"})
-        else:
-            # 对整个页面进行截图
-            await page.screenshot(
-                {"path": str(filename), "type": "png", "fullPage": True}
-            )
-
-        await page.close()
-
-        return str(filename)
-    except Exception as e:
-        logging.error(f"urlToImage 失败: {str(e)}")
-        logging.error(traceback.format_exc())
-
-        # 确保页面关闭
-        try:
-            await page.close() if "page" in locals() else None
-        except:
-            pass
-
-        # 如果生成了文件但过程出错，删除文件
-        if filename.exists():
-            try:
-                filename.unlink()
-            except:
-                pass
-
-        raise
+    return filename

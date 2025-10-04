@@ -9,8 +9,8 @@
 #>
 
 # 配置参数
-$pluginsSrcDir = "plugins_src"
-$pluginsDir = "plugins"
+$pluginsSrcDir = Join-Path -Path $PSScriptRoot -ChildPath "plugins_src"
+$pluginsDir = Join-Path -Path $PSScriptRoot -ChildPath "plugins"
 $baseTempDir = Join-Path $env:TEMP "amia_plugin_temp"
 
 # 确保plugins目录存在
