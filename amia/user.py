@@ -126,7 +126,7 @@ class User:
         info = await self.bot.doAction("get_stranger_info", {"user_id": self.user_id})
 
         data = cast(Dict[str, Any], info.get("data", {}) or {})
-        self.raw=data
+        self.raw = data
 
         # 映射基础属性
         self.qq = int(data.get("uin", 0))
@@ -239,29 +239,31 @@ class User:
     def __str__(self) -> str:
         # 把所有有的信息都包含在字符串中
         info_list = [
-            f"QQ号：{self.qq}",
-            f"昵称：{self.nick}",
-            f"备注：{self.remark}",
-            f"国家：{self.country}",
-            f"城市：{self.city}",
-            f"注册时间：{self.reg_time.strftime('%Y-%m-%d %H:%M:%S')}",
-            f"QID：{self.qid}",
-            f"生日：{self.birthday.strftime('%Y-%m-%d') if self.birthday else 'N/A'}",
-            f"年龄：{self.age}",
-            f"性别：{self.sex.value}",
-            f"头像：{self.avatar}",
-            f"用户ID：{self.user_id}",
+            f"QQ号: {self.qq}",
+            f"昵称: {self.nick}",
+            f"备注: {self.remark}",
+            f"国家: {self.country}",
+            f"城市: {self.city}",
+            f"注册时间: {self.reg_time.strftime('%Y-%m-%d %H:%M:%S')}",
+            f"QID: {self.qid}",
+            f"生日: {self.birthday.strftime('%Y-%m-%d') if self.birthday else 'N/A'}",
+            f"年龄: {self.age}",
+            f"性别: {self.sex.value}",
+            f"头像: {self.avatar}",
+            f"用户ID: {self.user_id}",
         ]
         if hasattr(self, "group_id") and self.group_id:
-            info_list.append(f"群ID：{self.group_id}")
+            info_list.append(f"群ID: {self.group_id}")
         if hasattr(self, "role") and self.role:
-            info_list.append(f"角色：{self.role.value}")
+            info_list.append(f"角色: {self.role.value}")
         if hasattr(self, "group_level") and self.group_level:
-            info_list.append(f"群等级：{self.group_level}")
+            info_list.append(f"群等级: {self.group_level}")
         if hasattr(self, "shut_up_timestamp"):
-            info_list.append(f"禁言时间戳：{self.shut_up_timestamp}")
+            info_list.append(f"禁言时间戳: {self.shut_up_timestamp}")
         if hasattr(self, "join_time") and self.join_time:
-            info_list.append(f"加入时间：{self.join_time.strftime('%Y-%m-%d %H:%M:%S')}")
+            info_list.append(
+                f"加入时间: {self.join_time.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
         # 把所有有的信息用换行符连接起来
         info_str = "\n".join(info_list)
         return info_str

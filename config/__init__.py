@@ -185,7 +185,7 @@ class Config(ConfigObject):
         Args:
             filename: 配置文件路径
         """
-        super().__init__(json.loads(filename.read_text()))
+        super().__init__(json.loads(filename.read_text(encoding='utf-8')))
         self._filename = filename
         self._last_update_time = datetime.now()
         
@@ -259,7 +259,7 @@ class Config(ConfigObject):
         重新加载配置文件，而不是重新初始化对象
         """
         if hasattr(self, '_filename'):
-            new_data = json.loads(self._filename.read_text())
+            new_data = json.loads(self._filename.read_text(encoding='utf-8'))
             # 递归转换嵌套字典为ConfigObject
             for key, value in new_data.items():
                 if isinstance(value, dict):

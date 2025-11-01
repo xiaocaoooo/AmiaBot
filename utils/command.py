@@ -13,23 +13,25 @@ def parse_command_line_args(cmd: str) -> Tuple[List[str], Dict[str, str]]:
         cmd (str): The command-line string to parse. 要解析的命令行字符串。
 
     Returns:
-        A tuple containing: 一个包含以下内容的元组：
+        A tuple containing: 一个包含以下内容的元组:
         - A list of positional arguments (strings). 位置参数列表（字符串）。
         - A dictionary of keyword arguments, where keys are argument names and
           values are their string representations. 关键字参数字典，其中键是参数名称，值是其字符串表示。
     """
     args: List[str] = []
     kwargs: Dict[str, str] = {}
-    
+
     # This regex pattern correctly handles:
     # 1. Key-value pairs (key=value) with or without quotes.
     # 2. Arguments enclosed in double or single quotes.
     # 3. Regular arguments without quotes.
-    # 此正则表达式模式能正确处理：
+    # 此正则表达式模式能正确处理:
     # 1. 带或不带引号的键值对（key=value）。
     # 2. 用双引号或单引号括起来的参数。
     # 3. 不带引号的普通参数。
-    pattern = re.compile(r'(\w+)=(?:"([^"]*)"|\'([^\']*)\'|([^\s]+))|(?:"([^"]*)"|\'([^\']*)\'|([^\s]+))')
+    pattern = re.compile(
+        r'(\w+)=(?:"([^"]*)"|\'([^\']*)\'|([^\s]+))|(?:"([^"]*)"|\'([^\']*)\'|([^\s]+))'
+    )
 
     for match in re.finditer(pattern, cmd):
         # Check for a key-value pair
@@ -46,5 +48,5 @@ def parse_command_line_args(cmd: str) -> Tuple[List[str], Dict[str, str]]:
             value = match.group(5) or match.group(6) or match.group(7)
             if value:
                 args.append(value)
-    
+
     return args, kwargs

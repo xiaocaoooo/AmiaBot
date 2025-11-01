@@ -1,0 +1,10 @@
+{
+    "clean_mode": "size",
+    "interval": 3600,
+    "ttl": 3600,
+    "max_cache_size": 104857600,
+    "files": {},
+    "ignore": [
+        "plugins/.*"
+    ]
+}

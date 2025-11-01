@@ -3,7 +3,7 @@ import aiohttp
 import logging
 from typing import Dict, Any, List, Optional, Union
 from config import ConfigObject
-from utools.tries import tries
+from utils.tries import tries
 
 
 class ChatMessage:
@@ -13,7 +13,7 @@ class ChatMessage:
         """初始化聊天消息
 
         Args:
-            role: 消息的角色，可选值：system, user, assistant
+            role: 消息的角色，可选值: system, user, assistant
             content: 消息的内容
         """
         if role not in ["system", "user", "assistant"]:

@@ -1,21 +1,23 @@
 {
+    "qq": 0,
     "onebot": {
         "host": "127.0.0.1",
         "http_port": 3000,
-        "ws_port": 3001
+        "ws_port": 3001,
+        "token": ""
     },
     "webui": {
-        "host": "127.0.0.1",
-        "port": 8080,
+        "host": "0.0.0.0",
+        "port": 6002,
         "password": "admin"
     },
     "info_cache_time": 60000,
     "openai": {
-        "api_key": "sk-",
-        "api_base": "http://127.0.0.1:3902/v1",
-        "model": "gpt-3.5-turbo"
+        "api_key": "",
+        "api_base": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "model": "gemini-2.0-flash"
     },
-    "log_group": 0,
+    "log_group": 492453181,
     "prefixes": [
         "/",
         ",",

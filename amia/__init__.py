@@ -22,7 +22,9 @@ class Amia:
             )
         return Amia._instance
 
-    def __init__(self, host: str, http_port: int, ws_port: int, config: Config):
+    def __init__(
+        self, host: str, http_port: int, ws_port: int, token: str, config: Config
+    ):
         """初始化Amia机器人实例
 
         Args:
@@ -38,8 +40,19 @@ class Amia:
         self.host = host
         self.http_port = http_port
         self.ws_port = ws_port
+        self.token = token
         self.config = config
         self._listeners: List[Callable[[Dict[str, Any]], Awaitable[None]]] = []
+
+    @property
+    def qq(self) -> int:
+        """
+        获取机器人的QQ号。
+
+        Returns:
+            int: 机器人的QQ号。
+        """
+        return self.config.qq
 
     async def run(self) -> None:
         """启动WebSocket连接并保持运行
@@ -56,7 +69,7 @@ class Amia:
         while True:
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.ws_connect(ws_url) as ws:
+                    async with session.ws_connect(ws_url, headers={"Authorization": f"Bearer {self.token}"}) as ws:
                         retry_delay = 1  # 成功连接后重置重试延迟
                         async for msg in ws:
                             if msg.type == aiohttp.WSMsgType.TEXT:
@@ -114,15 +127,18 @@ class Amia:
             API响应结果（JSON解析后的字典）
         """
         logging.info(f"执行操作 {action} {json.dumps(params, ensure_ascii=False)}")
-        timeout = aiohttp.ClientTimeout(total=180)
+        timeout = aiohttp.ClientTimeout(total=600)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.request(
                 methods,
                 f"http://{self.host}:{self.http_port}/{action}",
                 json=params or {},
+                headers={"Authorization": f"Bearer {self.token}"},
             ) as resp:
                 data = cast(Dict[str, Any], await resp.json())
-                logging.info(f"操作 {action} 响应: {json.dumps(data, ensure_ascii=False)}")
+                logging.info(
+                    f"操作 {action} 响应: {json.dumps(data, ensure_ascii=False)}"
+                )
                 return data
 
     async def getBotUser(self) -> "User":  # type: ignore  # noqa: F821
@@ -144,7 +160,7 @@ class Amia:
         await user.get_info()
         return user
 
-    async def ocr(self, image:str)->Dict[str, Any]:
+    async def ocr(self, image: str) -> Dict[str, Any]:
         """调用OCR API识别图片中的文字
 
         Args:

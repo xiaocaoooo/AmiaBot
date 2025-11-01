@@ -1,3 +1,4 @@
+import base64
 from pathlib import Path
 from typing import Any, Dict, List, Union
 from . import Amia
@@ -5,7 +6,8 @@ from .recv_message import RecvMessage
 import os
 from urllib.parse import urlparse
 
-message_history:Dict[int, List[int]]={} # 被回复ID -> 回复ID列表
+message_history: Dict[int, List[int]] = {}  # 被回复ID -> 回复ID列表
+
 
 class SendMessage:
     def __init__(
@@ -45,17 +47,23 @@ class SendMessage:
                 | self.messages[0].data,
             )
             if recv_message:
-                message_history.setdefault(recv_message.message_id, []).append(data["data"]["message_id"])
+                message_history.setdefault(recv_message.message_id, []).append(
+                    data["data"]["message_id"]
+                )
             return RecvMessage(data["data"]["message_id"], self.bot)
         if is_private:
             data = await self.bot.doAction("send_private_msg", params={"user_id": self.user_id or user_id or recv_message.user_id, "message": [m.toDict() for m in self.messages]})  # type: ignore
             if recv_message:
-                message_history.setdefault(recv_message.message_id, []).append(data["data"]["message_id"])
+                message_history.setdefault(recv_message.message_id, []).append(
+                    data["data"]["message_id"]
+                )
             return RecvMessage(data["data"]["message_id"], self.bot)
         elif is_group:
             data = await self.bot.doAction("send_group_msg", params={"group_id": self.group_id or group_id or recv_message.group_id, "message": [m.toDict() for m in self.messages]})  # type: ignore
             if recv_message:
-                message_history.setdefault(recv_message.message_id, []).append(data["data"]["message_id"])
+                message_history.setdefault(recv_message.message_id, []).append(
+                    data["data"]["message_id"]
+                )
             return RecvMessage(data["data"]["message_id"], self.bot)
 
     async def reply(self, recv_message: RecvMessage):
@@ -74,7 +82,10 @@ class SendMessage:
                 },
             )
             if recv_message.message_id:
-                message_history.setdefault(recv_message.message_id, []).append(data["data"]["message_id"])
+                # [2025-11-01 07:55:49] [INFO] [__init__.py:139] 操作 send_group_msg 响应: {"status": "ok", "retcode": 0, "data": {"message_id": 1439597536}, "message": "", "wording": "", "echo": "3ytaw7o34vy", "stream": "normal-action"}
+                message_history.setdefault(recv_message.message_id, []).append(
+                    data["data"]["message_id"]
+                )
             return RecvMessage(data["data"]["message_id"], self.bot)
         elif recv_message.user_id:
             data = await self.bot.doAction(
@@ -85,7 +96,9 @@ class SendMessage:
                 },
             )
             if recv_message.message_id:
-                message_history.setdefault(recv_message.message_id, []).append(data["data"]["message_id"])
+                message_history.setdefault(recv_message.message_id, []).append(
+                    data["data"]["message_id"]
+                )
             return RecvMessage(data["data"]["message_id"], self.bot)
 
 
@@ -93,7 +106,7 @@ class SendBaseMessage:
     def __init__(self, type: str, data: Dict[str, Any] | None = None) -> None:
         self.type = type
         self.data = data or {}
-        
+
     @classmethod
     def fromDict(cls, data: Dict[str, Any]) -> "SendBaseMessage":
         if data["type"] == "text":
@@ -122,12 +135,18 @@ class SendImageMessage(SendBaseMessage):
     def __init__(self, image: str | Path) -> None:
         if isinstance(image, Path):
             image = str(image)
-        if urlparse(image).scheme in ("http", "https", "file"):
+        if urlparse(image).scheme in ("http", "https"):
             img_path = image
         else:
-            abs_path = os.path.abspath(image)
-            img_path = f'file://{abs_path.replace(os.sep, "/")}'
+            # abs_path = os.path.abspath(image)
+            # img_path = f'file://{abs_path.replace(os.sep, "/")}'
+            with open(image, "rb") as f:
+                base64_data = base64.b64encode(f.read()).decode()
+            img_path = f"data:image/png;base64,{base64_data}"
         super().__init__("image", data={"file": img_path})
+
+    def toDict(self) -> Dict[str, Any]:
+        return {"type": self.type, "data": self.data}
 
 
 class SendFaceMessage(SendBaseMessage):
@@ -379,7 +398,7 @@ class SendCustomMusicMessage(SendBaseMessage):
         )
 
 
-# 辅助函数：创建消息链
+# 辅助函数: 创建消息链
 def create_message_chain(*messages: SendBaseMessage) -> List[Dict[str, Any]]:
     """创建消息链，将多个消息对象转换为API调用所需的格式
 

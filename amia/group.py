@@ -8,6 +8,7 @@ from .user import User
 
 class GroupPermission(Enum):
     """群成员权限枚举"""
+
     OWNER = "owner"  # 群主
     ADMIN = "admin"  # 管理员
     MEMBER = "member"  # 普通成员
@@ -38,7 +39,7 @@ class Group:
         if group_id not in cls._instances:
             cls._instances[group_id] = super().__new__(cls)
         return cls._instances[group_id]
-    
+
     @staticmethod
     async def get_group_list(bot: Amia) -> List["Group"]:
         """获取所有群组列表
@@ -51,7 +52,7 @@ class Group:
         """
         result = await bot.doAction("get_group_list", {})
         group_list = cast(List[Dict[str, Any]], result.get("data", []))
-        groups=[Group(group_id=group["group_id"], bot=bot) for group in group_list]
+        groups = [Group(group_id=group["group_id"], bot=bot) for group in group_list]
         await asyncio.gather(*[group.get_info() for group in groups])
         return groups
 
@@ -105,6 +106,22 @@ class Group:
         self._last_update_time = datetime.now()
 
         return self
+    
+    @classmethod
+    async def get_group_list(cls, bot: Amia) -> List["Group"]:
+        """获取所有群组列表
+
+        Args:
+            bot: 机器人实例
+
+        Returns:
+            List[Group]: 群组列表
+        """
+        result = await bot.doAction("get_group_list", {})
+        group_list = cast(List[Dict[str, Any]], result.get("data", []))
+        groups = [Group(group_id=group["group_id"], bot=bot) for group in group_list]
+        # await asyncio.gather(*[group.get_info() for group in groups])
+        return groups
 
     async def get_member_list_raw(self) -> List[Dict[str, Any]]:
         """获取群成员列表
@@ -112,7 +129,9 @@ class Group:
         Returns:
             List[Dict[str, Any]]: 群成员列表
         """
-        result = await self.bot.doAction("get_group_member_list", {"group_id": self.group_id})
+        result = await self.bot.doAction(
+            "get_group_member_list", {"group_id": self.group_id}
+        )
         return cast(List[Dict[str, Any]], result.get("data", []))
 
     async def get_member_list(self) -> List[User]:
@@ -134,8 +153,7 @@ class Group:
             Dict[str, Any]: 群成员信息
         """
         result = await self.bot.doAction(
-            "get_group_member_info", 
-            {"group_id": self.group_id, "user_id": user_id}
+            "get_group_member_info", {"group_id": self.group_id, "user_id": user_id}
         )
         return cast(Dict[str, Any], result.get("data", {}))
 
@@ -148,7 +166,7 @@ class Group:
         bot_user = await self.bot.getBotUser()
         member_info = await self.get_member_info(bot_user.user_id)
         permission = member_info.get("permission", "member")
-        
+
         try:
             return GroupPermission(permission)
         except ValueError:
@@ -164,8 +182,7 @@ class Group:
             bool: 是否设置成功
         """
         result = await self.bot.doAction(
-            "set_group_name", 
-            {"group_id": self.group_id, "group_name": group_name}
+            "set_group_name", {"group_id": self.group_id, "group_name": group_name}
         )
         # 假设API返回的状态码为0表示成功
         return result.get("status", False) is True
@@ -179,10 +196,9 @@ class Group:
         Returns:
             bool: 是否设置成功
         """
-        # 注意：实际API可能需要不同的参数格式
+        # 注意: 实际API可能需要不同的参数格式
         result = await self.bot.doAction(
-            "set_group_avatar", 
-            {"group_id": self.group_id, "file": file_path}
+            "set_group_avatar", {"group_id": self.group_id, "file": file_path}
         )
         return result.get("status", False) is True
 
@@ -197,12 +213,12 @@ class Group:
             bool: 是否踢出成功
         """
         result = await self.bot.doAction(
-            "set_group_kick", 
+            "set_group_kick",
             {
-                "group_id": self.group_id, 
+                "group_id": self.group_id,
                 "user_id": user_id,
-                "reject_add_request": reject_add_request
-            }
+                "reject_add_request": reject_add_request,
+            },
         )
         return result.get("status", False) is True
 
@@ -217,12 +233,8 @@ class Group:
             bool: 是否禁言成功
         """
         result = await self.bot.doAction(
-            "set_group_ban", 
-            {
-                "group_id": self.group_id, 
-                "user_id": user_id,
-                "duration": duration
-            }
+            "set_group_ban",
+            {"group_id": self.group_id, "user_id": user_id, "duration": duration},
         )
         return result.get("status", False) is True
 
@@ -247,8 +259,7 @@ class Group:
             bool: 是否设置成功
         """
         result = await self.bot.doAction(
-            "set_group_whole_ban", 
-            {"group_id": self.group_id, "enable": enable}
+            "set_group_whole_ban", {"group_id": self.group_id, "enable": enable}
         )
         return result.get("retcode") == 0
 
@@ -263,8 +274,8 @@ class Group:
             bool: 是否设置成功
         """
         result = await self.bot.doAction(
-            "set_group_admin", 
-            {"group_id": self.group_id, "user_id": user_id, "enable": enable}
+            "set_group_admin",
+            {"group_id": self.group_id, "user_id": user_id, "enable": enable},
         )
         return result.get("retcode") == 0
 
@@ -279,12 +290,14 @@ class Group:
             bool: 是否发送成功
         """
         result = await self.bot.doAction(
-            "_send_group_notice", 
-            {"group_id": self.group_id, "content": content, "pinned": pinned}
+            "_send_group_notice",
+            {"group_id": self.group_id, "content": content, "pinned": pinned},
         )
         return result.get("status", False) is True
 
-    async def get_messages_raw(self, message_id: int|None = None, count: int|None = None) -> List[Dict[str, Any]]:
+    async def get_messages_raw(
+        self, message_id: int | None = None, count: int | None = None
+    ) -> List[Dict[str, Any]]:
         """获取群消息原始数据
 
         Args:
@@ -299,15 +312,12 @@ class Group:
             params["message_id"] = message_id
         if count is not None:
             params["count"] = count
-        result = await self.bot.doAction(
-            "get_group_msg_history", 
-            params
-        )
+        result = await self.bot.doAction("get_group_msg_history", params)
         if result.get("retcode") == 0:
             return result.get("data", {}).get("messages", [])
         return []
-    
-    async def get_messages(self, message_id: int|None = None, count: int|None = None, seq: int|None = None) -> List["RecvMessage"]:  # type: ignore # noqa: F821
+
+    async def get_messages(self, message_id: int | None = None, count: int | None = None, seq: int | None = None) -> List["RecvMessage"]:  # type: ignore # noqa: F821
         """获取群消息
 
         Args:
@@ -318,6 +328,7 @@ class Group:
             List[RecvMessage]: 消息列表
         """
         from .recv_message import RecvMessage
+
         params = {"group_id": self.group_id}
         if message_id is not None:
             params["message_id"] = message_id
@@ -325,13 +336,20 @@ class Group:
             params["count"] = count
         if seq is not None:
             params["message_seq"] = seq
-        result = await self.bot.doAction(
-            "get_group_msg_history", 
-            params
-        )
+        result = await self.bot.doAction("get_group_msg_history", params)
         if result.get("retcode") == 0:
-            return [RecvMessage.fromDict(msg, self.bot) for msg in result.get("data", {}).get("messages", [])]
+            return [
+                RecvMessage.fromDict(msg, self.bot)
+                for msg in result.get("data", {}).get("messages", [])
+            ]
         return []
+    
+    async def sign(self):
+        """群打卡"""
+        return await self.bot.doAction(
+            "set_group_sign",
+            {"group_id": self.group_id},
+        )
 
     def toDict(self) -> Dict[str, Any]:
         """将群组信息转换为字典
@@ -350,10 +368,10 @@ class Group:
     def __str__(self) -> str:
         # 把所有有的信息都包含在字符串中
         info_list = [
-            f"群号：{self.group_id}",
-            f"群名称：{self.group_name}",
-            f"成员数量：{self.member_count}/{self.max_member_count}",
-            f"群头像：{self.avatar}",
+            f"群号: {self.group_id}",
+            f"群名称: {self.group_name}",
+            f"成员数量: {self.member_count}/{self.max_member_count}",
+            f"群头像: {self.avatar}",
         ]
         # 把所有有的信息用换行符连接起来
         info_str = "\n".join(info_list)
@@ -427,8 +445,8 @@ class GroupMember:
             return self
 
         info = await self.bot.doAction(
-            "get_group_member_info", 
-            {"group_id": self.group_id, "user_id": self.user_id}
+            "get_group_member_info",
+            {"group_id": self.group_id, "user_id": self.user_id},
         )
 
         data = cast(Dict[str, Any], info.get("data", {}))
@@ -440,11 +458,13 @@ class GroupMember:
         self.card = data.get("card", "")
         self.sex = data.get("sex", "unknown")
         self.age = data.get("age", 0)
-        
+
         # 处理时间类型数据
         self.join_time = datetime.fromtimestamp(data.get("join_time", 0))
         self.last_sent_time = datetime.fromtimestamp(data.get("last_sent_time", 0))
-        self.title_expire_time = datetime.fromtimestamp(data.get("title_expire_time", 0))
+        self.title_expire_time = datetime.fromtimestamp(
+            data.get("title_expire_time", 0)
+        )
 
         # 映射其他属性
         self.level = data.get("level", "")
@@ -479,8 +499,8 @@ class GroupMember:
             bool: 是否设置成功
         """
         result = await self.bot.doAction(
-            "set_group_card", 
-            {"group_id": self.group_id, "user_id": self.user_id, "card": card}
+            "set_group_card",
+            {"group_id": self.group_id, "user_id": self.user_id, "card": card},
         )
         return result.get("status", False) is True
 
@@ -495,13 +515,13 @@ class GroupMember:
             bool: 是否设置成功
         """
         result = await self.bot.doAction(
-            "set_group_special_title", 
+            "set_group_special_title",
             {
-                "group_id": self.group_id, 
+                "group_id": self.group_id,
                 "user_id": self.user_id,
                 "special_title": title,
-                "duration": duration
-            }
+                "duration": duration,
+            },
         )
         return result.get("status", False) is True
 

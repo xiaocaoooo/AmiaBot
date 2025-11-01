@@ -11,7 +11,7 @@ from cache_manager import CacheManager
 from typing import Optional
 import re
 import asyncio
-from utools.tries import tries
+from utils.tries import tries
 from urllib.parse import urlparse
 
 
@@ -318,7 +318,7 @@ async def htmlToImage(
     # 设置页面内容
     await page.setContent(html_content)
 
-    with open("test.html", "w") as f:
+    with open("test.html", "w", encoding="utf-8") as f:
         f.write(html_content)
 
     # 等待页面加载完成，包括网络资源
@@ -455,9 +455,7 @@ async def urlToImage(
         await element.screenshot({"path": str(filename), "type": "png"})
     else:
         # 对整个页面进行截图
-        await page.screenshot(
-            {"path": str(filename), "type": "png", "fullPage": True}
-        )
+        await page.screenshot({"path": str(filename), "type": "png", "fullPage": True})
 
     await page.close()
 

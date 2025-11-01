@@ -400,12 +400,12 @@ async def get_system_info(request):
             "python_version": python_version,
             "project_memory": psutil.Process(os.getpid())
             .memory_info()
-            .rss,  # 获取当前Python进程的内存占用（单位：字节）
+            .rss,  # 获取当前Python进程的内存占用（单位: 字节）
             "qq_memory": sum(
                 process.memory_info().rss
                 for process in psutil.process_iter(["name"])
                 if process.info["name"] and "qq.exe" in process.info["name"].lower()
-            ),  # 获取所有qq.exe进程的内存占用总和（单位：字节）
+            ),  # 获取所有qq.exe进程的内存占用总和（单位: 字节）
         }
 
         return web.json_response(system_info)
@@ -863,8 +863,8 @@ async def run_web_server_async():
 
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", 5000)
-    logger.info("Web server started on http://0.0.0.0:5000")
+    site = web.TCPSite(runner, config.webui.host, config.webui.port)
+    logger.info(f"Web server started on http://{config.webui.host}:{config.webui.port}")
     await site.start()
 
     # 保持服务器运行

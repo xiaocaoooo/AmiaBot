@@ -16,8 +16,8 @@ from amia import Amia
 from amia.recv_message import RecvMessage
 from amia.send_message import SendMessage, SendTextMessage
 from config import Config
-from utools.match import recursive_match
-from utools.sync import asyncRunWithNewThread
+from utils.match import recursive_match
+from utils.sync import asyncRunWithNewThread
 
 
 # 定义项目接口，供插件调用
@@ -38,7 +38,7 @@ class ProjectInterface:
 
     async def send_data_to_project(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        示例：插件调用此方法向项目发送数据。
+        示例: 插件调用此方法向项目发送数据。
 
         Args:
             data (Dict[str, Any]): 要发送的数据。
@@ -212,7 +212,7 @@ class PluginManager:
         self.project_interface: ProjectInterface = ProjectInterface()
 
         # 初始化时清理缓存目录
-        if self.cache_directory.exists():
+        if self.cache_directory.exists():  # TODO DEBUG
             shutil.rmtree(self.cache_directory)
 
         self.plugins_directory.mkdir(exist_ok=True)
@@ -547,8 +547,11 @@ class PluginManager:
                 for plugin_file in self.plugins_directory.glob("*.plugin")
             ]
         )
+        
+        # 所有插件加载完成后，触发startup触发器
+        await self._process_startup_triggers()
         # await self._load_plugin(
-        #     self.plugins_directory / "query.plugin"
+        #     self.plugins_directory / "poke.plugin"
         # )  # TODO 调试用，后续删除
 
     async def reload_plugin(self, plugin_id: str) -> bool:
@@ -814,8 +817,15 @@ class PluginManager:
         group_categories = Config(self.config_directory / "group_categories.json")
 
         # 处理普通消息类型 (text_pattern 和 text_command)
-        if message.get("post_type") == "message" and "message_id" in message:
+        if message.get("post_type") in ["message", "message_sent"] and "message_id" in message:
             await self._process_text_message(message, group_categories)
+
+        if (
+            message.get("post_type") == "notice"
+            and message.get("notice_type") == "notify"
+            and message.get("sub_type") == "poke"
+        ):
+            await self._process_poke_message(message, group_categories)
 
         # 处理match_message类型的触发器
         await self._process_match_message_triggers(message, group_categories)
@@ -833,6 +843,7 @@ class PluginManager:
         # if message.get("user_id") != 3381464350:  # TODO 调试用，后续删除
         #     return
         try:
+            sent = message.get("post_type") == "message_sent"
             msg = RecvMessage(message["message_id"], self.bot)
             await msg.get_info()
 
@@ -868,16 +879,24 @@ class PluginManager:
 
                     # 根据触发器类型处理
                     if trigger["type"] == "text_pattern":
+                        if sent and not trigger["params"].get("sent", False):
+                            continue
+                        pattern = trigger["params"]["pattern"]
+                        ignore_case = pattern.startswith("(?i)")
+                        if ignore_case:
+                            pattern = pattern[4:]
                         if re.search(
-                            trigger["params"]["pattern"],
+                            pattern,
                             (
                                 msg.raw_message.lower()
                                 if trigger["params"]["raw"]
                                 else msg.text.lower()
                             ),
+                            re.IGNORECASE if ignore_case else 0,
                         ):
                             self._record_usage(plugin.id, trigger["id"], msg.raw)
                             uid = uuid.uuid4()
+
                             async def func(self, uid, plugin, trigger, msg):
                                 await self.logToGroup(
                                     f"""
@@ -906,15 +925,25 @@ UUID: {uid}
 时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 """
                                 )
-                            if trigger["params"]["pattern"]!=".":
-                                asyncio.create_task(func(self, uid, plugin, trigger, msg))
+
+                            if trigger["params"]["pattern"] != "." and not trigger.get(
+                                "no_log"
+                            ):
+                                asyncio.create_task(
+                                    func(self, uid, plugin, trigger, msg)
+                                )
                             else:
-                                asyncio.create_task(plugin.call_function(trigger["func"], message=msg))
+                                asyncio.create_task(
+                                    plugin.call_function(trigger["func"], message=msg)
+                                )
 
                     elif trigger["type"] == "text_command":
+                        if sent and not trigger["params"].get("sent", False):
+                            continue
                         if self._match_text_command(msg.text, trigger, trigger_config):
                             self._record_usage(plugin.id, trigger["id"], msg.raw)
                             uid = uuid.uuid4()
+
                             async def func(self, uid, plugin, trigger, msg):
                                 await self.logToGroup(
                                     f"""
@@ -943,10 +972,103 @@ UUID: {uid}
 时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 """
                                 )
-                            await func(self, uid, plugin, trigger, msg)
+
+                            if not trigger.get("no_log"):
+                                asyncio.create_task(
+                                    func(self, uid, plugin, trigger, msg)
+                                )
+                            else:
+                                asyncio.create_task(
+                                    plugin.call_function(trigger["func"], message=msg)
+                                )
 
         except Exception as e:
             logging.error(f"处理文本消息时发生错误: {e}\n{traceback.format_exc()}")
+
+    async def _process_poke_message(
+        self, message: Dict[str, Any], group_categories: Config
+    ) -> None:
+        """
+        处理戳一戳消息
+
+        Args:
+            message (Dict[str, Any]): 消息数据
+        """
+        try:
+            # 预加载所有插件配置以提高性能
+            plugin_configs = {}
+
+            for plugin in self._plugins_cache.values():
+                if not plugin.enabled:
+                    continue
+
+                # 只加载一次插件配置
+                if plugin.id not in plugin_configs:
+                    plugin_configs[plugin.id] = Config(
+                        self.plugin_config_directory / f"{plugin.id}.json"
+                    )
+
+                plugin_config = plugin_configs[plugin.id]
+
+                for trigger in plugin.triggers:
+                    trigger_config = plugin_config.triggers[trigger["id"]]
+
+                    # 检查消息是否符合触发器的群组或私聊条件
+                    if not self._check_trigger_conditions(
+                        message.get("group_id") is not None,
+                        message.get("group_id") or 0,
+                        trigger_config,
+                        group_categories,
+                    ):
+                        continue
+
+                    if trigger["type"] == "poke":
+                        if (
+                            not trigger["params"].get("self", False)
+                            or message.get("target_id", 0) == self.bot.qq
+                        ):
+                            self._record_usage(plugin.id, trigger["id"], message)
+                            uid = uuid.uuid4()
+
+                            async def func(self, uid, plugin, trigger, message):
+                                await self.logToGroup(
+                                    f"""
+{plugin.id}-{trigger["id"]}
+开始处理消息
+UUID: {uid}
+时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+插件ID: {plugin.id}
+触发器ID: {trigger["id"]}
+群组ID: {message.get("group_id")}
+用户ID: {message["user_id"]}
+触发器详情: {json.dumps(trigger, ensure_ascii=False, indent=2)}
+--------
+{json.dumps(message, ensure_ascii=False, indent=2)}
+"""
+                                )
+                                await plugin.call_function(
+                                    trigger["func"], message=message
+                                )
+                                await self.logToGroup(
+                                    f"""
+处理完成
+UUID: {uid}
+时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+"""
+                                )
+
+                            if not trigger.get("no_log"):
+                                asyncio.create_task(
+                                    func(self, uid, plugin, trigger, message)
+                                )
+                            else:
+                                asyncio.create_task(
+                                    plugin.call_function(
+                                        trigger["func"], message=message
+                                    )
+                                )
+        except Exception as e:
+            logging.error(f"处理戳一戳消息时发生错误: {e}\n{traceback.format_exc()}")
 
     async def _process_match_message_triggers(
         self, message: Dict[str, Any], group_categories: Config
@@ -1001,6 +1123,7 @@ UUID: {uid}
                 if is_trigger_matched:
                     self._record_usage(plugin.id, trigger["id"], message)
                     uid = uuid.uuid4()
+
                     async def func(uid, plugin, trigger, group_id, message):
                         await self.logToGroup(
                             f"""
@@ -1027,7 +1150,15 @@ UUID: {uid}
 时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 """
                         )
-                    asyncio.create_task(func(uid, plugin, trigger, group_id, message))
+
+                    if not trigger.get("no_log"):
+                        asyncio.create_task(
+                            func(uid, plugin, trigger, group_id, message)
+                        )
+                    else:
+                        asyncio.create_task(
+                            plugin.call_function(trigger["func"], message=message)
+                        )
 
     def _check_trigger_conditions(
         self,
@@ -1079,6 +1210,11 @@ UUID: {uid}
             bool: 是否在有效群组中
         """
         for category_id in category_ids:
+            if (
+                category_id == "all"
+                and group_id not in group_categories["black"]["groups"]
+            ):
+                return True
             if category_id in group_categories and group_id in group_categories[
                 category_id
             ].get("groups", []):
@@ -1160,3 +1296,84 @@ UUID: {uid}
                 ).send()
         except Exception as e:
             logging.error(f"向日志群组发送消息失败: {e}")
+            
+    async def _process_startup_triggers(self) -> None:
+        """
+        处理所有插件的startup触发器。
+        在所有插件加载完成后调用此方法。
+        """
+        logging.info("开始处理startup触发器")
+        # 加载群组分类配置
+        group_categories = Config(self.config_directory / "group_categories.json")
+        
+        # 预加载所有插件配置以提高性能
+        plugin_configs = {}
+        
+        for plugin in self._plugins_cache.values():
+            if not plugin.enabled or not plugin.loaded:
+                continue
+            
+            # 只加载一次插件配置
+            if plugin.id not in plugin_configs:
+                plugin_configs[plugin.id] = Config(
+                    self.plugin_config_directory / f"{plugin.id}.json"
+                )
+            
+            plugin_config = plugin_configs[plugin.id]
+            
+            for trigger in plugin.triggers:
+                if trigger.get("type") != "startup":
+                    continue
+                
+                trigger_id = trigger.get("id", trigger.get("name", "unknown"))
+                trigger_config = plugin_config.triggers.get(trigger_id, {})
+                
+                # 检查触发器是否启用
+                if not trigger_config.get("enabled", True):
+                    continue
+                
+                # 获取要调用的函数名
+                func_name = trigger.get("func", "")
+                if not func_name:
+                    logging.warning(f"插件 '{plugin.id}' 的startup触发器 '{trigger_id}' 未指定函数名")
+                    continue
+                
+                # 记录使用情况
+                self._record_usage(plugin.id, trigger_id, {"type": "startup"})
+                uid = uuid.uuid4()
+                
+                async def func(self, uid, plugin, trigger, trigger_id):
+                    try:
+                        await self.logToGroup(
+                            f"""
+{plugin.id}-{trigger_id}
+开始处理startup触发器
+UUID: {uid}
+时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+插件ID: {plugin.id}
+触发器ID: {trigger_id}
+触发器详情: {json.dumps(trigger, ensure_ascii=False, indent=2)}
+"""
+                        )
+                        await plugin.call_function(trigger["func"])
+                        await self.logToGroup(
+                            f"""
+处理完成
+UUID: {uid}
+时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+"""
+                        )
+                    except Exception as e:
+                        logging.error(f"执行插件 '{plugin.id}' 的startup触发器 '{trigger_id}' 时出错: {e}\n{traceback.format_exc()}")
+                
+                # 创建任务执行startup触发器函数
+                if not trigger.get("no_log"):
+                    asyncio.create_task(
+                        func(self, uid, plugin, trigger, trigger_id)
+                    )
+                else:
+                    asyncio.create_task(
+                        plugin.call_function(trigger["func"])
+                    )
+        
+        logging.info("startup触发器处理完成")

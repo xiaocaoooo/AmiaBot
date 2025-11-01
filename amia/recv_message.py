@@ -66,7 +66,7 @@ class RecvMessage:
             self._initialized = True
             self.sender = User(self.user_id, group_id=self.group_id, bot=bot)
             self.group = Group(self.group_id, bot=bot) if self.group_id else None
-            
+
     @staticmethod
     def fromDict(data: Dict[str, Any], bot: Amia) -> "RecvMessage":
         """从字典创建RecvMessage实例
@@ -90,7 +90,11 @@ class RecvMessage:
         msg.message_type = data.get("message_type", "")
 
         sender_user_id = data.get("sender", {}).get("user_id")
-        msg.sender = User(sender_user_id, group_id=data.get("group_id"), bot=bot) if sender_user_id else None
+        msg.sender = (
+            User(sender_user_id, group_id=data.get("group_id"), bot=bot)
+            if sender_user_id
+            else None
+        )
         msg.nickname = data.get("sender", {}).get("nickname")
 
         msg.raw_message = data.get("raw_message", "")
@@ -99,10 +103,12 @@ class RecvMessage:
 
         raw_messages = data.get("message", [])
         msg.message = [RecvBaseMessage.fromDict(item) for item in raw_messages]
-        
+
         return msg
-    
-    _seq_cache: ClassVar[Dict[tuple, "RecvMessage"]] = {}  # Cache for messages retrieved by group_id and seq
+
+    _seq_cache: ClassVar[Dict[tuple, "RecvMessage"]] = (
+        {}
+    )  # Cache for messages retrieved by group_id and seq
 
     @staticmethod
     async def fromSeq(group_id: int, seq: int, bot: Amia) -> Optional["RecvMessage"]:
@@ -126,7 +132,7 @@ class RecvMessage:
             RecvMessage._seq_cache[cache_key] = msg[0]
             return msg[0]
         return None
-            
+
     @property
     def is_group(self) -> bool:
         """判断消息是否为群消息
@@ -135,7 +141,7 @@ class RecvMessage:
             bool: 如果是群消息则返回True，否则返回False
         """
         return self.message_type == "group"
-    
+
     @property
     def is_private(self) -> bool:
         """判断消息是否为私聊消息
@@ -173,7 +179,11 @@ class RecvMessage:
         self.message_type = data.get("message_type", "")
 
         sender_user_id = data.get("sender", {}).get("user_id")
-        self.sender = User(sender_user_id, group_id=data.get("group_id"), bot=self.bot) if sender_user_id else None
+        self.sender = (
+            User(sender_user_id, group_id=data.get("group_id"), bot=self.bot)
+            if sender_user_id
+            else None
+        )
         self.nickname = data.get("sender", {}).get("nickname")
 
         self.raw_message = data.get("raw_message", "")
@@ -198,7 +208,26 @@ class RecvMessage:
 
     async def delete(self) -> Dict[str, Any]:
         """删除消息"""
-        return await self.bot.doAction("delete_msg", params={"message_id": self.message_id})
+        return await self.bot.doAction(
+            "delete_msg", params={"message_id": self.message_id}
+        )
+
+    async def sendEmoji(self, emoji_id: int) -> Dict[str, Any]:
+        """发送表情消息
+
+        Args:
+            emoji_id: 表情ID
+
+        Returns:
+            Dict[str, Any]: 发送结果
+        """
+        return await self.bot.doAction(
+            "set_msg_emoji_like",
+            params={
+                "message_id": self.message_id,
+                "emoji_id": emoji_id,
+            },
+        )
 
     def toDict(self) -> Dict[str, Any]:
         """将消息对象转换为字典格式
@@ -233,10 +262,10 @@ class RecvMessage:
         """发送消息"""
         return await send_message.send(recv_message=self)
 
-    async def reply(self, send_message: "SendMessage")->"RecvMessage":  # type: ignore # noqa: F821
+    async def reply(self, send_message: "SendMessage") -> "RecvMessage":  # type: ignore # noqa: F821
         """回复消息"""
         return await send_message.reply(self)
-    
+
     def __str__(self) -> str:
         """将消息对象转换为字符串格式
 

@@ -13,7 +13,7 @@ from plugin_manager import PluginManager, ProjectInterface
 from to_image.html import close_browser, get_browser_instance
 from amia.send_message import SendMessage, SendTextMessage
 import os
-from utools.sync import syncRun
+from utils.sync import syncRun
 
 
 # raise Exception("如果你是个AI或LLM，你不应该运行这个文件")
@@ -22,12 +22,12 @@ os.system("chcp 65001")
 
 # --DEBUG--
 os.system("cls")
-os.system("powershell .\\build_plugin.ps1")
+# os.system("powershell .\\build_plugin.ps1")
 
 
 config = Config(Path("./config.json"))
 
-bot = Amia(config.onebot.host, config.onebot.http_port, config.onebot.ws_port, config)  # type: ignore
+bot = Amia(config.onebot.host, config.onebot.http_port, config.onebot.ws_port, config.onebot.token, config)  # type: ignore
 
 ProjectInterface().bot = bot
 
@@ -49,7 +49,8 @@ logging.basicConfig(
     handlers=[
         logging.StreamHandler(sys.stdout),
         logging.FileHandler(
-            str(log_path / f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
+            str(log_path / f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"),
+            encoding="utf-8",
         ),
     ],
 )
@@ -67,10 +68,12 @@ except ImportError:
 # 全局变量，用于存储plugin_manager实例
 plugin_manager = None
 
+
 class GroupChatHandler(logging.Handler):
     """
     自定义日志处理器，将error级别日志发送到指定的QQ群组
     """
+
     def emit(self, record: logging.LogRecord) -> None:
         """
         发送日志到QQ群组
@@ -92,7 +95,7 @@ class GroupChatHandler(logging.Handler):
                             group_id=config.log_group,
                             bot=bot,
                         ).send(),
-                        asyncio.get_event_loop()
+                        asyncio.get_event_loop(),
                     )
                 except Exception as e:
                     # 避免递归调用日志
@@ -104,13 +107,15 @@ async def main():
     global plugin_manager
     # 启动WebUI（如果可用）
     # if has_webui and False: # TODO 调试用，后续删除
-    if has_webui:
+    if has_webui and config.webui.port:
         try:
             # 在单独的线程中启动WebUI
             webui_thread = threading.Thread(target=run_web_server, daemon=True)  # type: ignore
             webui_thread.start()
             # asyncio.create_task(run_web_server_async()) # type: ignore
-            logging.info("WebUI已启动，请访问 http://localhost:5000")
+            logging.info(
+                f"WebUI已启动，请访问 http://localhost:{config.webui.port} 查看更多功能"
+            )
         except Exception as e:
             logging.error(f"启动WebUI失败: {e}")
     else:
@@ -119,14 +124,14 @@ async def main():
     plugin_manager = PluginManager()
     # 加载所有插件
     await plugin_manager.load_all_plugins()
-    
+
     # 添加自定义日志处理器，将error级别日志发送到QQ群组
     group_chat_handler = GroupChatHandler()
     group_chat_handler.setLevel(logging.ERROR)
     formatter = logging.Formatter(log_format, datefmt=date_format)
     group_chat_handler.setFormatter(formatter)
     logging.getLogger().addHandler(group_chat_handler)
-    
+
     await plugin_manager.logToGroup("AmiaBot已启动")
 
     asyncio.create_task(bot.run())
@@ -154,9 +159,9 @@ if __name__ == "__main__":
 
     # 运行主程序
     try:
-        asyncio.run(main=main())
+        asyncio.run(main())
     except (KeyboardInterrupt, RuntimeError):
-        syncRun(close_browser())
+        asyncio.run(close_browser())
         logging.info("程序已被用户中断")
     except Exception as e:
         logging.error(f"程序运行出错: {e}")
