@@ -5,6 +5,7 @@ go 1.25.6
 require (
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.7.0
+	github.com/lib/pq v1.12.0
 	github.com/xiaocaoooo/amiabot-plugin-sdk v0.0.0
 )
 
