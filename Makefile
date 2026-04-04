@@ -8,10 +8,11 @@ PLUGINS := \
 	nyanyabot-plugin-amiabot-pjsk-card \
 	nyanyabot-plugin-amiabot-pjsk-event \
 	nyanyabot-plugin-amiabot-pjsk-song \
+	nyanyabot-plugin-amiabot-pjsk-profile \
 	nyanyabot-plugin-amiabot-zeabur-status
 
 .PHONY: build test fmt clean tidy \
-	build-bilibili build-pixiv build-account build-bind build-card build-event build-song build-zeabur
+	build-bilibili build-pixiv build-account build-bind build-card build-event build-song build-profile build-zeabur
 
 build: $(addprefix $(BIN_DIR)/,$(PLUGINS))
 
@@ -28,6 +29,7 @@ build-bind: $(BIN_DIR)/nyanyabot-plugin-amiabot-pjsk-bind
 build-card: $(BIN_DIR)/nyanyabot-plugin-amiabot-pjsk-card
 build-event: $(BIN_DIR)/nyanyabot-plugin-amiabot-pjsk-event
 build-song: $(BIN_DIR)/nyanyabot-plugin-amiabot-pjsk-song
+build-profile: $(BIN_DIR)/nyanyabot-plugin-amiabot-pjsk-profile
 build-zeabur: $(BIN_DIR)/nyanyabot-plugin-amiabot-zeabur-status
 
 test:

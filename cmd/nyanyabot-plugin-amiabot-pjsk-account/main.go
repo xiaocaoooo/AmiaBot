@@ -101,6 +101,18 @@ func (p *PJSKAccount) Descriptor(ctx context.Context) (papi.Descriptor, error) {
 				ParamsSchema: json.RawMessage(`{"type":"object","properties":{"qq_id":{"type":"integer"},"game_server":{"type":"string"},"game_id":{"type":"string"}},"required":["qq_id","game_server","game_id"]}`),
 				ResultSchema: json.RawMessage(`{"type":"object","properties":{"success":{"type":"boolean"},"message":{"type":"string"}}}`),
 			},
+			{
+				Name:        "account.get_preferred_server",
+				Description: "获取用户默认服务器",
+				ParamsSchema: json.RawMessage(`{"type":"object","properties":{"qq_id":{"type":"integer"}},"required":["qq_id"]}`),
+				ResultSchema: json.RawMessage(`{"type":"object","properties":{"success":{"type":"boolean"},"server":{"type":"string"},"message":{"type":"string"}}}`),
+			},
+			{
+				Name:        "account.set_preferred_server",
+				Description: "设置用户默认服务器",
+				ParamsSchema: json.RawMessage(`{"type":"object","properties":{"qq_id":{"type":"integer"},"server":{"type":"string"}},"required":["qq_id","server"]}`),
+				ResultSchema: json.RawMessage(`{"type":"object","properties":{"success":{"type":"boolean"},"message":{"type":"string"}}}`),
+			},
 		},
 		Config: &papi.ConfigSpec{
 			Version:     "1",
@@ -177,6 +189,11 @@ func (p *PJSKAccount) createTable(db *sql.DB) error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_pjsk_accounts_qq_id ON pjsk_accounts(qq_id);
 	CREATE INDEX IF NOT EXISTS idx_pjsk_accounts_game_id ON pjsk_accounts(game_id);
+	CREATE TABLE IF NOT EXISTS pjsk_user_settings (
+		qq_id            BIGINT PRIMARY KEY,
+		preferred_server VARCHAR(4) NOT NULL DEFAULT 'jp',
+		updated_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
 	`
 	_, err := db.Exec(query)
 	return err
@@ -198,6 +215,10 @@ func (p *PJSKAccount) Invoke(ctx context.Context, method string, paramsJSON json
 		return p.handleSetEnabled(ctx, paramsJSON)
 	case "account.remove":
 		return p.handleRemove(ctx, paramsJSON)
+	case "account.get_preferred_server":
+		return p.handleGetPreferredServer(ctx, paramsJSON)
+	case "account.set_preferred_server":
+		return p.handleSetPreferredServer(ctx, paramsJSON)
 	default:
 		return nil, papi.NewStructuredError(papi.ErrorCodeNotFound, "method not found: "+method)
 	}

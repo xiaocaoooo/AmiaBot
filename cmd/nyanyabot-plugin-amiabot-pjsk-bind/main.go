@@ -21,8 +21,9 @@ import (
 )
 
 var (
-	bindRegex = regexp.MustCompile(`^(?i)(?:(?P<server>cn|jp|tw|en|kr))?绑定(?P<id>\d+)$`)
-	idRegex   = regexp.MustCompile(`^(?:(?P<server>cn|jp|tw|en|kr)|(?:烤))id$`)
+	bindRegex       = regexp.MustCompile(`^(?i)(?:(?P<server>cn|jp|tw|en|kr))?绑定(?P<id>\d+)$`)
+	idRegex         = regexp.MustCompile(`^(?:(?P<server>cn|jp|tw|en|kr)|(?:烤))id$`)
+	defaultSrvRegex = regexp.MustCompile(`^(?:默认服务器|server)(?P<server>cn|jp|tw|en|kr)$`)
 
 	httpClient = &http.Client{Timeout: 15 * time.Second}
 )
@@ -77,6 +78,14 @@ func (p *PJSKBind) Descriptor(ctx context.Context) (papi.Descriptor, error) {
 				MatchRaw:    true,
 				Handler:     "HandleID",
 			},
+			{
+				Name:        "pjsk-set-default-server",
+				ID:          "cmd.set-default-server",
+				Description: "设置默认服务器（如 serverjp, 默认服务器cn）",
+				Pattern:     `^(?:默认服务器|server)(?P<server>cn|jp|tw|en|kr)$`,
+				MatchRaw:    true,
+				Handler:     "HandleSetDefaultServer",
+			},
 		},
 	}, nil
 }
@@ -111,6 +120,9 @@ func (p *PJSKBind) Handle(ctx context.Context, listenerID string, eventRaw ob11.
 	}
 	if listenerID == "cmd.profile-id" {
 		return p.handleID(ctx, eventRaw, match)
+	}
+	if listenerID == "cmd.set-default-server" {
+		return p.handleSetDefaultServer(ctx, eventRaw, match)
 	}
 	return papi.HandleResult{}, nil
 }
@@ -206,6 +218,24 @@ func (p *PJSKBind) handleBind(ctx context.Context, eventRaw ob11.Event, match *p
 		}
 		util.SendText(host, msgType, groupID, userID, "❌ "+msg)
 		return papi.HandleResult{}, nil
+	}
+
+	// 检查是否已有默认服务器，如果没有则自动设置为本次绑定的服务器
+	getSrvResult, getSrvErr := host.CallDependency(ctx, "external.amiabot-pjsk-account", "account.get_preferred_server", map[string]any{
+		"qq_id": qqIDInt,
+	})
+	if getSrvErr == nil {
+		var getSrvResp struct {
+			Success bool   `json:"success"`
+			Server  string `json:"server"`
+		}
+		if err := json.Unmarshal(getSrvResult, &getSrvResp); err == nil && getSrvResp.Success && getSrvResp.Server == "" {
+			// 用户尚未设置默认服务器，自动设置为本次绑定的服务器
+			_, _ = host.CallDependency(ctx, "external.amiabot-pjsk-account", "account.set_preferred_server", map[string]any{
+				"qq_id":  qqIDInt,
+				"server": server,
+			})
+		}
 	}
 
 	// 通过 pages 获取 profile 用户名
@@ -353,6 +383,93 @@ func evtToQQID(evt map[string]any) int64 {
 		}
 	}
 	return 0
+}
+
+// parseSetDefaultServerArgs 解析设置默认服务器命令参数
+func parseSetDefaultServerArgs(rawMessage string) string {
+	m := defaultSrvRegex.FindStringSubmatch(rawMessage)
+	if len(m) < 2 {
+		return ""
+	}
+	return strings.ToLower(strings.TrimSpace(m[1]))
+}
+
+// handleSetDefaultServer 处理设置默认服务器命令
+func (p *PJSKBind) handleSetDefaultServer(ctx context.Context, eventRaw ob11.Event, match *papi.CommandMatch) (papi.HandleResult, error) {
+	log := hclog.L()
+
+	var evt map[string]any
+	if err := json.Unmarshal(eventRaw, &evt); err != nil {
+		log.Error("[Bind] 解析事件失败", "error", err)
+		return papi.HandleResult{}, nil
+	}
+	msgType, _ := evt["message_type"].(string)
+	groupID := evt["group_id"]
+	userID := evt["user_id"]
+	rawMessage, _ := evt["raw_message"].(string)
+
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("panic: %v", r)
+			log.Error("[Bind] panic", "error", err)
+			util.SendError(transport.Host(), msgType, groupID, userID, "❌ 设置默认服务器异常", err)
+		}
+	}()
+
+	host := transport.Host()
+	if host == nil {
+		log.Warn("[Bind] host 为 nil，终止")
+		return papi.HandleResult{}, nil
+	}
+
+	server := parseSetDefaultServerArgs(rawMessage)
+	if !validServers[server] {
+		util.SendText(host, msgType, groupID, userID, "❌ 无效的服务器，请选择 jp/cn/en/tw/kr")
+		return papi.HandleResult{}, nil
+	}
+
+	qqIDInt := evtToQQID(evt)
+
+	setResult, err := host.CallDependency(ctx, "external.amiabot-pjsk-account", "account.set_preferred_server", map[string]any{
+		"qq_id":  qqIDInt,
+		"server": server,
+	})
+	if err != nil {
+		log.Error("[Bind] 调用 set_preferred_server 失败", "error", err)
+		util.SendError(host, msgType, groupID, userID, "❌ 设置默认服务器失败", err)
+		return papi.HandleResult{}, nil
+	}
+
+	var setResp struct {
+		Success bool   `json:"success"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(setResult, &setResp); err != nil {
+		util.SendText(host, msgType, groupID, userID, "❌ 设置默认服务器失败")
+		return papi.HandleResult{}, nil
+	}
+
+	if !setResp.Success {
+		msg := "设置默认服务器失败"
+		if setResp.Message != "" {
+			msg = setResp.Message
+		}
+		util.SendText(host, msgType, groupID, userID, "❌ "+msg)
+		return papi.HandleResult{}, nil
+	}
+
+	serverUpper := strings.ToUpper(server)
+	util.SendText(host, msgType, groupID, userID, fmt.Sprintf("默认服务器已设置为 [%s]\n可以使用“个人信息”或“profile”查看 profile", serverUpper))
+	return papi.HandleResult{}, nil
+}
+
+// validServers 验证服务器列表
+var validServers = map[string]bool{
+	"jp": true,
+	"cn": true,
+	"en": true,
+	"tw": true,
+	"kr": true,
 }
 
 // fetchProfileName 通过 pages 获取 profile 用户名

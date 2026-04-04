@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -49,6 +51,17 @@ type RemoveParams struct {
 	QQID      int64  `json:"qq_id"`
 	GameServer string `json:"game_server"`
 	GameID    string `json:"game_id"`
+}
+
+// GetPreferredServerParams 获取默认服务器参数
+type GetPreferredServerParams struct {
+	QQID int64 `json:"qq_id"`
+}
+
+// SetPreferredServerParams 设置默认服务器参数
+type SetPreferredServerParams struct {
+	QQID   int64  `json:"qq_id"`
+	Server string `json:"server"`
 }
 
 // handleAdd 处理添加账户请求
@@ -421,4 +434,116 @@ func (p *PJSKAccount) handleRemove(ctx context.Context, paramsJSON json.RawMessa
 func jsonResult(data interface{}) json.RawMessage {
 	b, _ := json.Marshal(data)
 	return b
+}
+
+// handleGetPreferredServer 处理获取用户默认服务器请求
+func (p *PJSKAccount) handleGetPreferredServer(ctx context.Context, paramsJSON json.RawMessage) (json.RawMessage, error) {
+	var params GetPreferredServerParams
+	if err := json.Unmarshal(paramsJSON, &params); err != nil {
+		return jsonResult(map[string]interface{}{
+			"success": false,
+			"message": "参数解析失败: " + err.Error(),
+		}), nil
+	}
+
+	if params.QQID == 0 {
+		return jsonResult(map[string]interface{}{
+			"success": false,
+			"message": "QQ号不能为空",
+		}), nil
+	}
+
+	p.mu.RLock()
+	db := p.db
+	p.mu.RUnlock()
+
+	if db == nil {
+		return jsonResult(map[string]interface{}{
+			"success": false,
+			"message": "数据库未连接",
+		}), nil
+	}
+
+	var server string
+	err := db.QueryRowContext(ctx,
+		"SELECT preferred_server FROM pjsk_user_settings WHERE qq_id = $1",
+		params.QQID,
+	).Scan(&server)
+
+	if err == sql.ErrNoRows {
+		// 没有记录，返回默认值
+		return jsonResult(map[string]interface{}{
+			"success": true,
+			"server":  "",
+			"message": "用户未设置默认服务器",
+		}), nil
+	} else if err != nil {
+		hclog.L().Error("[Account] 查询默认服务器失败", "error", err)
+		return jsonResult(map[string]interface{}{
+			"success": false,
+			"message": "查询默认服务器失败: " + err.Error(),
+		}), nil
+	}
+
+	return jsonResult(map[string]interface{}{
+		"success": true,
+		"server":  server,
+	}), nil
+}
+
+// handleSetPreferredServer 处理设置用户默认服务器请求
+func (p *PJSKAccount) handleSetPreferredServer(ctx context.Context, paramsJSON json.RawMessage) (json.RawMessage, error) {
+	var params SetPreferredServerParams
+	if err := json.Unmarshal(paramsJSON, &params); err != nil {
+		return jsonResult(map[string]interface{}{
+			"success": false,
+			"message": "参数解析失败: " + err.Error(),
+		}), nil
+	}
+
+	if params.QQID == 0 {
+		return jsonResult(map[string]interface{}{
+			"success": false,
+			"message": "QQ号不能为空",
+		}), nil
+	}
+	if !validServers[params.Server] {
+		return jsonResult(map[string]interface{}{
+			"success": false,
+			"message": "无效的服务器，只支持 jp/cn/en/tw/kr",
+		}), nil
+	}
+
+	p.mu.RLock()
+	db := p.db
+	p.mu.RUnlock()
+
+	if db == nil {
+		return jsonResult(map[string]interface{}{
+			"success": false,
+			"message": "数据库未连接",
+		}), nil
+	}
+
+	// UPSERT: 如果存在则更新，不存在则插入
+	_, err := db.ExecContext(ctx,
+		`INSERT INTO pjsk_user_settings (qq_id, preferred_server, updated_at)
+		 VALUES ($1, $2, CURRENT_TIMESTAMP)
+		 ON CONFLICT (qq_id) DO UPDATE SET preferred_server = $2, updated_at = CURRENT_TIMESTAMP`,
+		params.QQID, params.Server,
+	)
+	if err != nil {
+		hclog.L().Error("[Account] 设置默认服务器失败", "error", err)
+		return jsonResult(map[string]interface{}{
+			"success": false,
+			"message": "设置默认服务器失败: " + err.Error(),
+		}), nil
+	}
+
+	serverUpper := strings.ToUpper(params.Server)
+	hclog.L().Info("[Account] 设置默认服务器成功", "qq_id", params.QQID, "server", serverUpper)
+	return jsonResult(map[string]interface{}{
+		"success": true,
+		"message": fmt.Sprintf("默认服务器已设置为 [%s]", serverUpper),
+	}), nil
 }
