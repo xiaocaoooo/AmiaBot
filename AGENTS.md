@@ -6,7 +6,7 @@
 
 ## 1. 项目概述
 
-AmiaBot 是为 **NyaNyaBot** 宿主程序提供的一组外置插件（共 7 个）。每个插件作为**独立进程**运行，通过 **HashiCorp go-plugin** 框架（net/rpc 协议）与宿主通信。插件可响应 QQ 消息事件，执行 Bilibili/Pixiv/PJSK/Zeabur 等业务逻辑，并通过宿主调用 OneBot API 发送消息。
+AmiaBot 是为 **NyaNyaBot** 宿主程序提供的一组外置插件（共 8 个）。每个插件作为**独立进程**运行，通过 **HashiCorp go-plugin** 框架（net/rpc 协议）与宿主通信。插件可响应 QQ 消息事件，执行 Bilibili/Pixiv/PJSK/Zeabur 等业务逻辑，并通过宿主调用 OneBot API 发送消息。
 
 核心工作流：**事件解析 → 参数提取 → 配置读取 → 页面 URL 构建 → 调用截图插件 → 调用 blobserver 上传 → 发送消息**
 
@@ -32,7 +32,7 @@ AmiaBot 是为 **NyaNyaBot** 宿主程序提供的一组外置插件（共 7 个
 AmiaBot/
 ├── go.mod                        # Go 模块定义，依赖本地 SDK (replace => ../amiabot-plugin-sdk)
 ├── go.sum
-├── Makefile                      # 构建系统（7 个插件的编译目标）
+├── Makefile                      # 构建系统（8 个插件的编译目标）
 ├── .gitignore                    # 忽略 plugins/ 编译产物目录
 ├── cmd/                          # 每个插件一个子目录
 │   ├── nyanyabot-plugin-amiabot-bilibili/
@@ -45,6 +45,8 @@ AmiaBot/
 │   │   ├── main.go               # PJSK 账户管理插件（数据库 CRUD）
 │   │   ├── exports.go            # 跨插件导出方法实现（account.add/get/list/set_enabled/remove）
 │   │   └── utils.go              # 工具函数
+│   ├── nyanyabot-plugin-amiabot-pjsk-bind/
+│   │   └── main.go               # PJSK 账户绑定插件（绑定/查询游戏 ID）
 │   ├── nyanyabot-plugin-amiabot-pjsk-card/
 │   │   ├── main.go               # PJSK 卡面查询插件
 │   │   └── utils.go
@@ -67,7 +69,7 @@ AmiaBot/
 
 ---
 
-## 4. 七个插件详细说明
+## 4. 八个插件详细说明
 
 ### 4.1 Bilibili 链接识别 (`external.amiabot-bilibili`)
 
@@ -106,7 +108,21 @@ AmiaBot/
 - **依赖**：无
 - **配置项**：`database_url`（必填）, `default_server`
 
-### 4.4 PJSK 卡面查询 (`external.amiabot-pjsk-card`)
+### 4.4 PJSK 账户绑定 (`external.amiabot-pjsk-bind`)
+
+- **触发方式**：两个命令
+  - **绑定命令**：`^(?i)(?:(?P<server>cn|jp|tw|en|kr))?绑定(?P<id>\d+)$`
+  - **ID查询命令**：`^(?:(?P<server>cn|jp|tw|en|kr)|(?:烤))id$`
+- **示例**：`绑定12345`, `jp绑定12345`, `id`, `jpid`, `烤id`
+- **MatchRaw**：`true`
+- **行为**：
+  - 绑定：调用 `account.add` 写入数据库 → 通过 pages `/pjsk/profile/raw` 获取用户名 → 返回 `绑定成功！\n[JP] <username>`
+  - ID查询：指定 server 时返回该 server 的已启用 id，否则返回所有已启用的 id
+- **文件**：`cmd/nyanyabot-plugin-amiabot-pjsk-bind/main.go`（单文件，自包含）
+- **依赖**：`external.amiabot-pjsk-account`
+- **配置项**：`amiabot_pages`（用于获取 profile 用户名）
+
+### 4.5 PJSK 卡面查询 (`external.amiabot-pjsk-card`)
 
 - **触发方式**：命令匹配 `card` 或 `查卡` + 编号
 - **正则**：`^(?i)(?:(?P<server>cn|jp|tw|en|kr))?(?:card|查卡)(?P<id>[0-9]+)$`
@@ -117,7 +133,7 @@ AmiaBot/
 - **依赖**：`external.screenshot`, `external.blobserver`
 - **配置项**：`amiabot_pages`, `default_server`
 
-### 4.5 PJSK 活动查询 (`external.amiabot-pjsk-event`)
+### 4.6 PJSK 活动查询 (`external.amiabot-pjsk-event`)
 
 - **触发方式**：命令匹配 `event` 或 `查活动` + 可选编号
 - **正则**：`^(?i)(?:(?P<server>cn|jp|tw|en|kr))?(?:event|查活动)(?P<id>[0-9]*)$`
@@ -128,7 +144,7 @@ AmiaBot/
 - **依赖**：`external.screenshot`, `external.blobserver`
 - **配置项**：`amiabot_pages`, `default_server`
 
-### 4.6 PJSK 歌曲查询 (`external.amiabot-pjsk-song`)
+### 4.7 PJSK 歌曲查询 (`external.amiabot-pjsk-song`)
 
 - **触发方式**：命令 `song` + 歌曲名称/别名
 - **正则**：`^(?i)(?:(?P<server>cn|jp|tw|en|kr))?song(?P<name>.+)$`
@@ -145,7 +161,7 @@ AmiaBot/
 - **依赖**：`external.screenshot`, `external.blobserver`
 - **配置项**：`amiabot_pages`, `default_server`, `alias_data_url`, `alias_cache_dir`, `alias_cache_ttl`
 
-### 4.7 Zeabur 状态展示 (`external.amiabot-zeabur-status`)
+### 4.8 Zeabur 状态展示 (`external.amiabot-zeabur-status`)
 
 - **触发方式**：精确匹配 `status` 或 `状态`
 - **正则**：`(?i)^(status|状态)$`
@@ -224,6 +240,7 @@ make build
 make build-bilibili    # → plugins/nyanyabot-plugin-amiabot-bilibili
 make build-pixiv       # → plugins/nyanyabot-plugin-amiabot-pixiv
 make build-account     # → plugins/nyanyabot-plugin-amiabot-pjsk-account
+make build-bind        # → plugins/nyanyabot-plugin-amiabot-pjsk-bind
 make build-card        # → plugins/nyanyabot-plugin-amiabot-pjsk-card
 make build-event       # → plugins/nyanyabot-plugin-amiabot-pjsk-event
 make build-song        # → plugins/nyanyabot-plugin-amiabot-pjsk-song
@@ -269,7 +286,9 @@ make clean             # rm -rf plugins/
 │  external.amiabot-pjsk-song   ──依赖──→ external.blobserver │
 │  external.amiabot-zeabur-status ──依赖──→ external.blobserver│
 │                                                  │
+│  external.amiabot-pjsk-bind ──Invoke──→ external.amiabot-pjsk-account│
 │  其他 PJSK 插件 ──Invoke──→ external.amiabot-pjsk-account   │
+│  external.amiabot-pjsk-bind ──HTTP──→ amiabot-pages         │
 └──────────────────────────────────────────────┘
 ```
 
@@ -283,7 +302,7 @@ make clean             # rm -rf plugins/
 
 | 配置项 | 类型 | 用途 | 使用插件 | 默认值 |
 |--------|------|------|----------|--------|
-| `amiabot_pages` | string | Amiabot Pages 服务地址 | 所有截图类插件 | `""` |
+| `amiabot_pages` | string | Amiabot Pages 服务地址 | 所有截图类插件、PJSK Bind | `""` |
 | `amiabot_pages_download_base` | string | Pixiv 下载基地址 | Pixiv | `""`（回退 amiabot_pages） |
 | `bilibili_downloader_server` | string | Bilibili 视频下载服务地址 | Bilibili | `""` |
 | `database_url` | string | PostgreSQL 连接字符串 | PJSK Account（必填） | `""` |
@@ -403,7 +422,7 @@ go test ./cmd/nyanyabot-plugin-amiabot-pjsk-song/ -v
          │ 加载 & go-plugin RPC
          ▼
 ┌─────────────────────┐
-│    AmiaBot           │ ← 本仓库（7 个外置插件）
+│    AmiaBot           │ ← 本仓库（8 个外置插件）
 │  (Plugin Collection) │
 └──┬──────────────┬───┘
    │              │
