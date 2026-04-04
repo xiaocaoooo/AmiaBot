@@ -1,6 +1,8 @@
 GO ?= go
 BIN_DIR ?= plugins
 PLUGINS := \
+	nyanyabot-plugin-screenshot \
+	nyanyabot-plugin-blobserver \
 	nyanyabot-plugin-amiabot-bilibili \
 	nyanyabot-plugin-amiabot-pixiv \
 	nyanyabot-plugin-amiabot-pjsk-account \
@@ -13,7 +15,7 @@ PLUGINS := \
 	nyanyabot-plugin-amiabot-zeabur-status
 
 .PHONY: build test fmt clean tidy \
-	build-bilibili build-pixiv build-account build-bind build-card build-event build-song build-profile build-b30 build-zeabur
+	build-screenshot build-blobserver build-bilibili build-pixiv build-account build-bind build-card build-event build-song build-profile build-b30 build-zeabur
 
 build: $(addprefix $(BIN_DIR)/,$(PLUGINS))
 
@@ -23,6 +25,8 @@ $(BIN_DIR):
 $(BIN_DIR)/%: | $(BIN_DIR)
 	$(GO) build -o $@ ./cmd/$*
 
+build-screenshot: $(BIN_DIR)/nyanyabot-plugin-screenshot
+build-blobserver: $(BIN_DIR)/nyanyabot-plugin-blobserver
 build-bilibili: $(BIN_DIR)/nyanyabot-plugin-amiabot-bilibili
 build-pixiv: $(BIN_DIR)/nyanyabot-plugin-amiabot-pixiv
 build-account: $(BIN_DIR)/nyanyabot-plugin-amiabot-pjsk-account
