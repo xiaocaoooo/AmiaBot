@@ -34,6 +34,7 @@ import (
 	"github.com/xiaocaoooo/amiabot-plugin-sdk/onebot/ob11"
 	papi "github.com/xiaocaoooo/amiabot-plugin-sdk/plugin"
 	"github.com/xiaocaoooo/amiabot-plugin-sdk/plugin/transport"
+	"github.com/xiaocaoooo/amiabot-plugin-sdk/util"
 )
 
 // AmiabotBilibili 是插件的实现类型。
@@ -174,12 +175,9 @@ func (e *AmiabotBilibili) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// hostCaller 抽象宿主提供的 OneBot 调用能力。
-// transport.Host() 返回的对象满足该接口。
-type hostCaller interface {
-	CallOneBot(ctx context.Context, action string, params any) (ob11.APIResponse, error)
-	CallDependency(ctx context.Context, targetPluginID string, method string, params any) (json.RawMessage, error)
-}
+
+// 接口兼容性检查：transport.HostRPCClient 必须实现 util.HostCaller
+var _ util.HostCaller = (*transport.HostRPCClient)(nil)
 
 // handleBilibili：
 //   - 识别消息中的 aid / bvid / b23.tv short
@@ -248,8 +246,10 @@ func (e *AmiabotBilibili) handleBilibili(ctx context.Context, eventRaw ob11.Even
 	// 生成截图 URL（需要 pagesHost + external.screenshot 插件）。
 	screenshotURL := ""
 	if pagesHost != "" {
-		pagesURL := buildAmiabotBilibiliPagesURL(pagesHost, aid, bvid)
-		screenshotURL = buildScreenshotViaPlugin(host, pagesURL)
+		pagesURL := util.BuildPagesURL(pagesHost, "/bilibili/video", map[string]string{"aid": aid, "bvid": bvid})
+		if v, _ := util.BuildScreenshotViaPlugin(host, pagesURL); v != "" {
+			screenshotURL = v
+		}
 	}
 
 	// 生成下载 URL（需要 downloaderServer）。
@@ -273,14 +273,14 @@ func (e *AmiabotBilibili) handleBilibili(ctx context.Context, eventRaw ob11.Even
 	// 图片与视频分开发送，若 external.blobserver 可用则优先转为 Blob URL，不可用则回退原始 URL。
 	if screenshotURL != "" {
 		imageID := fmt.Sprintf("%s-image-%d", id, time.Now().Unix())
-		if uploadedURL := uploadViaBlobPlugin(ctx, host, screenshotURL, imageID, "image"); uploadedURL != "" {
+		if uploadedURL := util.UploadViaBlobPlugin(ctx, host, screenshotURL, imageID, "image"); uploadedURL != "" {
 			screenshotURL = uploadedURL
 		}
-		_ = sendImage(host, msgType, groupID, userID, screenshotURL)
+		_ = util.SendImage(host, msgType, groupID, userID, screenshotURL)
 	}
 	if videoURL != "" {
 		videoID := id + "-video"
-		if uploadedURL := uploadViaBlobPlugin(ctx, host, videoURL, videoID, "video"); uploadedURL != "" {
+		if uploadedURL := util.UploadViaBlobPlugin(ctx, host, videoURL, videoID, "video"); uploadedURL != "" {
 			videoURL = uploadedURL
 		}
 		_ = sendVideo(host, msgType, groupID, userID, videoURL)
@@ -289,49 +289,7 @@ func (e *AmiabotBilibili) handleBilibili(ctx context.Context, eventRaw ob11.Even
 	return papi.HandleResult{}, nil
 }
 
-func sendImage(host hostCaller, msgType string, groupID any, userID any, url string) error {
-	if host == nil {
-		return nil
-	}
-	if msgType == "group" {
-		_, err := host.CallOneBot(context.Background(), "send_group_msg", map[string]any{
-			"group_id": groupID,
-			"message": []map[string]any{
-				{"type": "image", "data": map[string]any{"file": url}},
-			},
-		})
-		return err
-	}
-	_, err := host.CallOneBot(context.Background(), "send_private_msg", map[string]any{
-		"user_id": userID,
-		"message": []map[string]any{
-			{"type": "image", "data": map[string]any{"file": url}},
-		},
-	})
-	return err
-}
 
-func sendVideo(host hostCaller, msgType string, groupID any, userID any, url string) error {
-	if host == nil {
-		return nil
-	}
-	if msgType == "group" {
-		_, err := host.CallOneBot(context.Background(), "send_group_msg", map[string]any{
-			"group_id": groupID,
-			"message": []map[string]any{
-				{"type": "video", "data": map[string]any{"file": url}},
-			},
-		})
-		return err
-	}
-	_, err := host.CallOneBot(context.Background(), "send_private_msg", map[string]any{
-		"user_id": userID,
-		"message": []map[string]any{
-			{"type": "video", "data": map[string]any{"file": url}},
-		},
-	})
-	return err
-}
 
 // resolveB23 将 b23.tv 的 short code 解析为 aid 或 bvid。
 //
@@ -392,26 +350,8 @@ func extractBVID(s string) string {
 	return ""
 }
 
-func buildAmiabotBilibiliPagesURL(amiabotPages string, aid string, bvid string) string {
-	base := normalizeHTTPBase(amiabotPages)
-	u, err := url.Parse(base)
-	if err != nil {
-		return ""
-	}
-	u.Path = strings.TrimRight(u.Path, "/") + "/bilibili/video"
-	q := u.Query()
-	if aid != "" {
-		q.Set("aid", aid)
-	}
-	if bvid != "" {
-		q.Set("bvid", bvid)
-	}
-	u.RawQuery = q.Encode()
-	return u.String()
-}
-
 func buildDownloaderURL(downloaderServer string, id string) string {
-	base := normalizeHTTPBase(downloaderServer)
+	base := util.NormalizeHTTPBase(downloaderServer)
 	u, err := url.Parse(base)
 	if err != nil {
 		return ""
@@ -421,60 +361,27 @@ func buildDownloaderURL(downloaderServer string, id string) string {
 	return u.String()
 }
 
-func buildScreenshotViaPlugin(host hostCaller, pageURL string) string {
-	if host == nil || strings.TrimSpace(pageURL) == "" {
-		return ""
+// sendVideo 是 bilibili 特有的（SDK 没有内置 sendVideo），保留为本地函数。
+func sendVideo(host util.HostCaller, msgType string, groupID any, userID any, url string) error {
+	if host == nil {
+		return nil
 	}
-	result, err := host.CallDependency(context.Background(), "external.screenshot", "screenshot.build_url", map[string]any{
-		"page_url": pageURL,
-		"selector": "#screenshot-wrapper",
+	if msgType == "group" {
+		_, err := host.CallOneBot(context.Background(), "send_group_msg", map[string]any{
+			"group_id": groupID,
+			"message": []map[string]any{
+				{"type": "video", "data": map[string]any{"file": url}},
+			},
+		})
+		return err
+	}
+	_, err := host.CallOneBot(context.Background(), "send_private_msg", map[string]any{
+		"user_id": userID,
+		"message": []map[string]any{
+			{"type": "video", "data": map[string]any{"file": url}},
+		},
 	})
-	if err != nil {
-		return ""
-	}
-	var out struct {
-		URL string `json:"url"`
-	}
-	if err := json.Unmarshal(result, &out); err != nil {
-		return ""
-	}
-	return strings.TrimSpace(out.URL)
-}
-
-func uploadViaBlobPlugin(ctx context.Context, host hostCaller, downloadURL string, blobID string, kind string) string {
-	if host == nil || strings.TrimSpace(downloadURL) == "" || strings.TrimSpace(blobID) == "" {
-		return ""
-	}
-	result, err := host.CallDependency(ctx, "external.blobserver", "blob.upload_remote", map[string]any{
-		"download_url": downloadURL,
-		"blob_id":      blobID,
-		"kind":         kind,
-	})
-	if err != nil {
-		return ""
-	}
-	var out struct {
-		BlobURL   string `json:"blob_url"`
-		OneBotURL string `json:"onebot_url"`
-	}
-	if err := json.Unmarshal(result, &out); err != nil {
-		return ""
-	}
-	if strings.TrimSpace(out.OneBotURL) != "" {
-		return strings.TrimSpace(out.OneBotURL)
-	}
-	return strings.TrimSpace(out.BlobURL)
-}
-
-func normalizeHTTPBase(hostOrURL string) string {
-	hostOrURL = strings.TrimSpace(hostOrURL)
-	if hostOrURL == "" {
-		return ""
-	}
-	if strings.HasPrefix(hostOrURL, "http://") || strings.HasPrefix(hostOrURL, "https://") {
-		return strings.TrimRight(hostOrURL, "/")
-	}
-	return "http://" + strings.TrimRight(hostOrURL, "/")
+	return err
 }
 
 func main() {

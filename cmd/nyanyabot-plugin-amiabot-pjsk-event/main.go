@@ -14,6 +14,7 @@ import (
 	"github.com/xiaocaoooo/amiabot-plugin-sdk/onebot/ob11"
 	papi "github.com/xiaocaoooo/amiabot-plugin-sdk/plugin"
 	"github.com/xiaocaoooo/amiabot-plugin-sdk/plugin/transport"
+	"github.com/xiaocaoooo/amiabot-plugin-sdk/util"
 )
 
 type PJSKEvent struct {
@@ -126,7 +127,7 @@ func (e *PJSKEvent) handlePJSKEvent(ctx context.Context, eventRaw ob11.Event, ma
 		if r := recover(); r != nil {
 			err := fmt.Errorf("panic: %v", r)
 			log.Error("[Event] panic", "error", err)
-			sendError(transport.Host(), msgType, groupID, userID, "❌ 活动查询异常", err)
+			util.SendError(transport.Host(), msgType, groupID, userID, "❌ 活动查询异常", err)
 		}
 	}()
 
@@ -143,7 +144,7 @@ func (e *PJSKEvent) handlePJSKEvent(ctx context.Context, eventRaw ob11.Event, ma
 
 	if server == "" {
 		log.Warn("[Event] server 为空，终止")
-		sendText(host, msgType, groupID, userID, "❌ 服务器参数无效")
+		util.SendText(host, msgType, groupID, userID, "❌ 服务器参数无效")
 		return papi.HandleResult{}, nil
 	}
 
@@ -153,7 +154,7 @@ func (e *PJSKEvent) handlePJSKEvent(ctx context.Context, eventRaw ob11.Event, ma
 
 	if pagesHost == "" {
 		log.Warn("[Event] amiabot_pages 未配置，终止")
-		sendText(host, msgType, groupID, userID, "❌ 服务未配置")
+		util.SendText(host, msgType, groupID, userID, "❌ 服务未配置")
 		return papi.HandleResult{}, nil
 	}
 
@@ -161,27 +162,27 @@ func (e *PJSKEvent) handlePJSKEvent(ctx context.Context, eventRaw ob11.Event, ma
 	if id != "" {
 		params["id"] = id
 	}
-	pageURL := buildPagesURL(pagesHost, "/pjsk/event", params)
+	pageURL := util.BuildPagesURL(pagesHost, "/pjsk/event", params)
 	log.Info("[Event] 页面 URL", "url", pageURL)
 
 	log.Info("[Event] 调用截图插件...")
-	screenshotURL, screenshotErr := buildScreenshotViaPlugin(host, pageURL)
+	screenshotURL, screenshotErr := util.BuildScreenshotViaPlugin(host, pageURL)
 	log.Info("[Event] 截图 URL", "url", screenshotURL, "error", screenshotErr)
 	if screenshotErr != nil {
 		log.Warn("[Event] 截图失败", "error", screenshotErr)
-		sendError(host, msgType, groupID, userID, "❌ 截图失败", screenshotErr)
+		util.SendError(host, msgType, groupID, userID, "❌ 截图失败", screenshotErr)
 		return papi.HandleResult{}, nil
 	}
 
 	blobID := fmt.Sprintf("pjsk-event-%s-%s-%d", server, id, time.Now().Unix())
 	log.Info("[Event] 调用 blobserver 上传...", "blob_id", blobID)
-	if uploaded := uploadViaBlobPlugin(ctx, host, screenshotURL, blobID, "image"); uploaded != "" {
+	if uploaded := util.UploadViaBlobPlugin(ctx, host, screenshotURL, blobID, "image"); uploaded != "" {
 		log.Info("[Event] 上传成功", "url", uploaded)
 		screenshotURL = uploaded
 	}
 
 	log.Info("[Event] 发送图片消息...")
-	_ = sendImage(host, msgType, groupID, userID, screenshotURL)
+	_ = util.SendImage(host, msgType, groupID, userID, screenshotURL)
 	log.Info("[Event] ===== 处理完成 =====")
 	return papi.HandleResult{}, nil
 }

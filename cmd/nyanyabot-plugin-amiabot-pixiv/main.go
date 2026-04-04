@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/xiaocaoooo/amiabot-plugin-sdk/onebot/ob11"
 	papi "github.com/xiaocaoooo/amiabot-plugin-sdk/plugin"
 	"github.com/xiaocaoooo/amiabot-plugin-sdk/plugin/transport"
+	"github.com/xiaocaoooo/amiabot-plugin-sdk/util"
 )
 
 var (
@@ -147,7 +147,7 @@ func (e *AmiabotPixiv) handlePixivArtwork(ctx context.Context, eventRaw ob11.Eve
 		if r := recover(); r != nil {
 			err := fmt.Errorf("panic: %v", r)
 			log.Error("[Pixiv] panic", "error", err)
-			sendError(transport.Host(), msgType, groupID, userID, "❌ Pixiv 解析异常", err)
+			util.SendError(transport.Host(), msgType, groupID, userID, "❌ Pixiv 解析异常", err)
 		}
 	}()
 
@@ -169,68 +169,68 @@ func (e *AmiabotPixiv) handlePixivArtwork(ctx context.Context, eventRaw ob11.Eve
 	e.mu.RUnlock()
 	if pagesHost == "" {
 		log.Warn("[Pixiv] amiabot_pages 未配置")
-		sendText(host, msgType, groupID, userID, "❌ 服务未配置")
+		util.SendText(host, msgType, groupID, userID, "❌ 服务未配置")
 		return papi.HandleResult{}, nil
 	}
 
 	pageURL := buildPixivPageURL(pagesHost, pid)
 	if pageURL == "" {
 		log.Warn("[Pixiv] 页面 URL 构造失败", "pages_host", pagesHost, "pid", pid)
-		sendText(host, msgType, groupID, userID, "❌ 服务未配置")
+		util.SendText(host, msgType, groupID, userID, "❌ 服务未配置")
 		return papi.HandleResult{}, nil
 	}
 
-	screenshotURL, err := buildScreenshotViaPlugin(host, pageURL)
+	screenshotURL, err := util.BuildScreenshotViaPlugin(host, pageURL)
 	if err != nil {
 		log.Warn("[Pixiv] 截图失败", "pid", pid, "error", err)
-		sendError(host, msgType, groupID, userID, "❌ 截图失败", err)
+		util.SendError(host, msgType, groupID, userID, "❌ 截图失败", err)
 		return papi.HandleResult{}, nil
 	}
 	if strings.TrimSpace(screenshotURL) == "" {
 		log.Warn("[Pixiv] 截图 URL 为空", "pid", pid)
-		sendText(host, msgType, groupID, userID, "❌ 截图失败")
+		util.SendText(host, msgType, groupID, userID, "❌ 截图失败")
 		return papi.HandleResult{}, nil
 	}
 
 	cardBlobID := fmt.Sprintf("pixiv-artwork-%s-%d", pid, time.Now().Unix())
-	if uploaded := uploadViaBlobPlugin(ctx, host, screenshotURL, cardBlobID, "image"); uploaded != "" {
+	if uploaded := util.UploadViaBlobPlugin(ctx, host, screenshotURL, cardBlobID, "image"); uploaded != "" {
 		screenshotURL = uploaded
 	}
-	if err := sendImage(host, msgType, groupID, userID, screenshotURL); err != nil {
+	if err := util.SendImage(host, msgType, groupID, userID, screenshotURL); err != nil {
 		log.Warn("[Pixiv] 发送截图失败", "pid", pid, "error", err)
 	}
 
 	manifest, err := fetchPixivMediaManifest(ctx, downloadBase, pid)
 	if err != nil {
 		log.Warn("[Pixiv] 获取原图清单失败", "pid", pid, "error", err)
-		sendError(host, msgType, groupID, userID, "❌ 获取原图失败", err)
+		util.SendError(host, msgType, groupID, userID, "❌ 获取原图失败", err)
 		return papi.HandleResult{}, nil
 	}
 	if len(manifest.Items) == 0 {
 		log.Info("[Pixiv] 原图清单为空", "pid", pid, "type", manifest.Type)
-		sendText(host, msgType, groupID, userID, "⚠️ 未获取到可发送的原图")
+		util.SendText(host, msgType, groupID, userID, "⚠️ 未获取到可发送的原图")
 		return papi.HandleResult{}, nil
 	}
 
 	mediaURLs := resolvePixivMediaURLs(ctx, host, downloadBase, pid, manifest.Items)
 	if len(mediaURLs) == 0 {
 		log.Warn("[Pixiv] 原图 URL 解析结果为空", "pid", pid)
-		sendText(host, msgType, groupID, userID, "⚠️ 未获取到可发送的原图")
+		util.SendText(host, msgType, groupID, userID, "⚠️ 未获取到可发送的原图")
 		return papi.HandleResult{}, nil
 	}
 
 	if len(mediaURLs) == 1 {
-		if err := sendImage(host, msgType, groupID, userID, mediaURLs[0]); err != nil {
+		if err := util.SendImage(host, msgType, groupID, userID, mediaURLs[0]); err != nil {
 			log.Warn("[Pixiv] 发送原图失败", "pid", pid, "error", err)
-			sendError(host, msgType, groupID, userID, "❌ 发送原图失败", err)
+			util.SendError(host, msgType, groupID, userID, "❌ 发送原图失败", err)
 		}
 		return papi.HandleResult{}, nil
 	}
 
 	forwardNodes := buildPixivForwardNodes(mediaURLs, selfID, "AmiaBot Pixiv")
-	if err := sendForward(host, msgType, groupID, userID, forwardNodes); err != nil {
+	if err := util.SendForward(host, msgType, groupID, userID, forwardNodes); err != nil {
 		log.Warn("[Pixiv] 发送合并转发失败", "pid", pid, "error", err)
-		sendError(host, msgType, groupID, userID, "❌ 发送原图失败", err)
+		util.SendError(host, msgType, groupID, userID, "❌ 发送原图失败", err)
 	}
 	return papi.HandleResult{}, nil
 }
@@ -247,70 +247,6 @@ func extractPixivArtworkID(rawMessage string, match *papi.CommandMatch) string {
 		return strings.TrimSpace(m[1])
 	}
 	return ""
-}
-
-func buildPixivPageURL(pagesHost string, pid string) string {
-	pid = strings.TrimSpace(pid)
-	if pid == "" {
-		return ""
-	}
-	return buildPagesURL(pagesHost, "/pixiv/illust/info", map[string]string{"pid": pid})
-}
-
-func resolvePixivMediaBase(pagesHost string, downloadBase string) string {
-	downloadBase = strings.TrimSpace(downloadBase)
-	if downloadBase != "" {
-		return downloadBase
-	}
-	return strings.TrimSpace(pagesHost)
-}
-
-func fetchPixivMediaManifest(ctx context.Context, pagesHost string, pid string) (*pixivMediaManifest, error) {
-	manifestURL := buildPagesURL(pagesHost, "/pixiv/illust/media", map[string]string{"pid": strings.TrimSpace(pid)})
-	if manifestURL == "" {
-		return nil, fmt.Errorf("原图清单 URL 构造失败")
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, manifestURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("创建原图清单请求失败: %w", err)
-	}
-	resp, err := pixivHTTPClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("请求原图清单失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("读取原图清单失败: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("原图清单请求失败: HTTP %d %s", resp.StatusCode, extractErrorMessage(body))
-	}
-
-	var manifest pixivMediaManifest
-	if err := json.Unmarshal(body, &manifest); err != nil {
-		return nil, fmt.Errorf("解析原图清单失败: %w", err)
-	}
-	return &manifest, nil
-}
-
-func resolvePixivMediaURLs(ctx context.Context, host hostCaller, pagesHost string, pid string, items []pixivMediaItem) []string {
-	timestamp := time.Now().Unix()
-	urls := make([]string, 0, len(items))
-	for _, item := range items {
-		mediaURL := buildPagesAssetURL(pagesHost, item.Path)
-		if mediaURL == "" {
-			continue
-		}
-		blobID := fmt.Sprintf("pixiv-media-%s-%d-%d", pid, item.Index, timestamp)
-		if uploaded := uploadViaBlobPlugin(ctx, host, mediaURL, blobID, "image"); uploaded != "" {
-			mediaURL = uploaded
-		}
-		urls = append(urls, mediaURL)
-	}
-	return urls
 }
 
 func buildPixivForwardNodes(mediaURLs []string, senderID any, nickname string) []map[string]any {

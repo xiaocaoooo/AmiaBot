@@ -14,6 +14,7 @@ import (
 	"github.com/xiaocaoooo/amiabot-plugin-sdk/onebot/ob11"
 	papi "github.com/xiaocaoooo/amiabot-plugin-sdk/plugin"
 	"github.com/xiaocaoooo/amiabot-plugin-sdk/plugin/transport"
+	"github.com/xiaocaoooo/amiabot-plugin-sdk/util"
 )
 
 type PJSKSong struct {
@@ -152,7 +153,7 @@ func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, matc
 		if r := recover(); r != nil {
 			err := fmt.Errorf("panic: %v", r)
 			log.Error("[Song] panic", "error", err)
-			sendError(transport.Host(), msgType, groupID, userID, "❌ 歌曲查询异常", err)
+			util.SendError(transport.Host(), msgType, groupID, userID, "❌ 歌曲查询异常", err)
 		}
 	}()
 
@@ -170,7 +171,7 @@ func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, matc
 
 	if server == "" || len(results) == 0 {
 		log.Warn("[Song] 未找到匹配的歌曲")
-		sendText(host, msgType, groupID, userID, "❌ 未找到匹配的歌曲，请尝试其他关键词")
+		util.SendText(host, msgType, groupID, userID, "❌ 未找到匹配的歌曲，请尝试其他关键词")
 		return papi.HandleResult{}, nil
 	}
 
@@ -180,7 +181,7 @@ func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, matc
 
 	if pagesHost == "" {
 		log.Warn("[Song] amiabot_pages 未配置，终止")
-		sendText(host, msgType, groupID, userID, "❌ 服务未配置")
+		util.SendText(host, msgType, groupID, userID, "❌ 服务未配置")
 		return papi.HandleResult{}, nil
 	}
 
@@ -189,33 +190,33 @@ func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, matc
 	id := fmt.Sprintf("%d", topResult.MusicID)
 
 	// 构建页面URL并发送截图
-	pageURL := buildPagesURL(pagesHost, "/pjsk/music", map[string]string{"server": server, "id": id})
+	pageURL := util.BuildPagesURL(pagesHost, "/pjsk/music", map[string]string{"server": server, "id": id})
 	log.Info("[Song] 页面 URL", "url", pageURL)
 
 	log.Info("[Song] 调用截图插件...")
-	screenshotURL, screenshotErr := buildScreenshotViaPlugin(host, pageURL)
+	screenshotURL, screenshotErr := util.BuildScreenshotViaPlugin(host, pageURL)
 	log.Info("[Song] 截图 URL", "url", screenshotURL, "error", screenshotErr)
 	if screenshotErr != nil {
 		log.Warn("[Song] 截图失败", "error", screenshotErr)
-		sendError(host, msgType, groupID, userID, "❌ 截图失败", screenshotErr)
+		util.SendError(host, msgType, groupID, userID, "❌ 截图失败", screenshotErr)
 		return papi.HandleResult{}, nil
 	}
 
 	blobID := fmt.Sprintf("pjsk-song-%s-%s-%d", server, id, time.Now().Unix())
 	log.Info("[Song] 调用 blobserver 上传...", "blob_id", blobID)
-	if uploaded := uploadViaBlobPlugin(ctx, host, screenshotURL, blobID, "image"); uploaded != "" {
+	if uploaded := util.UploadViaBlobPlugin(ctx, host, screenshotURL, blobID, "image"); uploaded != "" {
 		log.Info("[Song] 上传成功", "url", uploaded)
 		screenshotURL = uploaded
 	}
 
 	log.Info("[Song] 发送图片消息...")
-	_ = sendImage(host, msgType, groupID, userID, screenshotURL)
+	_ = util.SendImage(host, msgType, groupID, userID, screenshotURL)
 
 	// 如果有多个匹配结果，发送候选列表
 	if len(results) > 1 {
 		candidateMsg := buildCandidateMessage(results[1:], server)
 		log.Info("[Song] 发送候选列表", "count", len(results)-1)
-		sendText(host, msgType, groupID, userID, candidateMsg)
+		util.SendText(host, msgType, groupID, userID, candidateMsg)
 	}
 
 	log.Info("[Song] ===== 处理完成 =====")

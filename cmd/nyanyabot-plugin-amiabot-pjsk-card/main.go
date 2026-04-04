@@ -14,6 +14,7 @@ import (
 	"github.com/xiaocaoooo/amiabot-plugin-sdk/onebot/ob11"
 	papi "github.com/xiaocaoooo/amiabot-plugin-sdk/plugin"
 	"github.com/xiaocaoooo/amiabot-plugin-sdk/plugin/transport"
+	"github.com/xiaocaoooo/amiabot-plugin-sdk/util"
 )
 
 type PJSKCard struct {
@@ -126,7 +127,7 @@ func (e *PJSKCard) handlePJSKCard(ctx context.Context, eventRaw ob11.Event, matc
 		if r := recover(); r != nil {
 			err := fmt.Errorf("panic: %v", r)
 			log.Error("[Card] panic", "error", err)
-			sendError(transport.Host(), msgType, groupID, userID, "❌ 卡面查询异常", err)
+			util.SendError(transport.Host(), msgType, groupID, userID, "❌ 卡面查询异常", err)
 		}
 	}()
 
@@ -143,7 +144,7 @@ func (e *PJSKCard) handlePJSKCard(ctx context.Context, eventRaw ob11.Event, matc
 
 	if server == "" || id == "" {
 		log.Warn("[Card] 参数不完整，终止")
-		sendText(host, msgType, groupID, userID, "❌ 参数不完整，请使用格式: card+编号")
+		util.SendText(host, msgType, groupID, userID, "❌ 参数不完整，请使用格式: card+编号")
 		return papi.HandleResult{}, nil
 	}
 
@@ -153,31 +154,31 @@ func (e *PJSKCard) handlePJSKCard(ctx context.Context, eventRaw ob11.Event, matc
 
 	if pagesHost == "" {
 		log.Warn("[Card] amiabot_pages 未配置，终止")
-		sendText(host, msgType, groupID, userID, "❌ 服务未配置")
+		util.SendText(host, msgType, groupID, userID, "❌ 服务未配置")
 		return papi.HandleResult{}, nil
 	}
 
-	pageURL := buildPagesURL(pagesHost, "/pjsk/card", map[string]string{"server": server, "id": id})
+	pageURL := util.BuildPagesURL(pagesHost, "/pjsk/card", map[string]string{"server": server, "id": id})
 	log.Info("[Card] 页面 URL", "url", pageURL)
 
 	log.Info("[Card] 调用截图插件...")
-	screenshotURL, screenshotErr := buildScreenshotViaPlugin(host, pageURL)
+	screenshotURL, screenshotErr := util.BuildScreenshotViaPlugin(host, pageURL)
 	log.Info("[Card] 截图 URL", "url", screenshotURL, "error", screenshotErr)
 	if screenshotErr != nil {
 		log.Warn("[Card] 截图失败", "error", screenshotErr)
-		sendError(host, msgType, groupID, userID, "❌ 截图失败", screenshotErr)
+		util.SendError(host, msgType, groupID, userID, "❌ 截图失败", screenshotErr)
 		return papi.HandleResult{}, nil
 	}
 
 	blobID := fmt.Sprintf("pjsk-card-%s-%s-%d", server, id, time.Now().Unix())
 	log.Info("[Card] 调用 blobserver 上传...", "blob_id", blobID)
-	if uploaded := uploadViaBlobPlugin(ctx, host, screenshotURL, blobID, "image"); uploaded != "" {
+	if uploaded := util.UploadViaBlobPlugin(ctx, host, screenshotURL, blobID, "image"); uploaded != "" {
 		log.Info("[Card] 上传成功", "url", uploaded)
 		screenshotURL = uploaded
 	}
 
 	log.Info("[Card] 发送图片消息...")
-	_ = sendImage(host, msgType, groupID, userID, screenshotURL)
+	_ = util.SendImage(host, msgType, groupID, userID, screenshotURL)
 	log.Info("[Card] ===== 处理完成 =====")
 	return papi.HandleResult{}, nil
 }
