@@ -12,10 +12,11 @@ PLUGINS := \
 	nyanyabot-plugin-amiabot-pjsk-song \
 	nyanyabot-plugin-amiabot-pjsk-profile \
 	nyanyabot-plugin-amiabot-pjsk-b30 \
+	nyanyabot-plugin-amiabot-query \
 	nyanyabot-plugin-amiabot-zeabur-status
 
 .PHONY: build test fmt clean tidy \
-	build-screenshot build-blobserver build-bilibili build-pixiv build-account build-bind build-card build-event build-song build-profile build-b30 build-zeabur
+	build-screenshot build-blobserver build-bilibili build-pixiv build-account build-bind build-card build-event build-song build-profile build-b30 build-query build-zeabur
 
 build: $(addprefix $(BIN_DIR)/,$(PLUGINS))
 
@@ -36,6 +37,7 @@ build-event: $(BIN_DIR)/nyanyabot-plugin-amiabot-pjsk-event
 build-song: $(BIN_DIR)/nyanyabot-plugin-amiabot-pjsk-song
 build-profile: $(BIN_DIR)/nyanyabot-plugin-amiabot-pjsk-profile
 build-b30: $(BIN_DIR)/nyanyabot-plugin-amiabot-pjsk-b30
+build-query: $(BIN_DIR)/nyanyabot-plugin-amiabot-query
 build-zeabur: $(BIN_DIR)/nyanyabot-plugin-amiabot-zeabur-status
 
 test:
