@@ -17,6 +17,7 @@ import (
 	"github.com/xiaocaoooo/amiabot-plugin-sdk/onebot/ob11"
 	papi "github.com/xiaocaoooo/amiabot-plugin-sdk/plugin"
 	"github.com/xiaocaoooo/amiabot-plugin-sdk/plugin/transport"
+	"github.com/xiaocaoooo/amiabot-plugin-sdk/util"
 )
 
 // ZeaburStatus 是插件的实现类型。
@@ -113,12 +114,6 @@ func (z *ZeaburStatus) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// hostCaller 抽象宿主提供的 OneBot 调用能力。
-type hostCaller interface {
-	CallOneBot(ctx context.Context, action string, params any) (ob11.APIResponse, error)
-	CallDependency(ctx context.Context, targetPluginID string, method string, params any) (json.RawMessage, error)
-}
-
 // handleStatus 处理 status/状态 命令。
 func (z *ZeaburStatus) handleStatus(ctx context.Context, eventRaw ob11.Event) (papi.HandleResult, error) {
 	host := transport.Host()
@@ -151,115 +146,33 @@ func (z *ZeaburStatus) handleStatus(ctx context.Context, eventRaw ob11.Event) (p
 	}
 
 	// 调用 screenshot 插件生成截图 URL
-	screenshotURL := buildScreenshotURL(host, statusURL)
+	screenshotURL, _ := util.BuildScreenshotViaPlugin(host, statusURL)
 	if screenshotURL == "" {
 		return papi.HandleResult{}, nil
 	}
 
 	// 上传图片到 blobserver
 	imageID := fmt.Sprintf("zeabur-status-%d", time.Now().Unix())
-	uploadedURL := uploadViaBlobPlugin(ctx, host, screenshotURL, imageID, "image")
+	uploadedURL := util.UploadViaBlobPlugin(ctx, host, screenshotURL, imageID, "image")
 	if uploadedURL != "" {
 		screenshotURL = uploadedURL
 	}
 
 	// 发送图片
-	_ = sendImage(host, msgType, groupID, userID, screenshotURL)
+	_ = util.SendImage(host, msgType, groupID, userID, screenshotURL)
 
 	return papi.HandleResult{}, nil
 }
 
 // buildStatusPageURL 构建状态页 URL。
 func buildStatusPageURL(amiabotPages string) string {
-	base := normalizeHTTPBase(amiabotPages)
+	base := util.NormalizeHTTPBase(amiabotPages)
 	u, err := url.Parse(base)
 	if err != nil {
 		return ""
 	}
 	u.Path = strings.TrimRight(u.Path, "/") + "/status/zeabur"
 	return u.String()
-}
-
-// buildScreenshotURL 调用 screenshot 插件生成截图 URL。
-func buildScreenshotURL(host hostCaller, pageURL string) string {
-	if host == nil || strings.TrimSpace(pageURL) == "" {
-		return ""
-	}
-	result, err := host.CallDependency(context.Background(), "external.screenshot", "screenshot.build_url", map[string]any{
-		"page_url": pageURL,
-		"selector": "#screenshot-wrapper",
-	})
-	if err != nil {
-		return ""
-	}
-	var out struct {
-		URL string `json:"url"`
-	}
-	if err := json.Unmarshal(result, &out); err != nil {
-		return ""
-	}
-	return strings.TrimSpace(out.URL)
-}
-
-// uploadViaBlobPlugin 调用 blobserver 插件上传远程文件。
-func uploadViaBlobPlugin(ctx context.Context, host hostCaller, downloadURL string, blobID string, kind string) string {
-	if host == nil || strings.TrimSpace(downloadURL) == "" || strings.TrimSpace(blobID) == "" {
-		return ""
-	}
-	result, err := host.CallDependency(ctx, "external.blobserver", "blob.upload_remote", map[string]any{
-		"download_url": downloadURL,
-		"blob_id":      blobID,
-		"kind":         kind,
-	})
-	if err != nil {
-		return ""
-	}
-	var out struct {
-		BlobURL   string `json:"blob_url"`
-		OneBotURL string `json:"onebot_url"`
-	}
-	if err := json.Unmarshal(result, &out); err != nil {
-		return ""
-	}
-	if strings.TrimSpace(out.OneBotURL) != "" {
-		return strings.TrimSpace(out.OneBotURL)
-	}
-	return strings.TrimSpace(out.BlobURL)
-}
-
-// sendImage 发送图片消息。
-func sendImage(host hostCaller, msgType string, groupID any, userID any, url string) error {
-	if host == nil {
-		return nil
-	}
-	if msgType == "group" {
-		_, err := host.CallOneBot(context.Background(), "send_group_msg", map[string]any{
-			"group_id": groupID,
-			"message": []map[string]any{
-				{"type": "image", "data": map[string]any{"file": url}},
-			},
-		})
-		return err
-	}
-	_, err := host.CallOneBot(context.Background(), "send_private_msg", map[string]any{
-		"user_id": userID,
-		"message": []map[string]any{
-			{"type": "image", "data": map[string]any{"file": url}},
-		},
-	})
-	return err
-}
-
-// normalizeHTTPBase 标准化 HTTP 基础 URL。
-func normalizeHTTPBase(hostOrURL string) string {
-	hostOrURL = strings.TrimSpace(hostOrURL)
-	if hostOrURL == "" {
-		return ""
-	}
-	if strings.HasPrefix(hostOrURL, "http://") || strings.HasPrefix(hostOrURL, "https://") {
-		return strings.TrimRight(hostOrURL, "/")
-	}
-	return "http://" + strings.TrimRight(hostOrURL, "/")
 }
 
 func main() {
