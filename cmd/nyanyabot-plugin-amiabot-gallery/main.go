@@ -41,12 +41,12 @@ type GalleryPlugin struct {
 }
 
 type messageContext struct {
-	MsgType    string
-	GroupID    any
-	UserID     any
-	SelfID     any
-	RawMessage string
-	Payload    map[string]any
+	MsgType string
+	GroupID any
+	UserID  any
+	SelfID  any
+	Content string
+	Payload map[string]any
 }
 
 type uploadOutcome struct {
@@ -447,12 +447,12 @@ func parseMessageEvent(eventRaw ob11.Event) (map[string]any, messageContext, boo
 		return nil, messageContext{}, false
 	}
 	ctx := messageContext{
-		MsgType:    toString(evt["message_type"]),
-		GroupID:    evt["group_id"],
-		UserID:     evt["user_id"],
-		SelfID:     evt["self_id"],
-		RawMessage: toString(evt["raw_message"]),
-		Payload:    evt,
+		MsgType: toString(evt["message_type"]),
+		GroupID: evt["group_id"],
+		UserID:  evt["user_id"],
+		SelfID:  evt["self_id"],
+		Content: toString(evt["content"]),
+		Payload: evt,
 	}
 	if ctx.SelfID == nil {
 		ctx.SelfID = ctx.UserID

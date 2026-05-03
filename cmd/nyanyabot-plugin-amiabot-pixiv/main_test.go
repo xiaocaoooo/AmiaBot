@@ -8,59 +8,59 @@ import (
 
 func TestExtractPixivArtworkID(t *testing.T) {
 	tests := []struct {
-		name  string
-		raw   string
-		match *papi.CommandMatch
-		want  string
+		name    string
+		content string
+		match   *papi.CommandMatch
+		want    string
 	}{
 		{
-			name: "match groups 优先",
-			raw:  "",
+			name:    "match groups 优先",
+			content: "",
 			match: &papi.CommandMatch{
 				Groups: []string{"125547965"},
 			},
 			want: "125547965",
 		},
 		{
-			name: "标准 artworks 链接",
-			raw:  "https://www.pixiv.net/artworks/123456",
-			want: "123456",
+			name:    "标准 artworks 链接",
+			content: "https://www.pixiv.net/artworks/123456",
+			want:    "123456",
 		},
 		{
-			name: "无 scheme 链接",
-			raw:  "pixiv.net/artworks/42",
-			want: "42",
+			name:    "无 scheme 链接",
+			content: "pixiv.net/artworks/42",
+			want:    "42",
 		},
 		{
-			name: "带语言前缀",
-			raw:  "https://www.pixiv.net/en/artworks/987654",
-			want: "987654",
+			name:    "带语言前缀",
+			content: "https://www.pixiv.net/en/artworks/987654",
+			want:    "987654",
 		},
 		{
-			name: "带 query 和 fragment",
-			raw:  "看看这个 https://pixiv.net/artworks/24680?foo=bar#baz",
-			want: "24680",
+			name:    "带 query 和 fragment",
+			content: "看看这个 https://pixiv.net/artworks/24680?foo=bar#baz",
+			want:    "24680",
 		},
 		{
-			name: "尾部带斜杠",
-			raw:  "https://www.pixiv.net/artworks/13579/",
-			want: "13579",
+			name:    "尾部带斜杠",
+			content: "https://www.pixiv.net/artworks/13579/",
+			want:    "13579",
 		},
 		{
-			name: "非 artworks 链接",
-			raw:  "https://www.pixiv.net/users/123456",
-			want: "",
+			name:    "非 artworks 链接",
+			content: "https://www.pixiv.net/users/123456",
+			want:    "",
 		},
 		{
-			name: "非法 pid",
-			raw:  "https://www.pixiv.net/artworks/abc",
-			want: "",
+			name:    "非法 pid",
+			content: "https://www.pixiv.net/artworks/abc",
+			want:    "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractPixivArtworkID(tt.raw, tt.match)
+			got := extractPixivArtworkID(tt.content, tt.match)
 			if got != tt.want {
 				t.Fatalf("extractPixivArtworkID() = %q, want %q", got, tt.want)
 			}

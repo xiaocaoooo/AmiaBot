@@ -38,11 +38,11 @@ type QueryPlugin struct {
 }
 
 type eventContext struct {
-	MsgType    string
-	GroupID    any
-	UserID     any
-	RawMessage string
-	Payload    map[string]any
+	MsgType string
+	GroupID any
+	UserID  any
+	Content string
+	Payload map[string]any
 }
 
 type strangerInfo struct {
@@ -352,7 +352,7 @@ func (p *QueryPlugin) Descriptor(ctx context.Context) (papi.Descriptor, error) {
 				ID:          "cmd.query-user",
 				Description: "查询用户资料卡（如 query、query @某人、资料卡）",
 				Pattern:     userCommandPattern,
-				MatchRaw:    true,
+				MatchRaw:    false,
 				Handler:     "HandleQueryUser",
 			},
 			{
@@ -360,7 +360,7 @@ func (p *QueryPlugin) Descriptor(ctx context.Context) (papi.Descriptor, error) {
 				ID:          "cmd.query-group",
 				Description: "查询当前群资料卡（如 group、群资料卡、群信息）",
 				Pattern:     groupCommandPattern,
-				MatchRaw:    true,
+				MatchRaw:    false,
 				Handler:     "HandleQueryGroup",
 			},
 		},
@@ -420,7 +420,7 @@ func (p *QueryPlugin) handleQueryUser(ctx context.Context, eventRaw ob11.Event, 
 		return papi.HandleResult{}, nil
 	}
 
-	targetUserID := extractTargetUserID(evt.Payload, evt.RawMessage)
+	targetUserID := extractTargetUserID(evt.Payload, evt.Content)
 	if targetUserID <= 0 {
 		targetUserID = anyToInt64(evt.Payload["user_id"])
 	}
@@ -590,24 +590,24 @@ func parseEventContext(eventRaw ob11.Event) (eventContext, error) {
 		return eventContext{}, err
 	}
 	return eventContext{
-		MsgType:    strings.TrimSpace(anyToString(evt["message_type"])),
-		GroupID:    evt["group_id"],
-		UserID:     evt["user_id"],
-		RawMessage: strings.TrimSpace(anyToString(evt["raw_message"])),
-		Payload:    evt,
+		MsgType: strings.TrimSpace(anyToString(evt["message_type"])),
+		GroupID: evt["group_id"],
+		UserID:  evt["user_id"],
+		Content: strings.TrimSpace(anyToString(evt["content"])),
+		Payload: evt,
 	}, nil
 }
 
-func extractTargetUserID(evt map[string]any, rawMessage string) int64 {
+func extractTargetUserID(evt map[string]any, content string) int64 {
 	if evt == nil {
-		return extractAtFromRaw(rawMessage)
+		return extractAtFromContent(content)
 	}
 	if message, ok := evt["message"]; ok {
 		if qq := extractAtFromSegments(message); qq > 0 {
 			return qq
 		}
 	}
-	return extractAtFromRaw(rawMessage)
+	return extractAtFromContent(content)
 }
 
 func extractAtFromSegments(message any) int64 {
@@ -648,8 +648,8 @@ func extractAtFromSegment(segment any) int64 {
 	return id
 }
 
-func extractAtFromRaw(rawMessage string) int64 {
-	m := rawAtRegex.FindStringSubmatch(rawMessage)
+func extractAtFromContent(content string) int64 {
+	m := rawAtRegex.FindStringSubmatch(content)
 	if len(m) != 2 {
 		return 0
 	}

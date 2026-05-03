@@ -43,7 +43,7 @@ func TestExtractTargetUserIDFromSegments(t *testing.T) {
 	}
 }
 
-func TestExtractTargetUserIDFallsBackToRawMessage(t *testing.T) {
+func TestExtractTargetUserIDFallsBackToContent(t *testing.T) {
 	if got := extractTargetUserID(nil, "query[CQ:at,qq=654321]"); got != 654321 {
 		t.Fatalf("extractTargetUserID() = %d, want %d", got, 654321)
 	}

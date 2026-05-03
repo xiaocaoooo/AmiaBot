@@ -109,7 +109,7 @@ func (e *AmiabotBilibili) Descriptor(ctx context.Context) (papi.Descriptor, erro
 				ID:          "cmd.bilibili",
 				Description: "识别 av 号 / BV 号 / b23.tv 短链，并发送截图与下载链接",
 				Pattern:     `(?i)\b(?:av(\d+)|(bv1[0-9a-zA-Z]+)|(?:(?:https?://)?b23\.tv/([a-z0-9]+)))\b`,
-				MatchRaw:    true,
+				MatchRaw:    false,
 				Handler:     "HandleBilibili",
 			},
 		},
@@ -175,7 +175,6 @@ func (e *AmiabotBilibili) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-
 // 接口兼容性检查：transport.HostRPCClient 必须实现 util.HostCaller
 var _ util.HostCaller = (*transport.HostRPCClient)(nil)
 
@@ -200,7 +199,7 @@ func (e *AmiabotBilibili) handleBilibili(ctx context.Context, eventRaw ob11.Even
 	msgType, _ := evt["message_type"].(string)
 	groupID := evt["group_id"]
 	userID := evt["user_id"]
-	rawMessage, _ := evt["raw_message"].(string)
+	content, _ := evt["content"].(string)
 
 	// 解析匹配结果：aid / bvid / short（三选一，short 需要继续解析）。
 	aid, bvid, short := "", "", ""
@@ -214,7 +213,7 @@ func (e *AmiabotBilibili) handleBilibili(ctx context.Context, eventRaw ob11.Even
 	// 兜底：如果宿主没有传 match，就自己跑一次正则（与 Descriptor.Pattern 保持一致）。
 	if aid == "" && bvid == "" && short == "" {
 		re := regexp.MustCompile(`(?i)\b(?:av(\d+)|(bv1[0-9a-zA-Z]+)|(?:(?:https?://)?b23\.tv/([a-z0-9]+)))\b`)
-		m := re.FindStringSubmatch(rawMessage)
+		m := re.FindStringSubmatch(content)
 		if len(m) >= 4 {
 			aid = strings.TrimSpace(m[1])
 			bvid = strings.TrimSpace(m[2])
@@ -288,8 +287,6 @@ func (e *AmiabotBilibili) handleBilibili(ctx context.Context, eventRaw ob11.Even
 
 	return papi.HandleResult{}, nil
 }
-
-
 
 // resolveB23 将 b23.tv 的 short code 解析为 aid 或 bvid。
 //

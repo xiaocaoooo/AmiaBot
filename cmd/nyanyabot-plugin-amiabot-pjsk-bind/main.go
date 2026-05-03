@@ -67,7 +67,6 @@ func (p *PJSKBind) Descriptor(ctx context.Context) (papi.Descriptor, error) {
 				ID:          "cmd.profile-bind",
 				Description: "绑定 PJSK 游戏账号（如 绑定12345, jp绑定12345）",
 				Pattern:     `^(?i)(?:(?P<server>cn|jp|tw|en|kr))?绑定(?P<id>\d+)$`,
-				MatchRaw:    true,
 				Handler:     "HandleBind",
 			},
 			{
@@ -75,7 +74,6 @@ func (p *PJSKBind) Descriptor(ctx context.Context) (papi.Descriptor, error) {
 				ID:          "cmd.profile-id",
 				Description: "查询已绑定的游戏 ID（如 id, jpid, 烤id）",
 				Pattern:     `^(?:(?P<server>cn|jp|tw|en|kr)|(?:烤))id$`,
-				MatchRaw:    true,
 				Handler:     "HandleID",
 			},
 			{
@@ -83,7 +81,6 @@ func (p *PJSKBind) Descriptor(ctx context.Context) (papi.Descriptor, error) {
 				ID:          "cmd.set-default-server",
 				Description: "设置默认服务器（如 serverjp, 默认服务器cn）",
 				Pattern:     `^(?:默认服务器|server)(?P<server>cn|jp|tw|en|kr)$`,
-				MatchRaw:    true,
 				Handler:     "HandleSetDefaultServer",
 			},
 		},
@@ -147,8 +144,8 @@ func parseBindArgs(rawMessage string) (server, id string) {
 }
 
 // parseIDArgs 解析 ID 查询命令参数
-func parseIDArgs(rawMessage string) string {
-	m := idRegex.FindStringSubmatch(rawMessage)
+func parseIDArgs(content string) string {
+	m := idRegex.FindStringSubmatch(content)
 	if len(m) < 2 {
 		return ""
 	}
@@ -170,7 +167,7 @@ func (p *PJSKBind) handleBind(ctx context.Context, eventRaw ob11.Event, match *p
 	msgType, _ := evt["message_type"].(string)
 	groupID := evt["group_id"]
 	userID := evt["user_id"]
-	rawMessage, _ := evt["raw_message"].(string)
+	content, _ := evt["content"].(string)
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -186,7 +183,7 @@ func (p *PJSKBind) handleBind(ctx context.Context, eventRaw ob11.Event, match *p
 		return papi.HandleResult{}, nil
 	}
 
-	server, gameID := parseBindArgs(rawMessage)
+	server, gameID := parseBindArgs(content)
 	log.Info("[Bind] 解析参数", "server", server, "game_id", gameID)
 
 	if server == "" || gameID == "" {
@@ -279,15 +276,15 @@ func (p *PJSKBind) handleID(ctx context.Context, eventRaw ob11.Event, match *pap
 		return papi.HandleResult{}, nil
 	}
 
-	rawMessage, _ := evt["raw_message"].(string)
-	specificServer := parseIDArgs(rawMessage)
+	content, _ := evt["content"].(string)
+	specificServer := parseIDArgs(content)
 
 	qqIDInt := evtToQQID(evt)
 
 	// 调用 account.list_by_qq
 	listResult, err := host.CallDependency(ctx, "external.amiabot-pjsk-account", "account.list_by_qq", map[string]any{
-		"qq_id":         qqIDInt,
-		"enabled_only":  true,
+		"qq_id":        qqIDInt,
+		"enabled_only": true,
 	})
 	if err != nil {
 		log.Error("[Bind] 调用 account.list_by_qq 失败", "error", err)
@@ -296,9 +293,9 @@ func (p *PJSKBind) handleID(ctx context.Context, eventRaw ob11.Event, match *pap
 	}
 
 	var listResp struct {
-		Success  bool     `json:"success"`
+		Success  bool      `json:"success"`
 		Accounts []Account `json:"accounts"`
-		Message  string   `json:"message"`
+		Message  string    `json:"message"`
 	}
 	if err := json.Unmarshal(listResult, &listResp); err != nil {
 		log.Error("[Bind] 解析账户列表失败", "error", err)
@@ -406,7 +403,7 @@ func (p *PJSKBind) handleSetDefaultServer(ctx context.Context, eventRaw ob11.Eve
 	msgType, _ := evt["message_type"].(string)
 	groupID := evt["group_id"]
 	userID := evt["user_id"]
-	rawMessage, _ := evt["raw_message"].(string)
+	content, _ := evt["content"].(string)
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -422,7 +419,7 @@ func (p *PJSKBind) handleSetDefaultServer(ctx context.Context, eventRaw ob11.Eve
 		return papi.HandleResult{}, nil
 	}
 
-	server := parseSetDefaultServerArgs(rawMessage)
+	server := parseSetDefaultServerArgs(content)
 	if !validServers[server] {
 		util.SendText(host, msgType, groupID, userID, "❌ 无效的服务器，请选择 jp/cn/en/tw/kr")
 		return papi.HandleResult{}, nil

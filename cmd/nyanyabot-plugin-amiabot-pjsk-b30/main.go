@@ -59,7 +59,6 @@ func (p *PJSKB30) Descriptor(ctx context.Context) (papi.Descriptor, error) {
 				ID:          "cmd.pjsk-b30",
 				Description: "查看 PJSK B30（如 b30, cnb30）",
 				Pattern:     `^(?:(?P<server>cn|jp|tw|en|kr))?b30$`,
-				MatchRaw:    true,
 				Handler:     "HandleB30",
 			},
 		},
@@ -120,7 +119,7 @@ func (p *PJSKB30) handleB30(ctx context.Context, eventRaw ob11.Event, match *pap
 	msgType, _ := evt["message_type"].(string)
 	groupID := evt["group_id"]
 	userID := evt["user_id"]
-	rawMessage, _ := evt["raw_message"].(string)
+	content, _ := evt["content"].(string)
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -165,7 +164,7 @@ func (p *PJSKB30) handleB30(ctx context.Context, eventRaw ob11.Event, match *pap
 	}
 
 	// 解析服务器
-	server := p.parseServer(rawMessage, match)
+	server := p.parseServer(content, match)
 
 	// 如果指定了 server 为空，优先使用用户默认服务器
 	if server == "" {
@@ -244,8 +243,8 @@ func (p *PJSKB30) handleB30(ctx context.Context, eventRaw ob11.Event, match *pap
 	return papi.HandleResult{}, nil
 }
 
-func (p *PJSKB30) parseServer(rawMessage string, match *papi.CommandMatch) string {
-	m := pjskB30Regex.FindStringSubmatch(rawMessage)
+func (p *PJSKB30) parseServer(content string, match *papi.CommandMatch) string {
+	m := pjskB30Regex.FindStringSubmatch(content)
 	if len(m) < 2 {
 		return ""
 	}

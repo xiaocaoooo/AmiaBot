@@ -56,7 +56,6 @@ func (e *PJSKEvent) Descriptor(ctx context.Context) (papi.Descriptor, error) {
 				ID:          "cmd.pjsk-event",
 				Description: "PJSK 活动查询（如 event, jpevent, cn查活动, enevent50）",
 				Pattern:     `^(?i)(?:(?P<server>cn|jp|tw|en|kr))?(?:event|查活动)(?P<id>[0-9]*)$`,
-				MatchRaw:    true,
 				Handler:     "HandlePJSKEvent",
 			},
 		},
@@ -120,7 +119,7 @@ func (e *PJSKEvent) handlePJSKEvent(ctx context.Context, eventRaw ob11.Event, ma
 	msgType, _ := evt["message_type"].(string)
 	groupID := evt["group_id"]
 	userID := evt["user_id"]
-	rawMessage, _ := evt["raw_message"].(string)
+	content, _ := evt["content"].(string)
 
 	// recover 兜底 panic
 	defer func() {
@@ -131,7 +130,7 @@ func (e *PJSKEvent) handlePJSKEvent(ctx context.Context, eventRaw ob11.Event, ma
 		}
 	}()
 
-	log.Info("[Event] 收到消息", "raw_message", rawMessage, "msg_type", msgType)
+	log.Info("[Event] 收到消息", "content", content, "msg_type", msgType)
 
 	host := transport.Host()
 	if host == nil {
@@ -139,7 +138,7 @@ func (e *PJSKEvent) handlePJSKEvent(ctx context.Context, eventRaw ob11.Event, ma
 		return papi.HandleResult{}, nil
 	}
 
-	server, id := e.parseArgs(rawMessage, match)
+	server, id := e.parseArgs(content, match)
 	log.Info("[Event] 解析结果", "server", server, "id", id)
 
 	if server == "" {
@@ -187,9 +186,9 @@ func (e *PJSKEvent) handlePJSKEvent(ctx context.Context, eventRaw ob11.Event, ma
 	return papi.HandleResult{}, nil
 }
 
-func (e *PJSKEvent) parseArgs(rawMessage string, match *papi.CommandMatch) (server, id string) {
+func (e *PJSKEvent) parseArgs(content string, match *papi.CommandMatch) (server, id string) {
 	re := regexp.MustCompile(`^(?i)(?:(?P<server>cn|jp|tw|en|kr))?(?:event|查活动)(?P<id>[0-9]*)$`)
-	m := re.FindStringSubmatch(rawMessage)
+	m := re.FindStringSubmatch(content)
 	if len(m) >= 3 {
 		server = strings.ToLower(strings.TrimSpace(m[1]))
 		id = strings.TrimSpace(m[2])

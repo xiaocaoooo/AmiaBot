@@ -65,7 +65,6 @@ func (e *PJSKSong) Descriptor(ctx context.Context) (papi.Descriptor, error) {
 				ID:          "cmd.pjsk-song",
 				Description: "PJSK 歌曲查询（如 songtyw, jpsong消失, song1）",
 				Pattern:     `^(?i)(?:(?P<server>cn|jp|tw|en|kr))?song(?P<name>.+)$`,
-				MatchRaw:    true,
 				Handler:     "HandlePJSKSong",
 			},
 		},
@@ -146,7 +145,7 @@ func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, matc
 	msgType, _ := evt["message_type"].(string)
 	groupID := evt["group_id"]
 	userID := evt["user_id"]
-	rawMessage, _ := evt["raw_message"].(string)
+	content, _ := evt["content"].(string)
 
 	// recover
 	defer func() {
@@ -157,7 +156,7 @@ func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, matc
 		}
 	}()
 
-	log.Info("[Song] 收到消息", "raw_message", rawMessage, "msg_type", msgType)
+	log.Info("[Song] 收到消息", "content", content, "msg_type", msgType)
 
 	host := transport.Host()
 	if host == nil {
@@ -166,7 +165,7 @@ func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, matc
 	}
 
 	// 解析参数并进行模糊匹配
-	server, results := e.parseArgs(rawMessage, match)
+	server, results := e.parseArgs(content, match)
 	log.Info("[Song] 解析结果", "server", server, "results_count", len(results))
 
 	if server == "" || len(results) == 0 {
@@ -225,9 +224,9 @@ func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, matc
 
 // parseArgs 解析参数并进行模糊匹配
 // 返回 server 和匹配结果列表
-func (e *PJSKSong) parseArgs(rawMessage string, match *papi.CommandMatch) (server string, results []MatchResult) {
+func (e *PJSKSong) parseArgs(content string, match *papi.CommandMatch) (server string, results []MatchResult) {
 	re := regexp.MustCompile(`^(?i)(?:(?P<server>cn|jp|tw|en|kr))?song(?P<name>.+)$`)
-	m := re.FindStringSubmatch(rawMessage)
+	m := re.FindStringSubmatch(content)
 	if len(m) >= 3 {
 		server = strings.ToLower(strings.TrimSpace(m[1]))
 		name := strings.TrimSpace(m[2])

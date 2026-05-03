@@ -59,7 +59,6 @@ func (p *PJSKProfile) Descriptor(ctx context.Context) (papi.Descriptor, error) {
 				ID:          "cmd.profile-show",
 				Description: "查看 PJSK 个人信息（如 profile, 个人信息, cn个人信息）",
 				Pattern:     `^(?:(?P<server>cn|jp|tw|en|kr))?(?:个人信息|profile)$`,
-				MatchRaw:    true,
 				Handler:     "HandleProfile",
 			},
 		},
@@ -120,7 +119,7 @@ func (p *PJSKProfile) handleProfile(ctx context.Context, eventRaw ob11.Event, ma
 	msgType, _ := evt["message_type"].(string)
 	groupID := evt["group_id"]
 	userID := evt["user_id"]
-	rawMessage, _ := evt["raw_message"].(string)
+	content, _ := evt["content"].(string)
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -165,7 +164,7 @@ func (p *PJSKProfile) handleProfile(ctx context.Context, eventRaw ob11.Event, ma
 	}
 
 	// 解析服务器
-	server := p.parseServer(rawMessage, match)
+	server := p.parseServer(content, match)
 
 	// 如果指定了 server 为空，优先使用用户默认服务器
 	if server == "" {
@@ -244,8 +243,8 @@ func (p *PJSKProfile) handleProfile(ctx context.Context, eventRaw ob11.Event, ma
 	return papi.HandleResult{}, nil
 }
 
-func (p *PJSKProfile) parseServer(rawMessage string, match *papi.CommandMatch) string {
-	m := profileRegex.FindStringSubmatch(rawMessage)
+func (p *PJSKProfile) parseServer(content string, match *papi.CommandMatch) string {
+	m := profileRegex.FindStringSubmatch(content)
 	if len(m) < 2 {
 		return ""
 	}

@@ -77,7 +77,7 @@ func (e *AmiabotPixiv) Descriptor(ctx context.Context) (papi.Descriptor, error) 
 				ID:          "cmd.pixiv-artwork",
 				Description: "识别 pixiv.net/artworks/:id 链接并发送截图与原图",
 				Pattern:     pixivArtworkPattern.String(),
-				MatchRaw:    true,
+				MatchRaw:    false,
 				Handler:     "HandlePixivArtwork",
 			},
 		},
@@ -135,7 +135,7 @@ func (e *AmiabotPixiv) handlePixivArtwork(ctx context.Context, eventRaw ob11.Eve
 	groupID := evt["group_id"]
 	userID := evt["user_id"]
 	selfID := evt["self_id"]
-	rawMessage, _ := evt["raw_message"].(string)
+	content, _ := evt["content"].(string)
 	if selfID == nil {
 		selfID = userID
 	}
@@ -157,7 +157,7 @@ func (e *AmiabotPixiv) handlePixivArtwork(ctx context.Context, eventRaw ob11.Eve
 		return papi.HandleResult{}, nil
 	}
 
-	pid := extractPixivArtworkID(rawMessage, match)
+	pid := extractPixivArtworkID(content, match)
 	if pid == "" {
 		log.Info("[Pixiv] 未解析到作品 ID")
 		return papi.HandleResult{}, nil
@@ -235,14 +235,14 @@ func (e *AmiabotPixiv) handlePixivArtwork(ctx context.Context, eventRaw ob11.Eve
 	return papi.HandleResult{}, nil
 }
 
-func extractPixivArtworkID(rawMessage string, match *papi.CommandMatch) string {
+func extractPixivArtworkID(content string, match *papi.CommandMatch) string {
 	if match != nil && len(match.Groups) > 0 {
 		if pid := strings.TrimSpace(match.Groups[0]); pid != "" {
 			return pid
 		}
 	}
 
-	m := pixivArtworkPattern.FindStringSubmatch(rawMessage)
+	m := pixivArtworkPattern.FindStringSubmatch(content)
 	if len(m) >= 2 {
 		return strings.TrimSpace(m[1])
 	}

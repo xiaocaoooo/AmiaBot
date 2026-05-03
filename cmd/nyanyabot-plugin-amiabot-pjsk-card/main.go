@@ -120,7 +120,7 @@ func (e *PJSKCard) handlePJSKCard(ctx context.Context, eventRaw ob11.Event, matc
 	msgType, _ := evt["message_type"].(string)
 	groupID := evt["group_id"]
 	userID := evt["user_id"]
-	rawMessage, _ := evt["raw_message"].(string)
+	content, _ := evt["content"].(string)
 
 	// recover 兜底 panic
 	defer func() {
@@ -131,7 +131,7 @@ func (e *PJSKCard) handlePJSKCard(ctx context.Context, eventRaw ob11.Event, matc
 		}
 	}()
 
-	log.Info("[Card] 收到消息", "raw_message", rawMessage, "msg_type", msgType)
+	log.Info("[Card] 收到消息", "content", content, "msg_type", msgType)
 
 	host := transport.Host()
 	if host == nil {
@@ -139,7 +139,7 @@ func (e *PJSKCard) handlePJSKCard(ctx context.Context, eventRaw ob11.Event, matc
 		return papi.HandleResult{}, nil
 	}
 
-	server, id := e.parseArgs(rawMessage, match)
+	server, id := e.parseArgs(content, match)
 	log.Info("[Card] 解析结果", "server", server, "id", id)
 
 	if server == "" || id == "" {
@@ -183,9 +183,9 @@ func (e *PJSKCard) handlePJSKCard(ctx context.Context, eventRaw ob11.Event, matc
 	return papi.HandleResult{}, nil
 }
 
-func (e *PJSKCard) parseArgs(rawMessage string, match *papi.CommandMatch) (server, id string) {
+func (e *PJSKCard) parseArgs(content string, match *papi.CommandMatch) (server, id string) {
 	re := regexp.MustCompile(`^(?i)(?:(?P<server>cn|jp|tw|en|kr))?(?:card|查卡)(?P<id>[0-9]+)$`)
-	m := re.FindStringSubmatch(rawMessage)
+	m := re.FindStringSubmatch(content)
 	if len(m) >= 3 {
 		server = strings.ToLower(strings.TrimSpace(m[1]))
 		id = strings.TrimSpace(m[2])
