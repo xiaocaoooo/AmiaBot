@@ -154,8 +154,6 @@ func (e *AmiabotBilibili) Invoke(ctx context.Context, method string, paramsJSON 
 //   - eventRaw：原始 OneBot/NapCat 事件 JSON（json.RawMessage）
 //   - match：仅命令命中时非空，包含正则捕获组
 func (e *AmiabotBilibili) Handle(ctx context.Context, listenerID string, eventRaw ob11.Event, match *papi.CommandMatch) (papi.HandleResult, error) {
-	_ = ctx
-
 	// 典型写法：switch listenerID 分发到不同函数。
 	// 你的插件有多个 commands/events 时，这里会变成一个路由表。
 	switch listenerID {
@@ -246,7 +244,7 @@ func (e *AmiabotBilibili) handleBilibili(ctx context.Context, eventRaw ob11.Even
 	screenshotURL := ""
 	if pagesHost != "" {
 		pagesURL := util.BuildPagesURL(pagesHost, "/bilibili/video", map[string]string{"aid": aid, "bvid": bvid})
-		if v, _ := util.BuildScreenshotViaPlugin(host, pagesURL); v != "" {
+		if v, _ := util.BuildScreenshotViaPlugin(ctx, host, pagesURL); v != "" {
 			screenshotURL = v
 		}
 	}
@@ -275,7 +273,7 @@ func (e *AmiabotBilibili) handleBilibili(ctx context.Context, eventRaw ob11.Even
 		if uploadedURL := util.UploadViaBlobPlugin(ctx, host, screenshotURL, imageID, "image"); uploadedURL != "" {
 			screenshotURL = uploadedURL
 		}
-		_ = util.SendImage(host, msgType, groupID, userID, screenshotURL)
+		_ = util.SendImage(ctx, host, msgType, groupID, userID, screenshotURL)
 	}
 	if videoURL != "" {
 		videoID := id + "-video"

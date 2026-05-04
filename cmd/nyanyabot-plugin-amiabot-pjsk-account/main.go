@@ -18,23 +18,23 @@ import (
 
 // PJSKAccount 插件主结构
 type PJSKAccount struct {
-	mu   sync.RWMutex
-	cfg  config
-	db   *sql.DB
+	mu  sync.RWMutex
+	cfg config
+	db  *sql.DB
 }
 
 type config struct {
-	DatabaseURL  string `json:"database_url"`
+	DatabaseURL   string `json:"database_url"`
 	DefaultServer string `json:"default_server"`
 }
 
 // Account 账户信息结构
 type Account struct {
-	QQID      int64     `json:"qq_id"`
+	QQID       int64     `json:"qq_id"`
 	GameServer string    `json:"game_server"`
-	GameID    string    `json:"game_id"`
-	CreatedAt time.Time `json:"created_at"`
-	Enabled   bool      `json:"enabled"`
+	GameID     string    `json:"game_id"`
+	CreatedAt  time.Time `json:"created_at"`
+	Enabled    bool      `json:"enabled"`
 }
 
 var validServers = map[string]bool{
@@ -58,58 +58,58 @@ func (p *PJSKAccount) Descriptor(ctx context.Context) (papi.Descriptor, error) {
 	}`)
 	def := json.RawMessage(`{"database_url":"","default_server":"jp"}`)
 	return papi.Descriptor{
-		Name:        "Amiabot PJSK Account",
-		PluginID:    "external.amiabot-pjsk-account",
-		Version:     "0.1.0",
-		Author:      "nyanyabot",
-		Description: "PJSK 游戏账户管理插件，提供账户的添加、获取、设置启用状态等功能，供其他插件调用",
+		Name:         "Amiabot PJSK Account",
+		PluginID:     "external.amiabot-pjsk-account",
+		Version:      "0.1.0",
+		Author:       "nyanyabot",
+		Description:  "PJSK 游戏账户管理插件，提供账户的添加、获取、设置启用状态等功能，供其他插件调用",
 		Dependencies: []string{},
 		Exports: []papi.ExportSpec{
 			{
-				Name:        "account.add",
-				Description: "添加账户，如果已存在则设为启用",
+				Name:         "account.add",
+				Description:  "添加账户，如果已存在则设为启用",
 				ParamsSchema: json.RawMessage(`{"type":"object","properties":{"qq_id":{"type":"integer"},"game_server":{"type":"string"},"game_id":{"type":"string"}},"required":["qq_id","game_server","game_id"]}`),
 				ResultSchema: json.RawMessage(`{"type":"object","properties":{"success":{"type":"boolean"},"account":{"type":"object"},"message":{"type":"string"}}}`),
 			},
 			{
-				Name:        "account.get",
-				Description: "获取单个账户",
+				Name:         "account.get",
+				Description:  "获取单个账户",
 				ParamsSchema: json.RawMessage(`{"type":"object","properties":{"qq_id":{"type":"integer"},"game_server":{"type":"string"},"game_id":{"type":"string"}},"required":["qq_id","game_server","game_id"]}`),
 				ResultSchema: json.RawMessage(`{"type":"object","properties":{"success":{"type":"boolean"},"account":{"type":"object"},"message":{"type":"string"}}}`),
 			},
 			{
-				Name:        "account.list_by_qq",
-				Description: "根据 QQ 号获取所有账户",
+				Name:         "account.list_by_qq",
+				Description:  "根据 QQ 号获取所有账户",
 				ParamsSchema: json.RawMessage(`{"type":"object","properties":{"qq_id":{"type":"integer"},"enabled_only":{"type":"boolean"}},"required":["qq_id"]}`),
 				ResultSchema: json.RawMessage(`{"type":"object","properties":{"success":{"type":"boolean"},"accounts":{"type":"array"}}}`),
 			},
 			{
-				Name:        "account.list_by_game_id",
-				Description: "根据游戏 ID 获取所有账户",
+				Name:         "account.list_by_game_id",
+				Description:  "根据游戏 ID 获取所有账户",
 				ParamsSchema: json.RawMessage(`{"type":"object","properties":{"game_server":{"type":"string"},"game_id":{"type":"string"},"enabled_only":{"type":"boolean"}},"required":["game_server","game_id"]}`),
 				ResultSchema: json.RawMessage(`{"type":"object","properties":{"success":{"type":"boolean"},"accounts":{"type":"array"}}}`),
 			},
 			{
-				Name:        "account.set_enabled",
-				Description: "设置账户启用状态",
+				Name:         "account.set_enabled",
+				Description:  "设置账户启用状态",
 				ParamsSchema: json.RawMessage(`{"type":"object","properties":{"qq_id":{"type":"integer"},"game_server":{"type":"string"},"game_id":{"type":"string"},"enabled":{"type":"boolean"}},"required":["qq_id","game_server","game_id","enabled"]}`),
 				ResultSchema: json.RawMessage(`{"type":"object","properties":{"success":{"type":"boolean"},"message":{"type":"string"}}}`),
 			},
 			{
-				Name:        "account.remove",
-				Description: "删除账户",
+				Name:         "account.remove",
+				Description:  "删除账户",
 				ParamsSchema: json.RawMessage(`{"type":"object","properties":{"qq_id":{"type":"integer"},"game_server":{"type":"string"},"game_id":{"type":"string"}},"required":["qq_id","game_server","game_id"]}`),
 				ResultSchema: json.RawMessage(`{"type":"object","properties":{"success":{"type":"boolean"},"message":{"type":"string"}}}`),
 			},
 			{
-				Name:        "account.get_preferred_server",
-				Description: "获取用户默认服务器",
+				Name:         "account.get_preferred_server",
+				Description:  "获取用户默认服务器",
 				ParamsSchema: json.RawMessage(`{"type":"object","properties":{"qq_id":{"type":"integer"}},"required":["qq_id"]}`),
 				ResultSchema: json.RawMessage(`{"type":"object","properties":{"success":{"type":"boolean"},"server":{"type":"string"},"message":{"type":"string"}}}`),
 			},
 			{
-				Name:        "account.set_preferred_server",
-				Description: "设置用户默认服务器",
+				Name:         "account.set_preferred_server",
+				Description:  "设置用户默认服务器",
 				ParamsSchema: json.RawMessage(`{"type":"object","properties":{"qq_id":{"type":"integer"},"server":{"type":"string"}},"required":["qq_id","server"]}`),
 				ResultSchema: json.RawMessage(`{"type":"object","properties":{"success":{"type":"boolean"},"message":{"type":"string"}}}`),
 			},

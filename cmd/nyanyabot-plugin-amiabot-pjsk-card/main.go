@@ -94,7 +94,6 @@ func (e *PJSKCard) Invoke(ctx context.Context, method string, paramsJSON json.Ra
 }
 
 func (e *PJSKCard) Handle(ctx context.Context, listenerID string, eventRaw ob11.Event, match *papi.CommandMatch) (papi.HandleResult, error) {
-	_ = ctx
 	hclog.L().Info("[Card] Handle() CALLED", "listenerID", listenerID)
 	if listenerID == "cmd.pjsk-card" {
 		return e.handlePJSKCard(ctx, eventRaw, match)
@@ -127,7 +126,7 @@ func (e *PJSKCard) handlePJSKCard(ctx context.Context, eventRaw ob11.Event, matc
 		if r := recover(); r != nil {
 			err := fmt.Errorf("panic: %v", r)
 			log.Error("[Card] panic", "error", err)
-			util.SendError(transport.Host(), msgType, groupID, userID, "❌ 卡面查询异常", err)
+			util.SendError(ctx, transport.Host(), msgType, groupID, userID, "❌ 卡面查询异常", err)
 		}
 	}()
 
@@ -144,7 +143,7 @@ func (e *PJSKCard) handlePJSKCard(ctx context.Context, eventRaw ob11.Event, matc
 
 	if server == "" || id == "" {
 		log.Warn("[Card] 参数不完整，终止")
-		util.SendText(host, msgType, groupID, userID, "❌ 参数不完整，请使用格式: card+编号")
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ 参数不完整，请使用格式: card+编号")
 		return papi.HandleResult{}, nil
 	}
 
@@ -154,7 +153,7 @@ func (e *PJSKCard) handlePJSKCard(ctx context.Context, eventRaw ob11.Event, matc
 
 	if pagesHost == "" {
 		log.Warn("[Card] amiabot_pages 未配置，终止")
-		util.SendText(host, msgType, groupID, userID, "❌ 服务未配置")
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ 服务未配置")
 		return papi.HandleResult{}, nil
 	}
 
@@ -162,11 +161,11 @@ func (e *PJSKCard) handlePJSKCard(ctx context.Context, eventRaw ob11.Event, matc
 	log.Info("[Card] 页面 URL", "url", pageURL)
 
 	log.Info("[Card] 调用截图插件...")
-	screenshotURL, screenshotErr := util.BuildScreenshotViaPlugin(host, pageURL)
+	screenshotURL, screenshotErr := util.BuildScreenshotViaPlugin(ctx, host, pageURL)
 	log.Info("[Card] 截图 URL", "url", screenshotURL, "error", screenshotErr)
 	if screenshotErr != nil {
 		log.Warn("[Card] 截图失败", "error", screenshotErr)
-		util.SendError(host, msgType, groupID, userID, "❌ 截图失败", screenshotErr)
+		util.SendError(ctx, host, msgType, groupID, userID, "❌ 截图失败", screenshotErr)
 		return papi.HandleResult{}, nil
 	}
 
@@ -178,7 +177,7 @@ func (e *PJSKCard) handlePJSKCard(ctx context.Context, eventRaw ob11.Event, matc
 	}
 
 	log.Info("[Card] 发送图片消息...")
-	_ = util.SendImage(host, msgType, groupID, userID, screenshotURL)
+	_ = util.SendImage(ctx, host, msgType, groupID, userID, screenshotURL)
 	log.Info("[Card] ===== 处理完成 =====")
 	return papi.HandleResult{}, nil
 }

@@ -425,7 +425,7 @@ func (p *QueryPlugin) handleQueryUser(ctx context.Context, eventRaw ob11.Event, 
 		targetUserID = anyToInt64(evt.Payload["user_id"])
 	}
 	if targetUserID <= 0 {
-		util.SendText(host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 无法识别要查询的用户")
+		util.SendText(ctx, host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 无法识别要查询的用户")
 		return papi.HandleResult{}, nil
 	}
 
@@ -435,7 +435,7 @@ func (p *QueryPlugin) handleQueryUser(ctx context.Context, eventRaw ob11.Event, 
 	})
 	if err != nil {
 		log.Error("[Query] 获取用户资料失败", "target_user_id", targetUserID, "error", err)
-		util.SendError(host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 获取用户资料失败", err)
+		util.SendError(ctx, host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 获取用户资料失败", err)
 		return papi.HandleResult{}, nil
 	}
 
@@ -509,11 +509,11 @@ func (p *QueryPlugin) handleQueryUser(ctx context.Context, eventRaw ob11.Event, 
 
 	pageURL, err := p.buildUserPageURL(payload)
 	if err != nil {
-		util.SendError(host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 服务未配置", err)
+		util.SendError(ctx, host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 服务未配置", err)
 		return papi.HandleResult{}, nil
 	}
 	if sendErr := sendScreenshotPage(ctx, host, evt, pageURL, fmt.Sprintf("query-user-%d-%d", targetUserID, time.Now().Unix())); sendErr != nil {
-		util.SendError(host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 资料卡生成失败", sendErr)
+		util.SendError(ctx, host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 资料卡生成失败", sendErr)
 	}
 	return papi.HandleResult{}, nil
 }
@@ -532,30 +532,30 @@ func (p *QueryPlugin) handleQueryGroup(ctx context.Context, eventRaw ob11.Event)
 		return papi.HandleResult{}, nil
 	}
 	if evt.MsgType != "group" {
-		util.SendText(host, evt.MsgType, evt.GroupID, evt.UserID, "该命令只能在群聊中使用")
+		util.SendText(ctx, host, evt.MsgType, evt.GroupID, evt.UserID, "该命令只能在群聊中使用")
 		return papi.HandleResult{}, nil
 	}
 
 	groupID := anyToInt64(evt.Payload["group_id"])
 	if groupID <= 0 {
-		util.SendText(host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 无法识别当前群聊")
+		util.SendText(ctx, host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 无法识别当前群聊")
 		return papi.HandleResult{}, nil
 	}
 
 	payload, err := fetchGroupPayload(ctx, host, groupID)
 	if err != nil {
 		log.Error("[Query] 获取群资料失败", "group_id", groupID, "error", err)
-		util.SendError(host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 获取群资料失败", err)
+		util.SendError(ctx, host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 获取群资料失败", err)
 		return papi.HandleResult{}, nil
 	}
 
 	pageURL, err := p.buildGroupPageURL(payload)
 	if err != nil {
-		util.SendError(host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 服务未配置", err)
+		util.SendError(ctx, host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 服务未配置", err)
 		return papi.HandleResult{}, nil
 	}
 	if sendErr := sendScreenshotPage(ctx, host, evt, pageURL, fmt.Sprintf("query-group-%d-%d", groupID, time.Now().Unix())); sendErr != nil {
-		util.SendError(host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 群资料卡生成失败", sendErr)
+		util.SendError(ctx, host, evt.MsgType, evt.GroupID, evt.UserID, "❌ 群资料卡生成失败", sendErr)
 	}
 	return papi.HandleResult{}, nil
 }
@@ -850,14 +850,14 @@ func buildGroupPageParams(payload groupPagePayload) map[string]string {
 }
 
 func sendScreenshotPage(ctx context.Context, host util.HostCaller, evt eventContext, pageURL string, blobID string) error {
-	screenshotURL, err := util.BuildScreenshotViaPlugin(host, pageURL)
+	screenshotURL, err := util.BuildScreenshotViaPlugin(ctx, host, pageURL)
 	if err != nil {
 		return err
 	}
 	if uploaded := util.UploadViaBlobPlugin(ctx, host, screenshotURL, blobID, "image"); uploaded != "" {
 		screenshotURL = uploaded
 	}
-	return util.SendImage(host, evt.MsgType, evt.GroupID, evt.UserID, screenshotURL)
+	return util.SendImage(ctx, host, evt.MsgType, evt.GroupID, evt.UserID, screenshotURL)
 }
 
 func callOneBotJSON[T any](ctx context.Context, host util.HostCaller, action string, params any) (T, error) {

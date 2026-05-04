@@ -97,7 +97,6 @@ func (z *ZeaburStatus) Invoke(ctx context.Context, method string, paramsJSON jso
 
 // Handle 是宿主分发入口。
 func (z *ZeaburStatus) Handle(ctx context.Context, listenerID string, eventRaw ob11.Event, match *papi.CommandMatch) (papi.HandleResult, error) {
-	_ = ctx
 	_ = match
 
 	switch listenerID {
@@ -146,7 +145,7 @@ func (z *ZeaburStatus) handleStatus(ctx context.Context, eventRaw ob11.Event) (p
 	}
 
 	// 调用 screenshot 插件生成截图 URL
-	screenshotURL, _ := util.BuildScreenshotViaPlugin(host, statusURL)
+	screenshotURL, _ := util.BuildScreenshotViaPlugin(ctx, host, statusURL)
 	if screenshotURL == "" {
 		return papi.HandleResult{}, nil
 	}
@@ -159,7 +158,7 @@ func (z *ZeaburStatus) handleStatus(ctx context.Context, eventRaw ob11.Event) (p
 	}
 
 	// 发送图片
-	_ = util.SendImage(host, msgType, groupID, userID, screenshotURL)
+	_ = util.SendImage(ctx, host, msgType, groupID, userID, screenshotURL)
 
 	return papi.HandleResult{}, nil
 }

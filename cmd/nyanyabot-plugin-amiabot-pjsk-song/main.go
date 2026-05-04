@@ -120,7 +120,6 @@ func (e *PJSKSong) Invoke(ctx context.Context, method string, paramsJSON json.Ra
 }
 
 func (e *PJSKSong) Handle(ctx context.Context, listenerID string, eventRaw ob11.Event, match *papi.CommandMatch) (papi.HandleResult, error) {
-	_ = ctx
 	hclog.L().Info("[Song] Handle() CALLED", "listenerID", listenerID)
 	if listenerID == "cmd.pjsk-song" {
 		return e.handlePJSKSong(ctx, eventRaw, match)
@@ -152,7 +151,7 @@ func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, matc
 		if r := recover(); r != nil {
 			err := fmt.Errorf("panic: %v", r)
 			log.Error("[Song] panic", "error", err)
-			util.SendError(transport.Host(), msgType, groupID, userID, "❌ 歌曲查询异常", err)
+			util.SendError(ctx, transport.Host(), msgType, groupID, userID, "❌ 歌曲查询异常", err)
 		}
 	}()
 
@@ -170,7 +169,7 @@ func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, matc
 
 	if server == "" || len(results) == 0 {
 		log.Warn("[Song] 未找到匹配的歌曲")
-		util.SendText(host, msgType, groupID, userID, "❌ 未找到匹配的歌曲，请尝试其他关键词")
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ 未找到匹配的歌曲，请尝试其他关键词")
 		return papi.HandleResult{}, nil
 	}
 
@@ -180,7 +179,7 @@ func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, matc
 
 	if pagesHost == "" {
 		log.Warn("[Song] amiabot_pages 未配置，终止")
-		util.SendText(host, msgType, groupID, userID, "❌ 服务未配置")
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ 服务未配置")
 		return papi.HandleResult{}, nil
 	}
 
@@ -193,11 +192,11 @@ func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, matc
 	log.Info("[Song] 页面 URL", "url", pageURL)
 
 	log.Info("[Song] 调用截图插件...")
-	screenshotURL, screenshotErr := util.BuildScreenshotViaPlugin(host, pageURL)
+	screenshotURL, screenshotErr := util.BuildScreenshotViaPlugin(ctx, host, pageURL)
 	log.Info("[Song] 截图 URL", "url", screenshotURL, "error", screenshotErr)
 	if screenshotErr != nil {
 		log.Warn("[Song] 截图失败", "error", screenshotErr)
-		util.SendError(host, msgType, groupID, userID, "❌ 截图失败", screenshotErr)
+		util.SendError(ctx, host, msgType, groupID, userID, "❌ 截图失败", screenshotErr)
 		return papi.HandleResult{}, nil
 	}
 
@@ -209,13 +208,13 @@ func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, matc
 	}
 
 	log.Info("[Song] 发送图片消息...")
-	_ = util.SendImage(host, msgType, groupID, userID, screenshotURL)
+	_ = util.SendImage(ctx, host, msgType, groupID, userID, screenshotURL)
 
 	// 如果有多个匹配结果，发送候选列表
 	if len(results) > 1 {
 		candidateMsg := buildCandidateMessage(results[1:], server)
 		log.Info("[Song] 发送候选列表", "count", len(results)-1)
-		util.SendText(host, msgType, groupID, userID, candidateMsg)
+		util.SendText(ctx, host, msgType, groupID, userID, candidateMsg)
 	}
 
 	log.Info("[Song] ===== 处理完成 =====")

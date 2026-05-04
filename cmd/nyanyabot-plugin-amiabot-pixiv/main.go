@@ -110,7 +110,6 @@ func (e *AmiabotPixiv) Invoke(ctx context.Context, method string, paramsJSON jso
 }
 
 func (e *AmiabotPixiv) Handle(ctx context.Context, listenerID string, eventRaw ob11.Event, match *papi.CommandMatch) (papi.HandleResult, error) {
-	_ = ctx
 	if listenerID == "cmd.pixiv-artwork" {
 		return e.handlePixivArtwork(ctx, eventRaw, match)
 	}
@@ -147,7 +146,7 @@ func (e *AmiabotPixiv) handlePixivArtwork(ctx context.Context, eventRaw ob11.Eve
 		if r := recover(); r != nil {
 			err := fmt.Errorf("panic: %v", r)
 			log.Error("[Pixiv] panic", "error", err)
-			util.SendError(transport.Host(), msgType, groupID, userID, "❌ Pixiv 解析异常", err)
+			util.SendError(ctx, transport.Host(), msgType, groupID, userID, "❌ Pixiv 解析异常", err)
 		}
 	}()
 
@@ -169,26 +168,26 @@ func (e *AmiabotPixiv) handlePixivArtwork(ctx context.Context, eventRaw ob11.Eve
 	e.mu.RUnlock()
 	if pagesHost == "" {
 		log.Warn("[Pixiv] amiabot_pages 未配置")
-		util.SendText(host, msgType, groupID, userID, "❌ 服务未配置")
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ 服务未配置")
 		return papi.HandleResult{}, nil
 	}
 
 	pageURL := buildPixivPageURL(pagesHost, pid)
 	if pageURL == "" {
 		log.Warn("[Pixiv] 页面 URL 构造失败", "pages_host", pagesHost, "pid", pid)
-		util.SendText(host, msgType, groupID, userID, "❌ 服务未配置")
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ 服务未配置")
 		return papi.HandleResult{}, nil
 	}
 
-	screenshotURL, err := util.BuildScreenshotViaPlugin(host, pageURL)
+	screenshotURL, err := util.BuildScreenshotViaPlugin(ctx, host, pageURL)
 	if err != nil {
 		log.Warn("[Pixiv] 截图失败", "pid", pid, "error", err)
-		util.SendError(host, msgType, groupID, userID, "❌ 截图失败", err)
+		util.SendError(ctx, host, msgType, groupID, userID, "❌ 截图失败", err)
 		return papi.HandleResult{}, nil
 	}
 	if strings.TrimSpace(screenshotURL) == "" {
 		log.Warn("[Pixiv] 截图 URL 为空", "pid", pid)
-		util.SendText(host, msgType, groupID, userID, "❌ 截图失败")
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ 截图失败")
 		return papi.HandleResult{}, nil
 	}
 
@@ -196,41 +195,41 @@ func (e *AmiabotPixiv) handlePixivArtwork(ctx context.Context, eventRaw ob11.Eve
 	if uploaded := util.UploadViaBlobPlugin(ctx, host, screenshotURL, cardBlobID, "image"); uploaded != "" {
 		screenshotURL = uploaded
 	}
-	if err := util.SendImage(host, msgType, groupID, userID, screenshotURL); err != nil {
+	if err := util.SendImage(ctx, host, msgType, groupID, userID, screenshotURL); err != nil {
 		log.Warn("[Pixiv] 发送截图失败", "pid", pid, "error", err)
 	}
 
 	manifest, err := fetchPixivMediaManifest(ctx, downloadBase, pid)
 	if err != nil {
 		log.Warn("[Pixiv] 获取原图清单失败", "pid", pid, "error", err)
-		util.SendError(host, msgType, groupID, userID, "❌ 获取原图失败", err)
+		util.SendError(ctx, host, msgType, groupID, userID, "❌ 获取原图失败", err)
 		return papi.HandleResult{}, nil
 	}
 	if len(manifest.Items) == 0 {
 		log.Info("[Pixiv] 原图清单为空", "pid", pid, "type", manifest.Type)
-		util.SendText(host, msgType, groupID, userID, "⚠️ 未获取到可发送的原图")
+		util.SendText(ctx, host, msgType, groupID, userID, "⚠️ 未获取到可发送的原图")
 		return papi.HandleResult{}, nil
 	}
 
 	mediaURLs := resolvePixivMediaURLs(ctx, host, downloadBase, pid, manifest.Items)
 	if len(mediaURLs) == 0 {
 		log.Warn("[Pixiv] 原图 URL 解析结果为空", "pid", pid)
-		util.SendText(host, msgType, groupID, userID, "⚠️ 未获取到可发送的原图")
+		util.SendText(ctx, host, msgType, groupID, userID, "⚠️ 未获取到可发送的原图")
 		return papi.HandleResult{}, nil
 	}
 
 	if len(mediaURLs) == 1 {
-		if err := util.SendImage(host, msgType, groupID, userID, mediaURLs[0]); err != nil {
+		if err := util.SendImage(ctx, host, msgType, groupID, userID, mediaURLs[0]); err != nil {
 			log.Warn("[Pixiv] 发送原图失败", "pid", pid, "error", err)
-			util.SendError(host, msgType, groupID, userID, "❌ 发送原图失败", err)
+			util.SendError(ctx, host, msgType, groupID, userID, "❌ 发送原图失败", err)
 		}
 		return papi.HandleResult{}, nil
 	}
 
 	forwardNodes := buildPixivForwardNodes(mediaURLs, selfID, "AmiaBot Pixiv")
-	if err := util.SendForward(host, msgType, groupID, userID, forwardNodes); err != nil {
+	if err := util.SendForward(ctx, host, msgType, groupID, userID, forwardNodes); err != nil {
 		log.Warn("[Pixiv] 发送合并转发失败", "pid", pid, "error", err)
-		util.SendError(host, msgType, groupID, userID, "❌ 发送原图失败", err)
+		util.SendError(ctx, host, msgType, groupID, userID, "❌ 发送原图失败", err)
 	}
 	return papi.HandleResult{}, nil
 }

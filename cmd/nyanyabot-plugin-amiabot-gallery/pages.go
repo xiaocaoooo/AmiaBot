@@ -55,7 +55,7 @@ func (g *GalleryPlugin) sendGalleryPagesCard(ctx context.Context, host util.Host
 		blobPrefix = "gallery-pages"
 	}
 
-	screenshotURL, err := util.BuildScreenshotViaPlugin(host, pageURL)
+	screenshotURL, err := util.BuildScreenshotViaPlugin(ctx, host, pageURL)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func (g *GalleryPlugin) sendGalleryPagesCard(ctx context.Context, host util.Host
 	if err != nil {
 		return err
 	}
-	return util.SendImage(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, onebotURL)
+	return util.SendImage(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, onebotURL)
 }
 
 func (g *GalleryPlugin) sendGalleryAllTagsCard(ctx context.Context, host util.HostCaller, msgCtx messageContext) error {

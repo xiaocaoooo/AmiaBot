@@ -96,7 +96,6 @@ func (p *PJSKProfile) Invoke(ctx context.Context, method string, paramsJSON json
 }
 
 func (p *PJSKProfile) Handle(ctx context.Context, listenerID string, eventRaw ob11.Event, match *papi.CommandMatch) (papi.HandleResult, error) {
-	_ = ctx
 	if listenerID == "cmd.profile-show" {
 		return p.handleProfile(ctx, eventRaw, match)
 	}
@@ -125,7 +124,7 @@ func (p *PJSKProfile) handleProfile(ctx context.Context, eventRaw ob11.Event, ma
 		if r := recover(); r != nil {
 			err := fmt.Errorf("panic: %v", r)
 			log.Error("[Profile] panic", "error", err)
-			util.SendError(transport.Host(), msgType, groupID, userID, "❌ 个人信息查询异常", err)
+			util.SendError(ctx, transport.Host(), msgType, groupID, userID, "❌ 个人信息查询异常", err)
 		}
 	}()
 
@@ -144,7 +143,7 @@ func (p *PJSKProfile) handleProfile(ctx context.Context, eventRaw ob11.Event, ma
 	})
 	if err != nil {
 		log.Error("[Profile] 调用 account.list_by_qq 失败", "error", err)
-		util.SendError(host, msgType, groupID, userID, "❌ 查询绑定失败", err)
+		util.SendError(ctx, host, msgType, groupID, userID, "❌ 查询绑定失败", err)
 		return papi.HandleResult{}, nil
 	}
 
@@ -154,12 +153,12 @@ func (p *PJSKProfile) handleProfile(ctx context.Context, eventRaw ob11.Event, ma
 	}
 	if err := json.Unmarshal(listResult, &listResp); err != nil {
 		log.Error("[Profile] 解析账户列表失败", "error", err)
-		util.SendText(host, msgType, groupID, userID, "❌ 查询失败")
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ 查询失败")
 		return papi.HandleResult{}, nil
 	}
 
 	if !listResp.Success || len(listResp.Accounts) == 0 {
-		util.SendText(host, msgType, groupID, userID, "你还没有绑定任何账号。\n请发送 绑定+你的游戏ID 进行绑定，如 jp绑定12345")
+		util.SendText(ctx, host, msgType, groupID, userID, "你还没有绑定任何账号。\n请发送 绑定+你的游戏ID 进行绑定，如 jp绑定12345")
 		return papi.HandleResult{}, nil
 	}
 
@@ -207,7 +206,7 @@ func (p *PJSKProfile) handleProfile(ctx context.Context, eventRaw ob11.Event, ma
 			srv := strings.ToUpper(acc.GameServer)
 			lines = append(lines, fmt.Sprintf("[%s]", srv))
 		}
-		util.SendText(host, msgType, groupID, userID, fmt.Sprintf("你尚未绑定 [%s] 服务器的账号。\n你已绑定的服务器: %s\n可以通过 服务器前缀+个人信息 切换，如 cn个人信息", serverUpper, strings.Join(lines, ", ")))
+		util.SendText(ctx, host, msgType, groupID, userID, fmt.Sprintf("你尚未绑定 [%s] 服务器的账号。\n你已绑定的服务器: %s\n可以通过 服务器前缀+个人信息 切换，如 cn个人信息", serverUpper, strings.Join(lines, ", ")))
 		return papi.HandleResult{}, nil
 	}
 
@@ -217,7 +216,7 @@ func (p *PJSKProfile) handleProfile(ctx context.Context, eventRaw ob11.Event, ma
 
 	if pagesHost == "" {
 		log.Warn("[Profile] amiabot_pages 未配置，终止")
-		util.SendText(host, msgType, groupID, userID, "❌ 服务未配置")
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ 服务未配置")
 		return papi.HandleResult{}, nil
 	}
 
@@ -227,10 +226,10 @@ func (p *PJSKProfile) handleProfile(ctx context.Context, eventRaw ob11.Event, ma
 	})
 	log.Info("[Profile] 页面 URL", "url", pageURL)
 
-	screenshotURL, screenshotErr := util.BuildScreenshotViaPlugin(host, pageURL)
+	screenshotURL, screenshotErr := util.BuildScreenshotViaPlugin(ctx, host, pageURL)
 	if screenshotErr != nil {
 		log.Warn("[Profile] 截图失败", "error", screenshotErr)
-		util.SendError(host, msgType, groupID, userID, "❌ 截图失败", screenshotErr)
+		util.SendError(ctx, host, msgType, groupID, userID, "❌ 截图失败", screenshotErr)
 		return papi.HandleResult{}, nil
 	}
 
@@ -239,7 +238,7 @@ func (p *PJSKProfile) handleProfile(ctx context.Context, eventRaw ob11.Event, ma
 		screenshotURL = uploaded
 	}
 
-	_ = util.SendImage(host, msgType, groupID, userID, screenshotURL)
+	_ = util.SendImage(ctx, host, msgType, groupID, userID, screenshotURL)
 	return papi.HandleResult{}, nil
 }
 

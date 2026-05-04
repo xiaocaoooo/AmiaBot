@@ -13,16 +13,16 @@ import (
 
 // AddParams 添加账户参数
 type AddParams struct {
-	QQID      int64  `json:"qq_id"`
+	QQID       int64  `json:"qq_id"`
 	GameServer string `json:"game_server"`
-	GameID    string `json:"game_id"`
+	GameID     string `json:"game_id"`
 }
 
 // GetParams 获取账户参数
 type GetParams struct {
-	QQID      int64  `json:"qq_id"`
+	QQID       int64  `json:"qq_id"`
 	GameServer string `json:"game_server"`
-	GameID    string `json:"game_id"`
+	GameID     string `json:"game_id"`
 }
 
 // ListByQQParams 根据 QQ 号列出账户参数
@@ -40,17 +40,17 @@ type ListByGameIDParams struct {
 
 // SetEnabledParams 设置启用状态参数
 type SetEnabledParams struct {
-	QQID      int64  `json:"qq_id"`
+	QQID       int64  `json:"qq_id"`
 	GameServer string `json:"game_server"`
-	GameID    string `json:"game_id"`
-	Enabled   bool   `json:"enabled"`
+	GameID     string `json:"game_id"`
+	Enabled    bool   `json:"enabled"`
 }
 
 // RemoveParams 删除账户参数
 type RemoveParams struct {
-	QQID      int64  `json:"qq_id"`
+	QQID       int64  `json:"qq_id"`
 	GameServer string `json:"game_server"`
-	GameID    string `json:"game_id"`
+	GameID     string `json:"game_id"`
 }
 
 // GetPreferredServerParams 获取默认服务器参数
@@ -129,11 +129,11 @@ func (p *PJSKAccount) handleAdd(ctx context.Context, paramsJSON json.RawMessage)
 			}), nil
 		}
 		account = Account{
-			QQID:      params.QQID,
+			QQID:       params.QQID,
 			GameServer: params.GameServer,
-			GameID:    params.GameID,
-			CreatedAt: now,
-			Enabled:   true,
+			GameID:     params.GameID,
+			CreatedAt:  now,
+			Enabled:    true,
 		}
 		hclog.L().Info("[Account] 添加账户成功", "qq_id", params.QQID, "server", params.GameServer, "game_id", params.GameID)
 	} else if err != nil {
@@ -156,11 +156,11 @@ func (p *PJSKAccount) handleAdd(ctx context.Context, paramsJSON json.RawMessage)
 			}), nil
 		}
 		account = Account{
-			QQID:      existingAccount.QQID,
+			QQID:       existingAccount.QQID,
 			GameServer: existingAccount.GameServer,
-			GameID:    existingAccount.GameID,
-			CreatedAt: existingAccount.CreatedAt,
-			Enabled:   true,
+			GameID:     existingAccount.GameID,
+			CreatedAt:  existingAccount.CreatedAt,
+			Enabled:    true,
 		}
 		hclog.L().Info("[Account] 账户已存在，已启用", "qq_id", params.QQID, "server", params.GameServer, "game_id", params.GameID)
 	}

@@ -111,7 +111,6 @@ func (p *PJSKBind) Invoke(ctx context.Context, method string, paramsJSON json.Ra
 }
 
 func (p *PJSKBind) Handle(ctx context.Context, listenerID string, eventRaw ob11.Event, match *papi.CommandMatch) (papi.HandleResult, error) {
-	_ = ctx
 	if listenerID == "cmd.profile-bind" {
 		return p.handleBind(ctx, eventRaw, match)
 	}
@@ -173,7 +172,7 @@ func (p *PJSKBind) handleBind(ctx context.Context, eventRaw ob11.Event, match *p
 		if r := recover(); r != nil {
 			err := fmt.Errorf("panic: %v", r)
 			log.Error("[Bind] panic", "error", err)
-			util.SendError(transport.Host(), msgType, groupID, userID, "❌ 绑定异常", err)
+			util.SendError(ctx, transport.Host(), msgType, groupID, userID, "❌ 绑定异常", err)
 		}
 	}()
 
@@ -187,7 +186,7 @@ func (p *PJSKBind) handleBind(ctx context.Context, eventRaw ob11.Event, match *p
 	log.Info("[Bind] 解析参数", "server", server, "game_id", gameID)
 
 	if server == "" || gameID == "" {
-		util.SendText(host, msgType, groupID, userID, "❌ 参数不正确，请发送 绑定+你的游戏ID，如 j p绑定12345")
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ 参数不正确，请发送 绑定+你的游戏ID，如 j p绑定12345")
 		return papi.HandleResult{}, nil
 	}
 
@@ -200,7 +199,7 @@ func (p *PJSKBind) handleBind(ctx context.Context, eventRaw ob11.Event, match *p
 	})
 	if err != nil {
 		log.Error("[Bind] 调用 account.add 失败", "error", err)
-		util.SendError(host, msgType, groupID, userID, "❌ 绑定失败", err)
+		util.SendError(ctx, host, msgType, groupID, userID, "❌ 绑定失败", err)
 		return papi.HandleResult{}, nil
 	}
 
@@ -213,7 +212,7 @@ func (p *PJSKBind) handleBind(ctx context.Context, eventRaw ob11.Event, match *p
 		if addResp.Message != "" {
 			msg = addResp.Message
 		}
-		util.SendText(host, msgType, groupID, userID, "❌ "+msg)
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ "+msg)
 		return papi.HandleResult{}, nil
 	}
 
@@ -240,12 +239,12 @@ func (p *PJSKBind) handleBind(ctx context.Context, eventRaw ob11.Event, match *p
 	if err != nil {
 		log.Warn("[Bind] 获取 profile 失败", "error", err)
 		serverUpper := strings.ToUpper(server)
-		util.SendText(host, msgType, groupID, userID, fmt.Sprintf("绑定成功！\n[%s]\n\n获取用户名失败: %s", serverUpper, err.Error()))
+		util.SendText(ctx, host, msgType, groupID, userID, fmt.Sprintf("绑定成功！\n[%s]\n\n获取用户名失败: %s", serverUpper, err.Error()))
 		return papi.HandleResult{}, nil
 	}
 
 	serverUpper := strings.ToUpper(server)
-	util.SendText(host, msgType, groupID, userID, fmt.Sprintf("绑定成功！\n[%s] %s", serverUpper, username))
+	util.SendText(ctx, host, msgType, groupID, userID, fmt.Sprintf("绑定成功！\n[%s] %s", serverUpper, username))
 	return papi.HandleResult{}, nil
 }
 
@@ -266,7 +265,7 @@ func (p *PJSKBind) handleID(ctx context.Context, eventRaw ob11.Event, match *pap
 		if r := recover(); r != nil {
 			err := fmt.Errorf("panic: %v", r)
 			log.Error("[Bind] panic", "error", err)
-			util.SendError(transport.Host(), msgType, groupID, userID, "❌ 查询异常", err)
+			util.SendError(ctx, transport.Host(), msgType, groupID, userID, "❌ 查询异常", err)
 		}
 	}()
 
@@ -288,7 +287,7 @@ func (p *PJSKBind) handleID(ctx context.Context, eventRaw ob11.Event, match *pap
 	})
 	if err != nil {
 		log.Error("[Bind] 调用 account.list_by_qq 失败", "error", err)
-		util.SendError(host, msgType, groupID, userID, "❌ 查询失败", err)
+		util.SendError(ctx, host, msgType, groupID, userID, "❌ 查询失败", err)
 		return papi.HandleResult{}, nil
 	}
 
@@ -299,7 +298,7 @@ func (p *PJSKBind) handleID(ctx context.Context, eventRaw ob11.Event, match *pap
 	}
 	if err := json.Unmarshal(listResult, &listResp); err != nil {
 		log.Error("[Bind] 解析账户列表失败", "error", err)
-		util.SendText(host, msgType, groupID, userID, "❌ 查询失败")
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ 查询失败")
 		return papi.HandleResult{}, nil
 	}
 
@@ -308,13 +307,13 @@ func (p *PJSKBind) handleID(ctx context.Context, eventRaw ob11.Event, match *pap
 		if listResp.Message != "" {
 			msg = listResp.Message
 		}
-		util.SendText(host, msgType, groupID, userID, msg)
+		util.SendText(ctx, host, msgType, groupID, userID, msg)
 		return papi.HandleResult{}, nil
 	}
 
 	accounts := listResp.Accounts
 	if len(accounts) == 0 {
-		util.SendText(host, msgType, groupID, userID, "还未绑定任何账号，请发送 绑定+游戏ID 进行绑定")
+		util.SendText(ctx, host, msgType, groupID, userID, "还未绑定任何账号，请发送 绑定+游戏ID 进行绑定")
 		return papi.HandleResult{}, nil
 	}
 
@@ -333,7 +332,7 @@ func (p *PJSKBind) handleID(ctx context.Context, eventRaw ob11.Event, match *pap
 		}
 		if len(filtered) == 0 {
 			serverUpper := strings.ToUpper(specificServer)
-			util.SendText(host, msgType, groupID, userID, fmt.Sprintf("未找到 [%s] 服务器已绑定的账号", serverUpper))
+			util.SendText(ctx, host, msgType, groupID, userID, fmt.Sprintf("未找到 [%s] 服务器已绑定的账号", serverUpper))
 			return papi.HandleResult{}, nil
 		}
 		var lines []string
@@ -341,7 +340,7 @@ func (p *PJSKBind) handleID(ctx context.Context, eventRaw ob11.Event, match *pap
 			serverUpper := strings.ToUpper(acc.GameServer)
 			lines = append(lines, fmt.Sprintf("[%s] %s", serverUpper, acc.GameID))
 		}
-		util.SendText(host, msgType, groupID, userID, strings.Join(lines, "\n"))
+		util.SendText(ctx, host, msgType, groupID, userID, strings.Join(lines, "\n"))
 		return papi.HandleResult{}, nil
 	}
 
@@ -354,10 +353,10 @@ func (p *PJSKBind) handleID(ctx context.Context, eventRaw ob11.Event, match *pap
 		}
 	}
 	if len(lines) == 0 {
-		util.SendText(host, msgType, groupID, userID, "未找到已启用的账号")
+		util.SendText(ctx, host, msgType, groupID, userID, "未找到已启用的账号")
 		return papi.HandleResult{}, nil
 	}
-	util.SendText(host, msgType, groupID, userID, strings.Join(lines, "\n"))
+	util.SendText(ctx, host, msgType, groupID, userID, strings.Join(lines, "\n"))
 	return papi.HandleResult{}, nil
 }
 
@@ -409,7 +408,7 @@ func (p *PJSKBind) handleSetDefaultServer(ctx context.Context, eventRaw ob11.Eve
 		if r := recover(); r != nil {
 			err := fmt.Errorf("panic: %v", r)
 			log.Error("[Bind] panic", "error", err)
-			util.SendError(transport.Host(), msgType, groupID, userID, "❌ 设置默认服务器异常", err)
+			util.SendError(ctx, transport.Host(), msgType, groupID, userID, "❌ 设置默认服务器异常", err)
 		}
 	}()
 
@@ -421,7 +420,7 @@ func (p *PJSKBind) handleSetDefaultServer(ctx context.Context, eventRaw ob11.Eve
 
 	server := parseSetDefaultServerArgs(content)
 	if !validServers[server] {
-		util.SendText(host, msgType, groupID, userID, "❌ 无效的服务器，请选择 jp/cn/en/tw/kr")
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ 无效的服务器，请选择 jp/cn/en/tw/kr")
 		return papi.HandleResult{}, nil
 	}
 
@@ -433,7 +432,7 @@ func (p *PJSKBind) handleSetDefaultServer(ctx context.Context, eventRaw ob11.Eve
 	})
 	if err != nil {
 		log.Error("[Bind] 调用 set_preferred_server 失败", "error", err)
-		util.SendError(host, msgType, groupID, userID, "❌ 设置默认服务器失败", err)
+		util.SendError(ctx, host, msgType, groupID, userID, "❌ 设置默认服务器失败", err)
 		return papi.HandleResult{}, nil
 	}
 
@@ -442,7 +441,7 @@ func (p *PJSKBind) handleSetDefaultServer(ctx context.Context, eventRaw ob11.Eve
 		Message string `json:"message"`
 	}
 	if err := json.Unmarshal(setResult, &setResp); err != nil {
-		util.SendText(host, msgType, groupID, userID, "❌ 设置默认服务器失败")
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ 设置默认服务器失败")
 		return papi.HandleResult{}, nil
 	}
 
@@ -451,12 +450,12 @@ func (p *PJSKBind) handleSetDefaultServer(ctx context.Context, eventRaw ob11.Eve
 		if setResp.Message != "" {
 			msg = setResp.Message
 		}
-		util.SendText(host, msgType, groupID, userID, "❌ "+msg)
+		util.SendText(ctx, host, msgType, groupID, userID, "❌ "+msg)
 		return papi.HandleResult{}, nil
 	}
 
 	serverUpper := strings.ToUpper(server)
-	util.SendText(host, msgType, groupID, userID, fmt.Sprintf("默认服务器已设置为 [%s]\n可以使用“个人信息”或“profile”查看 profile", serverUpper))
+	util.SendText(ctx, host, msgType, groupID, userID, fmt.Sprintf("默认服务器已设置为 [%s]\n可以使用\"个人信息\"或\"profile\"查看 profile", serverUpper))
 	return papi.HandleResult{}, nil
 }
 

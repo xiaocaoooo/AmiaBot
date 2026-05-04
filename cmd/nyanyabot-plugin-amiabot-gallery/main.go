@@ -66,7 +66,6 @@ func defaultGalleryConfig() galleryConfig {
 }
 
 func (g *GalleryPlugin) Descriptor(ctx context.Context) (papi.Descriptor, error) {
-	_ = ctx
 	schema := json.RawMessage(`{
 		"type":"object",
 		"properties":{
@@ -123,7 +122,6 @@ func (g *GalleryPlugin) Descriptor(ctx context.Context) (papi.Descriptor, error)
 }
 
 func (g *GalleryPlugin) Configure(ctx context.Context, config json.RawMessage) error {
-	_ = ctx
 	cfg := defaultGalleryConfig()
 	if len(config) > 0 {
 		_ = json.Unmarshal(config, &cfg)
@@ -143,7 +141,6 @@ func (g *GalleryPlugin) Configure(ctx context.Context, config json.RawMessage) e
 }
 
 func (g *GalleryPlugin) Invoke(ctx context.Context, method string, paramsJSON json.RawMessage, callerPluginID string) (json.RawMessage, error) {
-	_ = ctx
 	_ = method
 	_ = paramsJSON
 	_ = callerPluginID
@@ -164,7 +161,6 @@ func (g *GalleryPlugin) Handle(ctx context.Context, listenerID string, eventRaw 
 }
 
 func (g *GalleryPlugin) Shutdown(ctx context.Context) error {
-	_ = ctx
 	return nil
 }
 
@@ -184,26 +180,26 @@ func (g *GalleryPlugin) handleCreateTag(ctx context.Context, eventRaw ob11.Event
 
 	tagName := firstGroup(match)
 	if strings.TrimSpace(tagName) == "" {
-		util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "标签名不能为空")
+		util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "标签名不能为空")
 		return papi.HandleResult{}, nil
 	}
 
 	client := g.newClient()
 	tag, err := client.createTag(ctx, strings.TrimSpace(tagName))
 	if err == nil {
-		util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, fmt.Sprintf("标签创建成功：#%s（ID：%d）", tag.Name, tag.ID))
+		util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, fmt.Sprintf("标签创建成功：#%s（ID：%d）", tag.Name, tag.ID))
 		return papi.HandleResult{}, nil
 	}
 
 	if apiErr, ok := err.(*galleryAPIError); ok && apiErr.StatusCode == 409 {
 		existing, lookupErr := client.findExactTag(ctx, tagName)
 		if lookupErr == nil && existing != nil {
-			util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, fmt.Sprintf("标签已存在：#%s（ID：%d）", existing.Name, existing.ID))
+			util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, fmt.Sprintf("标签已存在：#%s（ID：%d）", existing.Name, existing.ID))
 			return papi.HandleResult{}, nil
 		}
 	}
 
-	util.SendError(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "创建标签失败", err)
+	util.SendError(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "创建标签失败", err)
 	return papi.HandleResult{}, nil
 }
 
@@ -222,28 +218,28 @@ func (g *GalleryPlugin) handleUpload(ctx context.Context, eventRaw ob11.Event, m
 
 	tags := parseTags(firstGroup(match))
 	if len(tags) == 0 {
-		util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "请至少提供一个标签")
+		util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "请至少提供一个标签")
 		return papi.HandleResult{}, nil
 	}
 
 	client := g.newClient()
 	missingTags, err := client.findMissingTags(ctx, tags)
 	if err != nil {
-		util.SendError(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "标签校验失败", err)
+		util.SendError(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "标签校验失败", err)
 		return papi.HandleResult{}, nil
 	}
 	if len(missingTags) > 0 {
-		util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "以下标签尚未创建，请先创建后再上传："+strings.Join(missingTags, "、"))
+		util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "以下标签尚未创建，请先创建后再上传："+strings.Join(missingTags, "、"))
 		return papi.HandleResult{}, nil
 	}
 
 	images, sourceLabel, err := extractImagesFromEvent(ctx, host, evt)
 	if err != nil {
-		util.SendError(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "提取图片失败", err)
+		util.SendError(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "提取图片失败", err)
 		return papi.HandleResult{}, nil
 	}
 	if len(images) == 0 {
-		util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "当前消息和引用消息中都没有找到图片")
+		util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "当前消息和引用消息中都没有找到图片")
 		return papi.HandleResult{}, nil
 	}
 
@@ -270,11 +266,11 @@ func (g *GalleryPlugin) handleUpload(ctx context.Context, eventRaw ob11.Event, m
 		outcomes = append(outcomes, uploadOutcome{Index: index + 1, DuplicateImageID: apiErr.DuplicateImageID})
 		if compareErr := g.sendDuplicateCompareCard(ctx, host, msgCtx, client, image, tags, apiErr.DuplicateImageID, index+1); compareErr != nil {
 			log.Warn("[Gallery] 发送重复对比卡失败", "duplicate_id", apiErr.DuplicateImageID, "error", compareErr)
-			util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, fmt.Sprintf("第 %d 张图片已存在于图库中，对应图片 ID：#%d", index+1, apiErr.DuplicateImageID))
+			util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, fmt.Sprintf("第 %d 张图片已存在于图库中，对应图片 ID：#%d", index+1, apiErr.DuplicateImageID))
 		}
 	}
 
-	util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, buildUploadSummary(sourceLabel, tags, outcomes))
+	util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, buildUploadSummary(sourceLabel, tags, outcomes))
 	return papi.HandleResult{}, nil
 }
 
@@ -291,7 +287,7 @@ func (g *GalleryPlugin) handleView(ctx context.Context, eventRaw ob11.Event, mat
 
 	input := strings.TrimSpace(firstGroup(match))
 	if input == "" {
-		util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "请输入图片 ID 或至少一个标签")
+		util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "请输入图片 ID 或至少一个标签")
 		return papi.HandleResult{}, nil
 	}
 
@@ -304,7 +300,7 @@ func (g *GalleryPlugin) handleView(ctx context.Context, eventRaw ob11.Event, mat
 			err = g.sendGalleryAllImagesCard(ctx, host, msgCtx, tags)
 		}
 		if err != nil {
-			util.SendError(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "生成画廊页面失败", err)
+			util.SendError(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "生成画廊页面失败", err)
 		}
 		return papi.HandleResult{}, nil
 	}
@@ -315,48 +311,48 @@ func (g *GalleryPlugin) handleView(ctx context.Context, eventRaw ob11.Event, mat
 		image, err := client.getImage(ctx, imageID)
 		if err == nil {
 			if sendErr := g.sendGalleryImage(ctx, host, msgCtx, client, image); sendErr != nil {
-				util.SendError(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "发送图片失败", sendErr)
+				util.SendError(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "发送图片失败", sendErr)
 				return papi.HandleResult{}, nil
 			}
-			util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, buildImageMetaText(image))
+			util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, buildImageMetaText(image))
 			return papi.HandleResult{}, nil
 		}
 		if apiErr, ok := err.(*galleryAPIError); ok && apiErr.StatusCode != 404 {
-			util.SendError(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "查询图片失败", err)
+			util.SendError(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "查询图片失败", err)
 			return papi.HandleResult{}, nil
 		}
 	}
 
 	tags := parseTags(input)
 	if len(tags) == 0 {
-		util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "请输入图片 ID 或至少一个标签")
+		util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "请输入图片 ID 或至少一个标签")
 		return papi.HandleResult{}, nil
 	}
 
 	missingTags, err := client.findMissingTags(ctx, tags)
 	if err != nil {
-		util.SendError(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "查询标签失败", err)
+		util.SendError(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "查询标签失败", err)
 		return papi.HandleResult{}, nil
 	}
 	if len(missingTags) > 0 {
-		util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "没有找到匹配的图片或标签")
+		util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "没有找到匹配的图片或标签")
 		return papi.HandleResult{}, nil
 	}
 
 	picked, err := client.randomImage(ctx, tags)
 	if err != nil {
 		if apiErr, ok := err.(*galleryAPIError); ok && apiErr.StatusCode == 404 {
-			util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "没有找到匹配的图片或标签")
+			util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "没有找到匹配的图片或标签")
 			return papi.HandleResult{}, nil
 		}
-		util.SendError(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "查询图片失败", err)
+		util.SendError(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "查询图片失败", err)
 		return papi.HandleResult{}, nil
 	}
 	if sendErr := g.sendGalleryImage(ctx, host, msgCtx, client, picked); sendErr != nil {
-		util.SendError(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "发送图片失败", sendErr)
+		util.SendError(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, "发送图片失败", sendErr)
 		return papi.HandleResult{}, nil
 	}
-	util.SendText(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, buildImageMetaText(picked))
+	util.SendText(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, buildImageMetaText(picked))
 	return papi.HandleResult{}, nil
 }
 
@@ -386,7 +382,7 @@ func (g *GalleryPlugin) sendDuplicateCompareCard(ctx context.Context, host util.
 		return fmt.Errorf("重复图片对比页地址构造失败")
 	}
 
-	screenshotURL, err := util.BuildScreenshotViaPlugin(host, pageURL)
+	screenshotURL, err := util.BuildScreenshotViaPlugin(ctx, host, pageURL)
 	if err != nil {
 		return err
 	}
@@ -395,7 +391,7 @@ func (g *GalleryPlugin) sendDuplicateCompareCard(ctx context.Context, host util.
 	if err != nil {
 		return err
 	}
-	if err := util.SendImage(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, onebotURL); err != nil {
+	if err := util.SendImage(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, onebotURL); err != nil {
 		return err
 	}
 	return nil
@@ -411,7 +407,7 @@ func (g *GalleryPlugin) sendGalleryImage(ctx context.Context, host util.HostCall
 	if err != nil {
 		return err
 	}
-	return util.SendImage(host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, onebotURL)
+	return util.SendImage(ctx, host, msgCtx.MsgType, msgCtx.GroupID, msgCtx.UserID, onebotURL)
 }
 
 func uploadOneBotImageViaBlob(ctx context.Context, host util.HostCaller, sourceURL string, blobID string) (string, error) {
