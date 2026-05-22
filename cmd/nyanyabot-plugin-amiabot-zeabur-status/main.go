@@ -113,6 +113,10 @@ func (z *ZeaburStatus) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+func (z *ZeaburStatus) Status(ctx context.Context) (string, error) {
+	return "OK", nil
+}
+
 // handleStatus 处理 status/状态 命令。
 func (z *ZeaburStatus) handleStatus(ctx context.Context, eventRaw ob11.Event) (papi.HandleResult, error) {
 	host := transport.Host()

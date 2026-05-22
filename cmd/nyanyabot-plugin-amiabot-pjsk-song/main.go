@@ -132,6 +132,10 @@ func (e *PJSKSong) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+func (e *PJSKSong) Status(ctx context.Context) (string, error) {
+	return "OK", nil
+}
+
 func (e *PJSKSong) handlePJSKSong(ctx context.Context, eventRaw ob11.Event, match *papi.CommandMatch) (papi.HandleResult, error) {
 	log := hclog.L()
 	log.Info("[Song] ===== 开始处理 =====")

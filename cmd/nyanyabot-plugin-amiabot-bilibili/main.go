@@ -173,6 +173,10 @@ func (e *AmiabotBilibili) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+func (e *AmiabotBilibili) Status(ctx context.Context) (string, error) {
+	return "OK", nil
+}
+
 // 接口兼容性检查：transport.HostRPCClient 必须实现 util.HostCaller
 var _ util.HostCaller = (*transport.HostRPCClient)(nil)
 

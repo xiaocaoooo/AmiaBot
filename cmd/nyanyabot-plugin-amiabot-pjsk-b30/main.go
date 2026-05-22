@@ -107,6 +107,10 @@ func (p *PJSKB30) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+func (p *PJSKB30) Status(ctx context.Context) (string, error) {
+	return "OK", nil
+}
+
 func (p *PJSKB30) handleB30(ctx context.Context, eventRaw ob11.Event, match *papi.CommandMatch) (papi.HandleResult, error) {
 	log := hclog.L()
 

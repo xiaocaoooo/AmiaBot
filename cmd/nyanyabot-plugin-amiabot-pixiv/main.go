@@ -121,6 +121,10 @@ func (e *AmiabotPixiv) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+func (e *AmiabotPixiv) Status(ctx context.Context) (string, error) {
+	return "OK", nil
+}
+
 func (e *AmiabotPixiv) handlePixivArtwork(ctx context.Context, eventRaw ob11.Event, match *papi.CommandMatch) (papi.HandleResult, error) {
 	log := hclog.L()
 

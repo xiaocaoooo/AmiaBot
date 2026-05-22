@@ -405,6 +405,10 @@ func (p *QueryPlugin) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+func (p *QueryPlugin) Status(ctx context.Context) (string, error) {
+	return "OK", nil
+}
+
 func (p *QueryPlugin) handleQueryUser(ctx context.Context, eventRaw ob11.Event, match *papi.CommandMatch) (papi.HandleResult, error) {
 	_ = match
 	log := hclog.L()

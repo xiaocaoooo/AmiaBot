@@ -242,6 +242,10 @@ func (p *PJSKAccount) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+func (p *PJSKAccount) Status(ctx context.Context) (string, error) {
+	return "OK", nil
+}
+
 func main() {
 	logger := hclog.New(&hclog.LoggerOptions{Name: "nyanyabot-plugin-amiabot-pjsk-account", Level: hclog.Info})
 

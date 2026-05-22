@@ -128,6 +128,10 @@ func (p *PJSKBind) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+func (p *PJSKBind) Status(ctx context.Context) (string, error) {
+	return "OK", nil
+}
+
 // parseBindArgs 解析绑定命令参数
 func parseBindArgs(rawMessage string) (server, id string) {
 	m := bindRegex.FindStringSubmatch(rawMessage)
