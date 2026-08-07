@@ -7,6 +7,7 @@ require (
 	github.com/hashicorp/go-plugin v1.7.0
 	github.com/lib/pq v1.12.0
 	github.com/xiaocaoooo/amiabot-plugin-sdk v0.0.0
+	nhooyr.io/websocket v1.8.17
 )
 
 require (
