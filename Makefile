@@ -25,7 +25,7 @@ $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
 $(BIN_DIR)/%: | $(BIN_DIR)
-	$(GO) build -o $@ ./cmd/$*
+	CGO_ENABLED=0 $(GO) build -o $@ ./cmd/$*
 
 build-screenshot: $(BIN_DIR)/nyanyabot-plugin-screenshot
 build-blobserver: $(BIN_DIR)/nyanyabot-plugin-blobserver
