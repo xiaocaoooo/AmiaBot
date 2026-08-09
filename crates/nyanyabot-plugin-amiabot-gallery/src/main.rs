@@ -13,8 +13,8 @@ use nyanyabot_proto::{
 };
 use parking_lot::RwLock;
 use plugin_common::{
-    build_pages_url, event_content, first_match_group, redact_secrets, screenshot_and_upload,
-    send_image, send_text, upload_remote_blob,
+    build_pages_url, event_content, event_self_id, first_match_group, redact_secrets,
+    screenshot_and_upload, send_image, send_text, upload_remote_blob,
 };
 use serde_json::{Value, json};
 use tokio::sync::RwLock as AsyncRwLock;
@@ -370,20 +370,26 @@ impl Plugin for Plug {
                     _ => {}
                 }
 
-                let (images, source_label) =
-                    match message::extract_images_from_event(&mut host, &event_raw).await {
-                        Ok(v) => v,
-                        Err(err) => {
-                            let _ = send_text(
-                                &mut host,
-                                &event_raw,
-                                &format!("提取图片失败：{}", redact_secrets(&err)),
-                                trace_id,
-                            )
-                            .await;
-                            return Ok(HandleResult {});
-                        }
-                    };
+                let (images, source_label) = match message::extract_images_from_event(
+                    &mut host,
+                    &event_raw,
+                    event_self_id(&event_raw),
+                    trace_id,
+                )
+                .await
+                {
+                    Ok(v) => v,
+                    Err(err) => {
+                        let _ = send_text(
+                            &mut host,
+                            &event_raw,
+                            &format!("提取图片失败：{}", redact_secrets(&err)),
+                            trace_id,
+                        )
+                        .await;
+                        return Ok(HandleResult {});
+                    }
+                };
                 if images.is_empty() {
                     let _ = send_text(
                         &mut host,

@@ -13,9 +13,11 @@ pub struct ExtractedImage {
 pub async fn extract_images_from_event(
     host: &mut HostClient,
     event: &Value,
+    self_id: i64,
+    trace_id: &str,
 ) -> Result<(Vec<ExtractedImage>, String), String> {
     let message = event.get("message");
-    let images = collect_images_from_value(host, message, 0).await?;
+    let images = collect_images_from_value(host, message, 0, self_id, trace_id).await?;
     if !images.is_empty() {
         return Ok((dedupe(images), "当前消息".into()));
     }
@@ -24,11 +26,16 @@ pub async fn extract_images_from_event(
         return Ok((Vec::new(), String::new()));
     }
     let resp = host
-        .call_onebot("get_msg", &json!({"message_id": reply_id}), 0, "")
+        .call_onebot(
+            "get_msg",
+            &json!({"message_id": reply_id}),
+            self_id,
+            trace_id,
+        )
         .await
         .map_err(|e| e.to_string())?;
     let data = resp.get("data").cloned().unwrap_or(resp);
-    let images = collect_images_from_value(host, data.get("message"), 0).await?;
+    let images = collect_images_from_value(host, data.get("message"), 0, self_id, trace_id).await?;
     Ok((dedupe(images), "引用消息".into()))
 }
 
@@ -60,6 +67,8 @@ async fn collect_images_from_value(
     host: &mut HostClient,
     value: Option<&Value>,
     depth: usize,
+    self_id: i64,
+    trace_id: &str,
 ) -> Result<Vec<ExtractedImage>, String> {
     if depth > MAX_DEPTH {
         return Err("消息嵌套层级过深".into());
@@ -68,18 +77,40 @@ async fn collect_images_from_value(
         return Ok(Vec::new());
     };
     match value {
-        Value::Array(arr) => collect_images_from_segments(host, arr, depth).await,
+        Value::Array(arr) => {
+            collect_images_from_segments(host, arr, depth, self_id, trace_id).await
+        }
         Value::Object(map) => {
             if let Some(message) = map.get("message") {
-                return Box::pin(collect_images_from_value(host, Some(message), depth + 1)).await;
+                return Box::pin(collect_images_from_value(
+                    host,
+                    Some(message),
+                    depth + 1,
+                    self_id,
+                    trace_id,
+                ))
+                .await;
             }
             if let Some(content) = map.get("content") {
-                return Box::pin(collect_images_from_value(host, Some(content), depth + 1)).await;
+                return Box::pin(collect_images_from_value(
+                    host,
+                    Some(content),
+                    depth + 1,
+                    self_id,
+                    trace_id,
+                ))
+                .await;
             }
             if let Some(data) = map.get("data") {
                 if let Some(content) = data.get("content") {
-                    return Box::pin(collect_images_from_value(host, Some(content), depth + 1))
-                        .await;
+                    return Box::pin(collect_images_from_value(
+                        host,
+                        Some(content),
+                        depth + 1,
+                        self_id,
+                        trace_id,
+                    ))
+                    .await;
                 }
                 if map.get("type").and_then(|v| v.as_str()) == Some("forward") {
                     let fid = first_non_empty(&[
@@ -90,7 +121,14 @@ async fn collect_images_from_value(
                     if fid.is_empty() {
                         return Ok(Vec::new());
                     }
-                    return Box::pin(collect_images_from_forward_id(host, &fid, depth + 1)).await;
+                    return Box::pin(collect_images_from_forward_id(
+                        host,
+                        &fid,
+                        depth + 1,
+                        self_id,
+                        trace_id,
+                    ))
+                    .await;
                 }
             }
             Ok(Vec::new())
@@ -104,6 +142,8 @@ async fn collect_images_from_segments(
     host: &mut HostClient,
     segments: &[Value],
     depth: usize,
+    self_id: i64,
+    trace_id: &str,
 ) -> Result<Vec<ExtractedImage>, String> {
     let mut images = Vec::new();
     for seg in segments {
@@ -123,13 +163,23 @@ async fn collect_images_from_segments(
                     seg.get("id").and_then(value_to_string),
                 ]);
                 if !fid.is_empty() {
-                    images.extend(collect_images_from_forward_id(host, &fid, depth + 1).await?);
+                    images.extend(
+                        collect_images_from_forward_id(host, &fid, depth + 1, self_id, trace_id)
+                            .await?,
+                    );
                 }
             }
             "node" => {
                 if let Some(content) = data.and_then(|d| d.get("content")) {
                     images.extend(
-                        Box::pin(collect_images_from_value(host, Some(content), depth + 1)).await?,
+                        Box::pin(collect_images_from_value(
+                            host,
+                            Some(content),
+                            depth + 1,
+                            self_id,
+                            trace_id,
+                        ))
+                        .await?,
                     );
                 }
             }
@@ -143,13 +193,25 @@ async fn collect_images_from_forward_id(
     host: &mut HostClient,
     forward_id: &str,
     depth: usize,
+    self_id: i64,
+    trace_id: &str,
 ) -> Result<Vec<ExtractedImage>, String> {
     let mut resp = host
-        .call_onebot("get_forward_msg", &json!({"message_id": forward_id}), 0, "")
+        .call_onebot(
+            "get_forward_msg",
+            &json!({"message_id": forward_id}),
+            self_id,
+            trace_id,
+        )
         .await;
     if resp.is_err() {
         resp = host
-            .call_onebot("get_forward_msg", &json!({"id": forward_id}), 0, "")
+            .call_onebot(
+                "get_forward_msg",
+                &json!({"id": forward_id}),
+                self_id,
+                trace_id,
+            )
             .await;
     }
     let resp = resp.map_err(|e| e.to_string())?;
@@ -161,7 +223,16 @@ async fn collect_images_from_forward_id(
         .unwrap_or_default();
     let mut images = Vec::new();
     for node in messages {
-        images.extend(Box::pin(collect_images_from_value(host, Some(&node), depth + 1)).await?);
+        images.extend(
+            Box::pin(collect_images_from_value(
+                host,
+                Some(&node),
+                depth + 1,
+                self_id,
+                trace_id,
+            ))
+            .await?,
+        );
     }
     Ok(images)
 }
