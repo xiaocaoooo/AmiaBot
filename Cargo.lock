@@ -1282,6 +1282,7 @@ dependencies = [
  "nyanyabot-proto",
  "parking_lot",
  "plugin-common",
+ "reqwest",
  "serde",
  "serde_json",
  "tokio",

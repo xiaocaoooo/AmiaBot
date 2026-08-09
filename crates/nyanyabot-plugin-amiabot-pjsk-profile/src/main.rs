@@ -46,7 +46,7 @@ fn plugin_descriptor() -> Descriptor {
         }),
         commands: vec![CommandListener {
             name: "pjsk-profile".into(),
-            id: "cmd.pjsk-profile".into(),
+            id: "cmd.profile-show".into(),
             description: "查看 PJSK 个人信息（如 profile, 个人信息, cn个人信息）".into(),
             pattern: r"^(?:(?P<server>cn|jp|tw|en|kr))?(?:个人信息|profile)$".into(),
             match_raw: true,
@@ -192,7 +192,7 @@ impl Plugin for Plug {
         match_data: Option<CommandMatch>,
         trace_id: &str,
     ) -> Result<HandleResult, StructuredError> {
-        if listener_id != "cmd.pjsk-profile" {
+        if listener_id != "cmd.profile-show" {
             return Ok(HandleResult {});
         }
         let host = self.host.read().await.clone();
