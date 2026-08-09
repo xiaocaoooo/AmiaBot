@@ -4,13 +4,16 @@ use nyanyabot_proto::{
     StructuredError, run_plugin_with_host,
 };
 use parking_lot::RwLock;
+use plugin_common::{
+    build_pages_url, event_content, redact_secrets, screenshot_and_upload, send_image, send_text,
+};
 use serde_json::{Value, json};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::RwLock as AsyncRwLock;
 use tracing_subscriber::EnvFilter;
 
 struct Plug {
-    #[allow(dead_code)]
     host: Arc<AsyncRwLock<Option<HostClient>>>,
     cfg: RwLock<Value>,
 }
@@ -20,28 +23,62 @@ fn plugin_descriptor() -> Descriptor {
         name: "Amiabot PJSK Event".into(),
         plugin_id: "external.amiabot-pjsk-event".into(),
         version: "0.1.0".into(),
-        author: "amiabot".into(),
-        description: "PJSK 活动查询".into(),
-        dependencies: vec![
-            "external.screenshot".to_string(),
-            "external.blobserver".to_string(),
-        ],
+        author: "nyanyabot".into(),
+        description: "PJSK 活动查询插件，发送截图".into(),
+        dependencies: vec!["external.screenshot".into(), "external.blobserver".into()],
         config: Some(ConfigSpec {
             version: Some("1".into()),
-            description: Some("config".into()),
-            schema: Some(json!({"type":"object"})),
-            default: Some(json!({"amiabot_pages": "", "default_server": "jp"})),
+            description: Some("Amiabot PJSK Event plugin config".into()),
+            schema: Some(json!({
+                "type":"object",
+                "properties":{
+                    "amiabot_pages":{"type":"string","description":"Amiabot Pages 域名/地址；为空则无法生成截图 URL"},
+                    "default_server":{"type":"string","description":"默认服务器 (jp/cn/en/tw/kr)，不填时为 jp"}
+                },
+                "additionalProperties": true
+            })),
+            default: Some(json!({"amiabot_pages":"","default_server":"jp"})),
         }),
         commands: vec![CommandListener {
-            name: "cmd.pjsk-event".into(),
+            name: "pjsk-event".into(),
             id: "cmd.pjsk-event".into(),
-            description: "PJSK 活动查询".into(),
-            pattern: r"(?i)^(?:(?P<server>cn|jp|tw|en|kr))?(?:event|查活动)(?P<id>[0-9]*)$".into(),
+            description: "PJSK 活动查询（如 event, jpevent, cn查活动, enevent50）".into(),
+            pattern: r"^(?i)(?:(?P<server>cn|jp|tw|en|kr))?(?:event|查活动)(?P<id>[0-9]*)$".into(),
             match_raw: true,
             handler: "Handle".into(),
         }],
         ..Default::default()
     }
+}
+
+fn valid_server(s: &str) -> bool {
+    matches!(s, "cn" | "jp" | "tw" | "en" | "kr")
+}
+
+fn parse_args(groups: &[String], default_server: &str) -> (String, String) {
+    let mut server = String::new();
+    let mut id = String::new();
+    if !groups.is_empty() {
+        let g0 = groups[0].trim().to_lowercase();
+        if valid_server(&g0) {
+            server = g0;
+        }
+    }
+    if groups.len() >= 2 {
+        id = groups[1].trim().to_string();
+    }
+    if server.is_empty() {
+        let ds = default_server.trim().to_lowercase();
+        server = if valid_server(&ds) { ds } else { "jp".into() };
+    }
+    (server, id)
+}
+
+fn now_unix() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
 }
 
 #[async_trait]
@@ -66,7 +103,6 @@ impl Plugin for Plug {
         if listener_id != "cmd.pjsk-event" {
             return Ok(HandleResult {});
         }
-
         let host = self.host.read().await.clone();
         let Some(mut host) = host else {
             return Ok(HandleResult {});
@@ -76,40 +112,47 @@ impl Plugin for Plug {
             .get("amiabot_pages")
             .and_then(|v| v.as_str())
             .unwrap_or("")
+            .trim()
             .to_string();
-        if pages.is_empty() {
-            let _ =
-                plugin_common::send_text(&mut host, &event_raw, "amiabot_pages 未配置", trace_id)
-                    .await;
-            return Ok(HandleResult {});
-        }
         let default_server = cfg
             .get("default_server")
             .and_then(|v| v.as_str())
             .unwrap_or("jp");
-        let full = match_data
+        let _content = match_data
             .as_ref()
             .map(|m| m.full.clone())
-            .unwrap_or_default();
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| event_content(&event_raw));
         let groups = match_data.map(|m| m.groups).unwrap_or_default();
-        let (path, blob_id) = build_page_path(&full, &groups, default_server);
-        let page_url = plugin_common::join_url(&pages, &path);
-        match plugin_common::screenshot_and_upload(
-            &mut host,
-            &page_url,
-            &blob_id,
-            serde_json::json!({}),
-        )
-        .await
-        {
+        let (server, id) = parse_args(&groups, default_server);
+        if !valid_server(&server) {
+            let _ = send_text(&mut host, &event_raw, "❌ 服务器参数无效", trace_id).await;
+            return Ok(HandleResult {});
+        }
+        if pages.is_empty() {
+            let _ = send_text(&mut host, &event_raw, "❌ 服务未配置", trace_id).await;
+            return Ok(HandleResult {});
+        }
+        let mut q = BTreeMap::new();
+        q.insert("server".into(), server.clone());
+        if !id.is_empty() {
+            q.insert("id".into(), id.clone());
+        }
+        let page_url = build_pages_url(&pages, "/pjsk/event", &q);
+        let blob_id = format!(
+            "pjsk-event-{server}-{}-{}",
+            if id.is_empty() { "latest" } else { &id },
+            now_unix()
+        );
+        match screenshot_and_upload(&mut host, &page_url, &blob_id, json!({})).await {
             Ok(url) => {
-                let _ = plugin_common::send_image(&mut host, &event_raw, &url, trace_id).await;
+                let _ = send_image(&mut host, &event_raw, &url, trace_id).await;
             }
             Err(err) => {
-                let _ = plugin_common::send_text(
+                let _ = send_text(
                     &mut host,
                     &event_raw,
-                    &format!("失败: {}", plugin_common::redact_secrets(&err.to_string())),
+                    &format!("❌ 截图失败: {}", redact_secrets(&err.to_string())),
                     trace_id,
                 )
                 .await;
@@ -125,21 +168,6 @@ impl Plugin for Plug {
     }
 }
 
-fn build_page_path(_full: &str, groups: &[String], default_server: &str) -> (String, String) {
-    let server = groups
-        .first()
-        .map(|s| s.as_str())
-        .filter(|s| !s.is_empty())
-        .unwrap_or(default_server);
-    let id = groups.get(1).map(|s| s.as_str()).unwrap_or("");
-    let path = if id.is_empty() {
-        format!("/pjsk/event/{server}")
-    } else {
-        format!("/pjsk/event/{server}/{id}")
-    };
-    (path, format!("pjsk-event-{server}-{id}"))
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     tracing_subscriber::fmt()
@@ -147,11 +175,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .with_writer(std::io::stderr)
         .init();
     let host = Arc::new(AsyncRwLock::new(None));
-    let plugin = Arc::new(Plug {
-        host: host.clone(),
-        cfg: RwLock::new(json!({})),
-    });
-    run_plugin_with_host(plugin, host).await
+    run_plugin_with_host(
+        Arc::new(Plug {
+            host: host.clone(),
+            cfg: RwLock::new(json!({})),
+        }),
+        host,
+    )
+    .await
+}
+
+#[cfg(test)]
+mod unit_tests {
+    use super::parse_args;
+
+    #[test]
+    fn parse_event_with_id() {
+        let (s, id) = parse_args(&["en".into(), "50".into()], "jp");
+        assert_eq!((s.as_str(), id.as_str()), ("en", "50"));
+    }
+
+    #[test]
+    fn parse_event_optional_id() {
+        let (s, id) = parse_args(&["".into(), "".into()], "cn");
+        assert_eq!((s.as_str(), id.as_str()), ("cn", ""));
+    }
 }
 
 #[cfg(test)]

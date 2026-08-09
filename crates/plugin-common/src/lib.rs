@@ -410,18 +410,7 @@ pub mod jsonata {
             return Ok(data.clone());
         }
         if let Some(path) = expr.strip_prefix("$.") {
-            let mut cur = data;
-            for part in path.split('.') {
-                if part.is_empty() {
-                    continue;
-                }
-                if let Ok(idx) = part.parse::<usize>() {
-                    cur = cur.get(idx).ok_or_else(|| format!("missing index {idx}"))?;
-                } else {
-                    cur = cur.get(part).ok_or_else(|| format!("missing {part}"))?;
-                }
-            }
-            return Ok(cur.clone());
+            return lookup_path(path, data);
         }
         if expr == "true" {
             return Ok(Value::Bool(true));
@@ -444,7 +433,40 @@ pub mod jsonata {
         if expr.starts_with('\'') && expr.ends_with('\'') && expr.len() >= 2 {
             return Ok(Value::String(expr[1..expr.len() - 1].to_string()));
         }
+        // Bare identifier / dotted path (Go JSONata style: post_type = 'message').
+        if is_bare_path(expr)
+            && let Ok(v) = lookup_path(expr, data)
+        {
+            return Ok(v);
+        }
         Ok(Value::String(expr.to_string()))
+    }
+
+    fn is_bare_path(expr: &str) -> bool {
+        !expr.is_empty()
+            && expr
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '.')
+            && expr
+                .chars()
+                .next()
+                .map(|c| c.is_ascii_alphabetic() || c == '_')
+                .unwrap_or(false)
+    }
+
+    fn lookup_path(path: &str, data: &Value) -> Result<Value, String> {
+        let mut cur = data;
+        for part in path.split('.') {
+            if part.is_empty() {
+                continue;
+            }
+            if let Ok(idx) = part.parse::<usize>() {
+                cur = cur.get(idx).ok_or_else(|| format!("missing index {idx}"))?;
+            } else {
+                cur = cur.get(part).ok_or_else(|| format!("missing {part}"))?;
+            }
+        }
+        Ok(cur.clone())
     }
 
     fn truthy(v: &Value) -> bool {
@@ -544,7 +566,7 @@ mod tests {
 
     #[test]
     fn jsonata_subset() {
-        let data = json!({"post_type":"message","user_id":1,"arr":[10,20],"nested":{"x":"y"}});
+        let data = json!({"user_id":1,"post_type":"message","arr":[10,20],"nested":{"x":"y"},"action":"send_msg"});
         assert_eq!(jsonata::evaluate("$", &data).unwrap(), data);
         assert_eq!(jsonata::evaluate("$.user_id", &data).unwrap(), json!(1));
         assert_eq!(jsonata::evaluate("$.arr.1", &data).unwrap(), json!(20));
@@ -558,6 +580,19 @@ mod tests {
         );
         assert_eq!(
             jsonata::evaluate("$.nested.x = 'y' and $.user_id = 1", &data).unwrap(),
+            json!(true)
+        );
+        // bare field path (Go JSONata style used by onebot-ws rules)
+        assert_eq!(
+            jsonata::evaluate("post_type = 'message'", &data).unwrap(),
+            json!(true)
+        );
+        assert_eq!(
+            jsonata::evaluate("action = 'send_msg'", &data).unwrap(),
+            json!(true)
+        );
+        assert_eq!(
+            jsonata::evaluate("nested.x = 'y'", &data).unwrap(),
             json!(true)
         );
         assert!(jsonata::is_truthy_filter(

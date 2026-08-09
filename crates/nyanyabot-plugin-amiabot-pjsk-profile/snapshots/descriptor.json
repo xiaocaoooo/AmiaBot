@@ -2,8 +2,8 @@
   "name": "Amiabot PJSK Profile",
   "plugin_id": "external.amiabot-pjsk-profile",
   "version": "0.1.0",
-  "author": "amiabot",
-  "description": "PJSK Profile",
+  "author": "nyanyabot",
+  "description": "PJSK 个人信息查询插件，发送 profile 截图",
   "dependencies": [
     "external.amiabot-pjsk-account",
     "external.screenshot",
@@ -12,8 +12,19 @@
   "exports": [],
   "config": {
     "version": "1",
-    "description": "config",
+    "description": "Amiabot PJSK Profile plugin config",
     "schema": {
+      "additionalProperties": true,
+      "properties": {
+        "amiabot_pages": {
+          "description": "Amiabot Pages 域名/地址；为空则无法生成截图 URL",
+          "type": "string"
+        },
+        "default_server": {
+          "description": "默认服务器 (jp/cn/en/tw/kr)，不填时为 jp",
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "default": {
@@ -23,9 +34,9 @@
   },
   "commands": [
     {
-      "name": "cmd.profile-show",
-      "id": "cmd.profile-show",
-      "description": "PJSK Profile",
+      "name": "pjsk-profile",
+      "id": "cmd.pjsk-profile",
+      "description": "查看 PJSK 个人信息（如 profile, 个人信息, cn个人信息）",
       "pattern": "^(?:(?P<server>cn|jp|tw|en|kr))?(?:个人信息|profile)$",
       "match_raw": true,
       "handler": "Handle"
