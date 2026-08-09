@@ -296,6 +296,39 @@ impl GalleryClient {
         })
     }
 
+    pub async fn random_image(
+        &self,
+        tags: &[String],
+    ) -> Result<GalleryImageWithTags, GalleryApiError> {
+        let mut url = format!("{}/v1/images/random", self.base.trim_end_matches('/'));
+        if !tags.is_empty() {
+            let joined = tags
+                .iter()
+                .map(|t| t.trim())
+                .filter(|t| !t.is_empty())
+                .collect::<Vec<_>>()
+                .join(",");
+            if !joined.is_empty() {
+                url.push_str(&format!("?tags={}", urlencoding_simple(&joined)));
+            }
+        }
+        let req = self.apply_auth(self.http.get(&url), false);
+        let resp = req.send().await.map_err(|e| GalleryApiError {
+            status_code: 0,
+            message: e.to_string(),
+            duplicate_image_id: 0,
+        })?;
+        if !resp.status().is_success() {
+            return Err(self.decode_api_error(resp).await);
+        }
+        resp.json().await.map_err(|e| GalleryApiError {
+            status_code: 0,
+            message: e.to_string(),
+            duplicate_image_id: 0,
+        })
+    }
+
+    #[allow(dead_code)]
     pub async fn list_images_by_tag(
         &self,
         tag: &str,

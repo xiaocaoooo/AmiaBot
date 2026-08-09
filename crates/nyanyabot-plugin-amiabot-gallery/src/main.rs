@@ -14,7 +14,7 @@ use nyanyabot_proto::{
 use parking_lot::RwLock;
 use plugin_common::{
     build_pages_url, event_content, first_match_group, redact_secrets, screenshot_and_upload,
-    send_image, send_text,
+    send_image, send_text, upload_remote_blob,
 };
 use serde_json::{Value, json};
 use tokio::sync::RwLock as AsyncRwLock;
@@ -106,6 +106,57 @@ fn parse_tags(input: &str) -> Vec<String> {
 
 fn looks_like_image_id(input: &str) -> bool {
     input.trim().parse::<i64>().is_ok()
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GalleryPagesViewMode {
+    None,
+    AllTags,
+    AllImages,
+}
+
+/// Go parseGalleryPagesViewInput: "所有" => all tags; "所有tag1, tag2" => all images.
+fn parse_gallery_pages_view_input(input: &str) -> (GalleryPagesViewMode, Vec<String>) {
+    let input = input.trim();
+    if input == "所有" {
+        return (GalleryPagesViewMode::AllTags, Vec::new());
+    }
+    if let Some(rest) = input.strip_prefix("所有") {
+        let tags = parse_tags(rest.trim());
+        if tags.is_empty() {
+            return (GalleryPagesViewMode::None, Vec::new());
+        }
+        return (GalleryPagesViewMode::AllImages, tags);
+    }
+    (GalleryPagesViewMode::None, Vec::new())
+}
+
+async fn send_gallery_image(
+    host: &mut HostClient,
+    event: &Value,
+    client: &GalleryClient,
+    image: &GalleryImageWithTags,
+    trace_id: &str,
+) -> Result<(), String> {
+    let render = client.build_render_url(image.image.id);
+    if render.trim().is_empty() {
+        return Err("图片渲染地址为空，无法发送".into());
+    }
+    let blob_id = format!(
+        "gallery-image-{}-{}",
+        image.image.id,
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0)
+    );
+    let onebot_url = upload_remote_blob(host, &render, &blob_id, "image")
+        .await
+        .map_err(|e| e.to_string())?;
+    send_image(host, event, &onebot_url, trace_id)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 fn tag_names(img: &GalleryImageWithTags) -> Vec<String> {
@@ -460,41 +511,99 @@ impl Plugin for Plug {
                     .await;
                     return Ok(HandleResult {});
                 }
-                // special pages modes from Go parseGalleryPagesViewInput
-                let lower = input.to_lowercase();
-                if lower == "alltags" || lower == "全部标签" || lower == "所有标签" {
-                    if cfg.amiabot_pages.is_empty() {
-                        let _ = send_text(&mut host, &event_raw, "amiabot_pages 未配置", trace_id)
-                            .await;
-                        return Ok(HandleResult {});
-                    }
-                    let page =
-                        build_pages_url(&cfg.amiabot_pages, "/gallery/tags", &BTreeMap::new());
-                    match screenshot_and_upload(&mut host, &page, "gallery-all-tags", json!({}))
-                        .await
-                    {
-                        Ok(url) => {
-                            let _ = send_image(&mut host, &event_raw, &url, trace_id).await;
-                        }
-                        Err(err) => {
+
+                let (mode, page_tags) = parse_gallery_pages_view_input(&input);
+                match mode {
+                    GalleryPagesViewMode::AllTags => {
+                        if cfg.amiabot_pages.is_empty() {
                             let _ = send_text(
                                 &mut host,
                                 &event_raw,
-                                &format!("查看失败：{err}"),
+                                "❌ 生成画廊页面失败：未配置 amiabot_pages",
                                 trace_id,
                             )
                             .await;
+                            return Ok(HandleResult {});
                         }
+                        let page =
+                            build_pages_url(&cfg.amiabot_pages, "/gallery/tags", &BTreeMap::new());
+                        match screenshot_and_upload(&mut host, &page, "gallery-tags", json!({}))
+                            .await
+                        {
+                            Ok(url) => {
+                                let _ = send_image(&mut host, &event_raw, &url, trace_id).await;
+                            }
+                            Err(err) => {
+                                let _ = send_text(
+                                    &mut host,
+                                    &event_raw,
+                                    &format!(
+                                        "❌ 生成画廊页面失败：{}",
+                                        redact_secrets(&err.to_string())
+                                    ),
+                                    trace_id,
+                                )
+                                .await;
+                            }
+                        }
+                        return Ok(HandleResult {});
                     }
-                    return Ok(HandleResult {});
+                    GalleryPagesViewMode::AllImages => {
+                        if cfg.amiabot_pages.is_empty() {
+                            let _ = send_text(
+                                &mut host,
+                                &event_raw,
+                                "❌ 生成画廊页面失败：未配置 amiabot_pages",
+                                trace_id,
+                            )
+                            .await;
+                            return Ok(HandleResult {});
+                        }
+                        let mut q = BTreeMap::new();
+                        q.insert("tags".into(), page_tags.join(","));
+                        let page = build_pages_url(&cfg.amiabot_pages, "/gallery/images", &q);
+                        match screenshot_and_upload(&mut host, &page, "gallery-images", json!({}))
+                            .await
+                        {
+                            Ok(url) => {
+                                let _ = send_image(&mut host, &event_raw, &url, trace_id).await;
+                            }
+                            Err(err) => {
+                                let _ = send_text(
+                                    &mut host,
+                                    &event_raw,
+                                    &format!(
+                                        "❌ 生成画廊页面失败：{}",
+                                        redact_secrets(&err.to_string())
+                                    ),
+                                    trace_id,
+                                )
+                                .await;
+                            }
+                        }
+                        return Ok(HandleResult {});
+                    }
+                    GalleryPagesViewMode::None => {}
                 }
 
+                // Image ID path (404 falls through to tag search like Go).
                 if looks_like_image_id(&input) {
                     let id: i64 = input.trim().parse().unwrap_or(0);
                     match client.get_image(id).await {
                         Ok(image) => {
-                            let file_url = client.build_render_url(image.image.id);
-                            let _ = send_image(&mut host, &event_raw, &file_url, trace_id).await;
+                            if let Err(err) =
+                                send_gallery_image(&mut host, &event_raw, &client, &image, trace_id)
+                                    .await
+                            {
+                                let _ = send_text(
+                                    &mut host,
+                                    &event_raw,
+                                    &format!("❌ 发送图片失败：{}", redact_secrets(&err)),
+                                    trace_id,
+                                )
+                                .await;
+                                return Ok(HandleResult {});
+                            }
                             let _ = send_text(
                                 &mut host,
                                 &event_raw,
@@ -502,18 +611,22 @@ impl Plugin for Plug {
                                 trace_id,
                             )
                             .await;
+                            return Ok(HandleResult {});
                         }
-                        Err(err) => {
+                        Err(err) if err.status_code != 404 && err.status_code != 0 => {
                             let _ = send_text(
                                 &mut host,
                                 &event_raw,
-                                &format!("查看失败：{}", redact_secrets(&err.to_string())),
+                                &format!("❌ 查询图片失败：{}", redact_secrets(&err.to_string())),
                                 trace_id,
                             )
                             .await;
+                            return Ok(HandleResult {});
+                        }
+                        Err(_) => {
+                            // 404 / transport ambiguity: fall through to tag parsing
                         }
                     }
-                    return Ok(HandleResult {});
                 }
 
                 let tags = parse_tags(&input);
@@ -527,67 +640,67 @@ impl Plugin for Plug {
                     .await;
                     return Ok(HandleResult {});
                 }
-                // Prefer pages card when available (Go behavior for multi-tag/list).
-                if !cfg.amiabot_pages.is_empty() {
-                    let mut q = BTreeMap::new();
-                    q.insert("tags".into(), tags.join(","));
-                    let page = build_pages_url(&cfg.amiabot_pages, "/gallery/view", &q);
-                    match screenshot_and_upload(
-                        &mut host,
-                        &page,
-                        &format!("gallery-view-{}", tags.join("-")),
-                        json!({}),
-                    )
-                    .await
-                    {
-                        Ok(url) => {
-                            let _ = send_image(&mut host, &event_raw, &url, trace_id).await;
-                            return Ok(HandleResult {});
-                        }
-                        Err(err) => {
-                            warn!(error=%err, "gallery pages view failed; fallback list");
-                        }
-                    }
-                }
-                match client.list_images_by_tag(&tags[0], 1, 5).await {
-                    Ok((items, total)) => {
-                        if items.is_empty() {
-                            let _ = send_text(
-                                &mut host,
-                                &event_raw,
-                                &format!("标签 {} 下没有图片", tags[0]),
-                                trace_id,
-                            )
-                            .await;
-                        } else {
-                            let _ = send_text(
-                                &mut host,
-                                &event_raw,
-                                &format!(
-                                    "标签 {} 共 {total} 张，展示前 {} 张",
-                                    tags[0],
-                                    items.len()
-                                ),
-                                trace_id,
-                            )
-                            .await;
-                            for img in items.iter().take(5) {
-                                let url = client.build_render_url(img.image.id);
-                                let _ = send_image(&mut host, &event_raw, &url, trace_id).await;
-                            }
-                        }
+
+                match client.find_missing_tags(&tags).await {
+                    Ok(missing) if !missing.is_empty() => {
+                        let _ =
+                            send_text(&mut host, &event_raw, "没有找到匹配的图片或标签", trace_id)
+                                .await;
+                        return Ok(HandleResult {});
                     }
                     Err(err) => {
                         let _ = send_text(
                             &mut host,
                             &event_raw,
-                            &format!("查看失败：{}", redact_secrets(&err.to_string())),
+                            &format!("❌ 查询标签失败：{}", redact_secrets(&err.to_string())),
+                            trace_id,
+                        )
+                        .await;
+                        return Ok(HandleResult {});
+                    }
+                    Ok(_) => {}
+                }
+
+                match client.random_image(&tags).await {
+                    Ok(image) => {
+                        if let Err(err) =
+                            send_gallery_image(&mut host, &event_raw, &client, &image, trace_id)
+                                .await
+                        {
+                            let _ = send_text(
+                                &mut host,
+                                &event_raw,
+                                &format!("❌ 发送图片失败：{}", redact_secrets(&err)),
+                                trace_id,
+                            )
+                            .await;
+                            return Ok(HandleResult {});
+                        }
+                        let _ = send_text(
+                            &mut host,
+                            &event_raw,
+                            &build_image_meta_text(&image),
+                            trace_id,
+                        )
+                        .await;
+                    }
+                    Err(err) if err.status_code == 404 => {
+                        let _ =
+                            send_text(&mut host, &event_raw, "没有找到匹配的图片或标签", trace_id)
+                                .await;
+                    }
+                    Err(err) => {
+                        let _ = send_text(
+                            &mut host,
+                            &event_raw,
+                            &format!("❌ 查询图片失败：{}", redact_secrets(&err.to_string())),
                             trace_id,
                         )
                         .await;
                     }
                 }
             }
+
             _ => {
                 let _ = event_content(&event_raw);
             }
@@ -662,5 +775,21 @@ mod unit_tests {
     fn image_id_detect() {
         assert!(looks_like_image_id("42"));
         assert!(!looks_like_image_id("cat"));
+    }
+
+    #[test]
+    fn pages_view_input_matches_go() {
+        assert_eq!(
+            parse_gallery_pages_view_input("所有"),
+            (GalleryPagesViewMode::AllTags, Vec::<String>::new())
+        );
+        let (mode, tags) = parse_gallery_pages_view_input("所有cat, cover");
+        assert_eq!(mode, GalleryPagesViewMode::AllImages);
+        assert_eq!(tags, vec!["cat".to_string(), "cover".to_string()]);
+        let (mode, tags) = parse_gallery_pages_view_input("所有,");
+        assert_eq!(mode, GalleryPagesViewMode::None);
+        assert!(tags.is_empty());
+        let (mode, _) = parse_gallery_pages_view_input("cat");
+        assert_eq!(mode, GalleryPagesViewMode::None);
     }
 }

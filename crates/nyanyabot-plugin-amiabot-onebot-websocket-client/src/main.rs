@@ -279,7 +279,7 @@ impl Plug {
         let handle = tokio::spawn(async move {
             let mut delay = std::time::Duration::from_secs(1);
             loop {
-                match connect_and_serve(
+                let result = connect_and_serve(
                     &url,
                     &token,
                     stop.clone(),
@@ -287,16 +287,26 @@ impl Plug {
                     host.clone(),
                     downstream_rules.clone(),
                 )
-                .await
-                {
-                    Ok(()) => {}
-                    Err(err) => warn!(error=%err, "onebot ws client loop error; retrying"),
+                .await;
+                match &result {
+                    Ok(()) => {
+                        // Clean stop or disconnect after connected: reset backoff (Go parity).
+                        delay = std::time::Duration::from_secs(1);
+                    }
+                    Err(err) => {
+                        warn!(error=%err, "onebot ws client loop error; retrying");
+                    }
                 }
                 tokio::select! {
                     _ = stop.notified() => break,
                     _ = tokio::time::sleep(delay) => {}
                 }
-                delay = (delay * 2).min(std::time::Duration::from_secs(30));
+                if result.is_err() {
+                    delay = (delay * 2).min(std::time::Duration::from_secs(30));
+                } else {
+                    // After an established session drops, Go waits 1s then retries.
+                    delay = std::time::Duration::from_secs(1);
+                }
             }
         });
         *self.outbound.lock().await = Some(handle);
