@@ -162,20 +162,23 @@ fn chrono_like_unix() -> i64 {
 }
 
 fn build_downloader_url(downloader_server: &str, id: &str) -> String {
-    let base = normalize_http_base(downloader_server).trim_end_matches('/').to_string();
+    let base = normalize_http_base(downloader_server)
+        .trim_end_matches('/')
+        .to_string();
     if base.is_empty() || id.is_empty() {
         return String::new();
     }
     let mut enc = String::new();
     for b in id.bytes() {
         match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => enc.push(b as char),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                enc.push(b as char)
+            }
             _ => enc.push_str(&format!("%{b:02X}")),
         }
     }
     format!("{base}/bilibili/download/{enc}")
 }
-
 
 #[async_trait]
 impl Plugin for Plug {
@@ -272,13 +275,7 @@ impl Plugin for Plug {
         }
         if !video_url.is_empty() {
             let mut final_video = video_url;
-            match upload_remote_blob(
-                &mut host,
-                &final_video,
-                &format!("{id}-video"),
-                "video",
-            )
-            .await
+            match upload_remote_blob(&mut host, &final_video, &format!("{id}-video"), "video").await
             {
                 Ok(url) => final_video = url,
                 Err(err) => warn!(error=%err, "bilibili video blob upload failed; send raw url"),

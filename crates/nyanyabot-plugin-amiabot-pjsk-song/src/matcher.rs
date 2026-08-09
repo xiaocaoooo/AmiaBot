@@ -196,10 +196,15 @@ fn traditional_to_simple(s: &str) -> String {
         ('輪', '轮'),
         ('迴', '回'),
         ('圈', '圈'),
-        ('循', '循')
+        ('循', '循'),
     ];
     s.chars()
-        .map(|c| MAP.iter().find(|(t, _)| *t == c).map(|(_, s)| *s).unwrap_or(c))
+        .map(|c| {
+            MAP.iter()
+                .find(|(t, _)| *t == c)
+                .map(|(_, s)| *s)
+                .unwrap_or(c)
+        })
         .collect()
 }
 

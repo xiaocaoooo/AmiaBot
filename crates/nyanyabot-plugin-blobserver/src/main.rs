@@ -225,9 +225,7 @@ async fn blob_prepare(
         .map_err(|e| StructuredError::internal(redact_secrets(&e.to_string())))?
         .error_for_status()
         .map_err(|e| {
-            StructuredError::internal(redact_secrets(&format!(
-                "blob prepare failed: {e}"
-            )))
+            StructuredError::internal(redact_secrets(&format!("blob prepare failed: {e}")))
         })?;
     let body: Value = resp
         .json()
@@ -431,20 +429,17 @@ mod unit_tests {
                 let n = sock.read(&mut buf).await.unwrap_or(0);
                 let req = String::from_utf8_lossy(&buf[..n]).to_string();
                 log2.lock().await.push(req.clone());
-                let (status, body) = if req.starts_with("POST ") && req.contains("/v1/blobs/prepare")
-                {
-                    (200, r#"{"upload_required":true}"#)
-                } else if req.starts_with("POST ") && req.contains("/v1/blobs/") {
-                    (200, r#"{"ok":true}"#)
-                } else if req.starts_with("GET ") {
-                    // source download
-                    (
-                        200,
-                        "PNGDATA",
-                    )
-                } else {
-                    (404, "no")
-                };
+                let (status, body) =
+                    if req.starts_with("POST ") && req.contains("/v1/blobs/prepare") {
+                        (200, r#"{"upload_required":true}"#)
+                    } else if req.starts_with("POST ") && req.contains("/v1/blobs/") {
+                        (200, r#"{"ok":true}"#)
+                    } else if req.starts_with("GET ") {
+                        // source download
+                        (200, "PNGDATA")
+                    } else {
+                        (404, "no")
+                    };
                 let resp = format!(
                     "HTTP/1.1 {status} OK\r\nContent-Length: {}\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{body}",
                     body.len()
@@ -507,9 +502,9 @@ mod unit_tests {
             "missing prepare: {entries:?}"
         );
         assert!(
-            entries
-                .iter()
-                .any(|e| e.contains("POST ") && e.contains("/v1/blobs/abc") && e.contains("multipart")),
+            entries.iter().any(|e| e.contains("POST ")
+                && e.contains("/v1/blobs/abc")
+                && e.contains("multipart")),
             "missing multipart upload: {entries:?}"
         );
     }
