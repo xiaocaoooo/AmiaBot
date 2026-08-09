@@ -1356,6 +1356,7 @@ name = "nyanyabot-plugin-amiabot-query"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "nyanyabot-proto",
  "parking_lot",
  "plugin-common",

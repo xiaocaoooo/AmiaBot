@@ -187,6 +187,385 @@ async fn onebot(
     host.call_onebot(action, &params, self_id, trace_id).await
 }
 
+fn format_timestamp(ts: i64) -> String {
+    if ts <= 0 {
+        return String::new();
+    }
+    use chrono::{TimeZone, Utc};
+    match Utc.timestamp_opt(ts, 0) {
+        chrono::LocalResult::Single(dt) => dt.format("%Y-%m-%d %H:%M:%S").to_string(),
+        _ => ts.to_string(),
+    }
+}
+
+fn render_honor_member(v: &Value) -> String {
+    if v.is_null() || !v.is_object() {
+        return String::new();
+    }
+    let nick = s(v, &["nickname", "nick"]);
+    let uid = n_i64(v, &["user_id", "userId"]);
+    let desc = s(v, &["description", "desc"]);
+    if nick.is_empty() && uid == 0 {
+        return String::new();
+    }
+    let mut out = if !nick.is_empty() {
+        nick
+    } else {
+        uid.to_string()
+    };
+    if uid > 0 {
+        out = format!("{out}({uid})");
+    }
+    if !desc.is_empty() {
+        out = format!("{out} {desc}");
+    }
+    out
+}
+
+fn first_honor_member(list: Option<&Value>) -> Value {
+    list.and_then(|v| v.as_array())
+        .and_then(|a| a.first())
+        .cloned()
+        .unwrap_or(Value::Null)
+}
+
+fn bool_from_value(v: Option<&Value>) -> Option<bool> {
+    match v? {
+        Value::Bool(b) => Some(*b),
+        Value::Number(n) => Some(n.as_i64().unwrap_or(0) != 0),
+        Value::String(s) => match s.trim().to_lowercase().as_str() {
+            "true" | "1" | "yes" => Some(true),
+            "false" | "0" | "no" => Some(false),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+async fn fetch_group_page_params(
+    host: &mut HostClient,
+    group_id: i64,
+    self_id: i64,
+    trace_id: &str,
+) -> Result<BTreeMap<String, String>, String> {
+    let mut q = BTreeMap::new();
+    put_always(&mut q, "id", group_id);
+
+    let mut name = String::new();
+    let mut remark = String::new();
+    let mut level = 0i64;
+    let mut create_time = 0i64;
+    let mut member_count = 0i64;
+    let mut max_member_count = 0i64;
+    let mut active_members = 0i64;
+    let mut owner_id = 0i64;
+    let mut rules = String::new();
+    let mut join_question = String::new();
+    let mut description = String::new();
+    let mut is_muted_all = false;
+    let mut detail_ok = false;
+    let mut base_ok = false;
+
+    // get_group_detail_info (NapCat / extended)
+    if let Ok(resp) = onebot(
+        host,
+        "get_group_detail_info",
+        json!({"group_id": group_id}),
+        self_id,
+        trace_id,
+    )
+    .await
+    {
+        let d = api_data(&resp);
+        detail_ok = true;
+        name = s(&d, &["group_name", "groupName", "name"]);
+        level = n_i64(&d, &["group_grade", "groupGrade", "level"]);
+        create_time = n_i64(&d, &["group_create_time", "groupCreateTime", "create_time"]);
+        member_count = first_positive(&[
+            n_i64(&d, &["member_num", "memberNum"]),
+            n_i64(&d, &["member_count", "memberCount"]),
+        ]);
+        max_member_count = first_positive(&[
+            n_i64(&d, &["max_member_num", "maxMemberNum"]),
+            n_i64(&d, &["max_member_count", "maxMemberCount"]),
+        ]);
+        active_members = n_i64(&d, &["active_member_num", "activeMemberNum"]);
+        owner_id = first_positive(&[
+            n_i64(&d, &["owner_uin", "ownerUin"]),
+            n_i64(&d, &["owner_id", "ownerId"]),
+        ]);
+        rules = truncate_text(&s(&d, &["finger_memo", "fingerMemo"]), 120);
+        join_question = truncate_text(&s(&d, &["group_question", "groupQuestion"]), 120);
+        description = truncate_text(&s(&d, &["group_memo", "groupMemo", "description"]), 120);
+        is_muted_all = n_i64(&d, &["shut_up_all_timestamp", "shutUpAllTimestamp"]) > 0;
+    }
+
+    // get_group_info base
+    match onebot(
+        host,
+        "get_group_info",
+        json!({"group_id": group_id, "no_cache": false}),
+        self_id,
+        trace_id,
+    )
+    .await
+    {
+        Ok(resp) => {
+            let d = api_data(&resp);
+            base_ok = true;
+            if name.is_empty() {
+                name = s(&d, &["group_name", "groupName", "name"]);
+            }
+            if member_count <= 0 {
+                member_count = n_i64(&d, &["member_count", "memberCount"]);
+            }
+            if max_member_count <= 0 {
+                max_member_count = n_i64(&d, &["max_member_count", "maxMemberCount"]);
+            }
+            remark = truncate_text(&s(&d, &["group_remark", "groupRemark", "remark"]), 64);
+            if !detail_ok {
+                is_muted_all = n_i64(&d, &["group_all_shut", "groupAllShut"]) > 0;
+            }
+            if owner_id <= 0 {
+                owner_id = n_i64(&d, &["owner_id", "ownerId"]);
+            }
+        }
+        Err(err) if !detail_ok => {
+            return Err(format!("get_group_info 失败: {err}"));
+        }
+        Err(_) => {}
+    }
+
+    if name.is_empty() {
+        name = format!("群聊 {group_id}");
+    }
+    if !detail_ok && !base_ok {
+        return Err("获取群资料失败".into());
+    }
+
+    put(&mut q, "name", &name);
+    put(&mut q, "remark", &remark);
+    put(&mut q, "level", level);
+    put(&mut q, "create_time", format_timestamp(create_time));
+    put(&mut q, "member_count", member_count);
+    put(&mut q, "max_member_count", max_member_count);
+    put(&mut q, "active_member_count", active_members);
+    put(&mut q, "owner_id", owner_id);
+    put(&mut q, "rules", &rules);
+    put(&mut q, "join_question", &join_question);
+    put(&mut q, "description", &description);
+    if is_muted_all {
+        put_always(&mut q, "is_muted_all", "true");
+    }
+
+    // member list stats
+    let mut admin_count = 0i64;
+    let mut robot_count = 0i64;
+    let mut muted_count = 0i64;
+    let mut card_count = 0i64;
+    let mut title_count = 0i64;
+    let mut unfriendly_count = 0i64;
+    let mut male_count = 0i64;
+    let mut female_count = 0i64;
+    let mut unknown_sex_count = 0i64;
+    let mut derived_active = 0i64;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+
+    if let Ok(resp) = onebot(
+        host,
+        "get_group_member_list",
+        json!({"group_id": group_id, "no_cache": false}),
+        self_id,
+        trace_id,
+    )
+    .await
+    {
+        let data = api_data(&resp);
+        let members = if let Some(arr) = data.as_array() {
+            arr.clone()
+        } else if let Some(arr) = data.get("members").and_then(|v| v.as_array()) {
+            arr.clone()
+        } else {
+            Vec::new()
+        };
+        for m in members {
+            let role = normalize_enum(&s(&m, &["role"]));
+            match role.as_str() {
+                "owner" => {
+                    let uid = n_i64(&m, &["user_id", "userId"]);
+                    if owner_id <= 0 && uid > 0 {
+                        owner_id = uid;
+                    }
+                }
+                "admin" => admin_count += 1,
+                _ => {}
+            }
+            if bool_from_value(m.get("is_robot").or_else(|| m.get("isRobot"))).unwrap_or(false) {
+                robot_count += 1;
+            }
+            if bool_from_value(m.get("unfriendly")).unwrap_or(false) {
+                unfriendly_count += 1;
+            }
+            let shut = n_i64(&m, &["shut_up_timestamp", "shutUpTimestamp"]);
+            if shut > now {
+                muted_count += 1;
+            }
+            if !s(&m, &["card"]).is_empty() {
+                card_count += 1;
+            }
+            if !s(&m, &["title"]).is_empty() {
+                title_count += 1;
+            }
+            match normalize_enum(&s(&m, &["sex"])).as_str() {
+                "male" | "man" | "1" => male_count += 1,
+                "female" | "woman" | "2" => female_count += 1,
+                _ => unknown_sex_count += 1,
+            }
+            let last = n_i64(&m, &["last_sent_time", "lastSentTime"]);
+            if last > now - 7 * 24 * 3600 {
+                derived_active += 1;
+            }
+        }
+        put(&mut q, "owner_id", owner_id);
+        put(&mut q, "admin_count", admin_count);
+        put(&mut q, "robot_count", robot_count);
+        put(&mut q, "muted_count", muted_count);
+        put(&mut q, "card_count", card_count);
+        put(&mut q, "title_count", title_count);
+        put(&mut q, "unfriendly_count", unfriendly_count);
+        put(&mut q, "male_count", male_count);
+        put(&mut q, "female_count", female_count);
+        put(&mut q, "unknown_sex_count", unknown_sex_count);
+        put(&mut q, "derived_active_member_count", derived_active);
+    }
+
+    // honors
+    if let Ok(resp) = onebot(
+        host,
+        "get_group_honor_info",
+        json!({"group_id": group_id, "type": "all"}),
+        self_id,
+        trace_id,
+    )
+    .await
+    {
+        let d = api_data(&resp);
+        put(
+            &mut q,
+            "current_talkative",
+            render_honor_member(d.get("current_talkative").unwrap_or(&Value::Null)),
+        );
+        put(
+            &mut q,
+            "talkative_top",
+            render_honor_member(&first_honor_member(d.get("talkative_list"))),
+        );
+        put(
+            &mut q,
+            "performer_top",
+            render_honor_member(&first_honor_member(d.get("performer_list"))),
+        );
+        put(
+            &mut q,
+            "legend_top",
+            render_honor_member(&first_honor_member(d.get("legend_list"))),
+        );
+        put(
+            &mut q,
+            "emotion_top",
+            render_honor_member(&first_honor_member(d.get("emotion_list"))),
+        );
+        put(
+            &mut q,
+            "strong_newbie_top",
+            render_honor_member(&first_honor_member(d.get("strong_newbie_list"))),
+        );
+    }
+
+    // notices
+    if let Ok(resp) = onebot(
+        host,
+        "_get_group_notice",
+        json!({"group_id": group_id}),
+        self_id,
+        trace_id,
+    )
+    .await
+    {
+        let data = api_data(&resp);
+        let notices = if let Some(arr) = data.as_array() {
+            arr.clone()
+        } else if let Some(arr) = data.get("notices").and_then(|v| v.as_array()) {
+            arr.clone()
+        } else {
+            Vec::new()
+        };
+        if let Some(latest) = notices.first() {
+            let msg = latest.get("message").cloned().unwrap_or(Value::Null);
+            let text = {
+                let t = s(&msg, &["text"]);
+                if t.is_empty() {
+                    s(latest, &["text"])
+                } else {
+                    t
+                }
+            };
+            put(&mut q, "latest_notice_text", truncate_text(&text, 160));
+            let pt = n_i64(latest, &["publish_time", "publishTime"]);
+            put(&mut q, "latest_notice_time", format_timestamp(pt));
+            put(
+                &mut q,
+                "latest_notice_sender_id",
+                n_i64(latest, &["sender_id", "senderId"]),
+            );
+            put(
+                &mut q,
+                "latest_notice_read_num",
+                n_i64(latest, &["read_num", "readNum"]),
+            );
+        }
+    }
+
+    // extended info
+    if let Ok(resp) = onebot(
+        host,
+        "get_group_info_ex",
+        json!({"group_id": group_id}),
+        self_id,
+        trace_id,
+    )
+    .await
+    {
+        let d = api_data(&resp);
+        let ext = d
+            .get("extInfo")
+            .or_else(|| d.get("ext_info"))
+            .cloned()
+            .unwrap_or(d);
+        put(
+            &mut q,
+            "lucky_word",
+            truncate_text(&s(&ext, &["luckyWord", "lucky_word"]), 32),
+        );
+        if owner_id <= 0 {
+            let owner = ext
+                .pointer("/groupOwnerID/memberUin")
+                .or_else(|| ext.pointer("/group_owner_id/member_uin"))
+                .and_then(|v| v.as_str())
+                .and_then(|s| s.parse::<i64>().ok())
+                .unwrap_or(0);
+            if owner > 0 {
+                put(&mut q, "owner_id", owner);
+            }
+        }
+    }
+
+    Ok(q)
+}
+
 #[async_trait]
 impl Plugin for Plug {
     async fn descriptor(&self) -> Result<Descriptor, StructuredError> {
@@ -485,80 +864,31 @@ impl Plugin for Plug {
                     let _ = send_text(&mut host, &event_raw, "❌ 无法识别当前群聊", trace_id).await;
                     return Ok(HandleResult {});
                 }
-                let info = match onebot(
-                    &mut host,
-                    "get_group_info",
-                    json!({"group_id": group_id, "no_cache": false}),
-                    self_id,
-                    trace_id,
-                )
-                .await
+                let q = match fetch_group_page_params(&mut host, group_id, self_id, trace_id).await
                 {
-                    Ok(v) => api_data(&v),
+                    Ok(q) => q,
                     Err(err) => {
                         let _ = send_text(
                             &mut host,
                             &event_raw,
-                            &format!("❌ 获取群资料失败：{}", redact_secrets(&err.to_string())),
+                            &format!("❌ 获取群资料失败：{}", redact_secrets(&err)),
                             trace_id,
                         )
                         .await;
                         return Ok(HandleResult {});
                     }
                 };
-                let mut q = BTreeMap::new();
-                put_always(&mut q, "id", group_id);
-                put(
-                    &mut q,
-                    "group_name",
-                    s(&info, &["group_name", "groupName", "name"]),
-                );
-                put(
-                    &mut q,
-                    "member_count",
-                    n_i64(&info, &["member_count", "memberCount"]),
-                );
-                put(
-                    &mut q,
-                    "max_member_count",
-                    n_i64(&info, &["max_member_count", "maxMemberCount"]),
-                );
-                put(&mut q, "owner_id", n_i64(&info, &["owner_id", "ownerId"]));
-                put(
-                    &mut q,
-                    "group_all_shut",
-                    n_i64(&info, &["group_all_shut", "groupAllShut"]),
-                );
-                put(
-                    &mut q,
-                    "group_remark",
-                    s(&info, &["group_remark", "groupRemark"]),
-                );
-                put(&mut q, "group_memo", s(&info, &["group_memo", "groupMemo"]));
-
-                // optional extra detail APIs used by Go when available
-                if let Ok(resp) = onebot(
-                    &mut host,
-                    "get_group_honor_info",
-                    json!({"group_id": group_id, "type": "all"}),
-                    self_id,
-                    trace_id,
-                )
-                .await
-                {
-                    // pass condensed honor presence flag; full JSON may be too large for query
-                    let d = api_data(&resp);
-                    if d.get("current_talkative").is_some() || d.get("talkative_list").is_some() {
-                        put(&mut q, "has_honor", true);
-                    }
-                }
-
                 if cfg.amiabot_pages.is_empty() {
-                    let name = q.get("group_name").cloned().unwrap_or_default();
+                    let name = q.get("name").cloned().unwrap_or_default();
+                    let members = q.get("member_count").cloned().unwrap_or_else(|| "?".into());
                     let _ = send_text(
                         &mut host,
                         &event_raw,
-                        &format!("群 {group_id}\n群名：{name}"),
+                        &format!(
+                            "群 {group_id}
+群名：{name}
+人数：{members}"
+                        ),
                         trace_id,
                     )
                     .await;
@@ -664,5 +994,14 @@ mod unit_tests {
     fn birthday_format() {
         assert_eq!(format_birthday(2000, 1, 2), "2000-01-02");
         assert_eq!(format_birthday(0, 1, 2), "");
+    }
+
+    #[test]
+    fn honor_render_and_timestamp() {
+        let v = serde_json::json!({"nickname":"Alice","user_id":123,"description":"day1"});
+        let s = super::render_honor_member(&v);
+        assert!(s.contains("Alice(123)"));
+        assert_eq!(super::format_timestamp(0), "");
+        assert!(!super::format_timestamp(1_700_000_000).is_empty());
     }
 }

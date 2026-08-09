@@ -108,8 +108,26 @@ pub fn event_message_type(event: &Value) -> &str {
 }
 
 pub fn event_content(event: &Value) -> String {
+    // Prefer host-injected content; else mirror Go deriveContent on `message`.
     if let Some(s) = event.get("content").and_then(|v| v.as_str()) {
         return s.to_string();
+    }
+    match event.get("message") {
+        Some(Value::String(s)) => return s.clone(),
+        Some(Value::Array(arr)) => {
+            let mut out = String::new();
+            for seg in arr {
+                if seg.get("type").and_then(|t| t.as_str()) == Some("text")
+                    && let Some(t) = seg.pointer("/data/text").and_then(|v| v.as_str())
+                {
+                    out.push_str(t);
+                }
+            }
+            if !out.is_empty() {
+                return out;
+            }
+        }
+        _ => {}
     }
     if let Some(s) = event.get("raw_message").and_then(|v| v.as_str()) {
         return s.to_string();
@@ -543,6 +561,15 @@ mod tests {
         assert_eq!(event_group_id(&event), 33);
         assert_eq!(event_message_type(&event), "group");
         assert_eq!(event_content(&event), "hi");
+    }
+
+    #[test]
+    fn event_content_from_message_not_raw() {
+        let event = json!({
+            "raw_message": "[CQ:at,qq=1] raw",
+            "message": [{"type":"text","data":{"text":"clean"}}]
+        });
+        assert_eq!(event_content(&event), "clean");
     }
 
     #[test]
