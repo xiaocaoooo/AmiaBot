@@ -19,5 +19,5 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 parking_lot = { workspace = true }
+reqwest = { workspace = true }
 regex = { workspace = true }
-

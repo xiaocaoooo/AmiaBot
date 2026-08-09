@@ -1,38 +1,58 @@
 {
-  "name": "Amiabot PJSK Song",
-  "plugin_id": "external.amiabot-pjsk-song",
-  "version": "0.1.0",
   "author": "amiabot",
-  "description": "PJSK 歌曲查询",
+  "commands": [
+    {
+      "description": "song query",
+      "handler": "HandlePJSKSong",
+      "id": "cmd.pjsk-song",
+      "match_raw": true,
+      "name": "song",
+      "pattern": "^(?i)(?:(?P<server>cn|jp|tw|en|kr))?song(?P<name>.+)$"
+    }
+  ],
+  "config": {
+    "default": {
+      "alias_cache_dir": "/tmp/nyanyabot",
+      "alias_cache_ttl": 3600,
+      "alias_data_url": "https://raw.githubusercontent.com/moe-sekai/MoeSekai-Hub/main/data/music_alias/music_aliases.json",
+      "amiabot_pages": "",
+      "default_server": "jp"
+    },
+    "description": "PJSK Song 插件配置",
+    "schema": {
+      "additionalProperties": true,
+      "properties": {
+        "alias_cache_dir": {
+          "type": "string"
+        },
+        "alias_cache_ttl": {
+          "description": "缓存有效期（秒）",
+          "type": "integer"
+        },
+        "alias_data_url": {
+          "description": "别名数据URL",
+          "type": "string"
+        },
+        "amiabot_pages": {
+          "type": "string"
+        },
+        "default_server": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "version": "1"
+  },
+  "crons": [],
   "dependencies": [
     "external.screenshot",
     "external.blobserver"
   ],
-  "exports": [],
-  "config": {
-    "version": "1",
-    "description": "config",
-    "schema": {
-      "type": "object"
-    },
-    "default": {
-      "alias_cache_dir": "",
-      "alias_cache_ttl": 86400,
-      "alias_data_url": "",
-      "amiabot_pages": "",
-      "default_server": "jp"
-    }
-  },
-  "commands": [
-    {
-      "name": "song",
-      "id": "cmd.pjsk-song",
-      "description": "song query",
-      "pattern": "(?i)^(?:(?P<server>cn|jp|tw|en|kr))?song(?P<name>.+)$",
-      "match_raw": true,
-      "handler": "Handle"
-    }
-  ],
+  "description": "PJSK 歌曲查询",
   "events": [],
-  "crons": []
+  "exports": [],
+  "name": "Amiabot PJSK Song",
+  "plugin_id": "external.amiabot-pjsk-song",
+  "version": "0.1.0"
 }
