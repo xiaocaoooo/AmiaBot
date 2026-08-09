@@ -39,7 +39,7 @@
       "name": "default-server",
       "id": "cmd.set-default-server",
       "description": "默认区服",
-      "pattern": "(?i)^默认区服\\s*(cn|jp|tw|en|kr)$",
+      "pattern": "^(?:默认服务器|server)(?P<server>cn|jp|tw|en|kr)$",
       "match_raw": true,
       "handler": "Handle"
     }

@@ -37,7 +37,7 @@ fn plugin_descriptor() -> Descriptor {
             name: "cmd.profile-show".into(),
             id: "cmd.profile-show".into(),
             description: "PJSK Profile".into(),
-            pattern: r"(?i)^(?:(?P<server>cn|jp|tw|en|kr))?(?:profile|面包)$".into(),
+            pattern: r"^(?:(?P<server>cn|jp|tw|en|kr))?(?:个人信息|profile)$".into(),
             match_raw: true,
             handler: "Handle".into(),
         }],

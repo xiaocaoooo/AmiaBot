@@ -26,7 +26,7 @@
       "name": "cmd.pjsk-b30",
       "id": "cmd.pjsk-b30",
       "description": "PJSK B30",
-      "pattern": "(?i)^(?:(?P<server>cn|jp|tw|en|kr))?b30$",
+      "pattern": "^(?:(?P<server>cn|jp|tw|en|kr))?b30$",
       "match_raw": true,
       "handler": "Handle"
     }

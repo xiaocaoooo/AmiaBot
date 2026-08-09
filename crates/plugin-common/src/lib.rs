@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use nyanyabot_proto::HostClient;
 use serde_json::{Value, json};
 use url::Url;
@@ -23,6 +25,45 @@ pub fn join_url(base: &str, path: &str) -> String {
     format!("{base}/{path}")
 }
 
+/// Build `base/path?k=v` with sorted query keys for stable URLs.
+pub fn build_pages_url(base: &str, path: &str, query: &BTreeMap<String, String>) -> String {
+    let mut url = join_url(base, path);
+    if query.is_empty() {
+        return url;
+    }
+    let mut first = true;
+    for (k, v) in query {
+        if k.is_empty() {
+            continue;
+        }
+        let enc_k = urlencoding_encode(k);
+        let enc_v = urlencoding_encode(v);
+        if first {
+            url.push('?');
+            first = false;
+        } else {
+            url.push('&');
+        }
+        url.push_str(&enc_k);
+        url.push('=');
+        url.push_str(&enc_v);
+    }
+    url
+}
+
+fn urlencoding_encode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char);
+            }
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
+}
+
 pub fn redact_secrets(s: &str) -> String {
     let mut out = s.to_string();
     for key in [
@@ -31,6 +72,8 @@ pub fn redact_secrets(s: &str) -> String {
         "authorization",
         "blob_token",
         "api_key",
+        "gallery_read_token",
+        "gallery_write_token",
     ] {
         let needle = format!("{key}=");
         if let Some(idx) = out.find(&needle) {
@@ -46,15 +89,15 @@ pub fn redact_secrets(s: &str) -> String {
 }
 
 pub fn event_self_id(event: &Value) -> i64 {
-    event.get("self_id").and_then(|v| v.as_i64()).unwrap_or(0)
+    json_i64(event.get("self_id")).unwrap_or(0)
 }
 
 pub fn event_user_id(event: &Value) -> i64 {
-    event.get("user_id").and_then(|v| v.as_i64()).unwrap_or(0)
+    json_i64(event.get("user_id")).unwrap_or(0)
 }
 
 pub fn event_group_id(event: &Value) -> i64 {
-    event.get("group_id").and_then(|v| v.as_i64()).unwrap_or(0)
+    json_i64(event.get("group_id")).unwrap_or(0)
 }
 
 pub fn event_message_type(event: &Value) -> &str {
@@ -62,6 +105,38 @@ pub fn event_message_type(event: &Value) -> &str {
         .get("message_type")
         .and_then(|v| v.as_str())
         .unwrap_or("")
+}
+
+pub fn event_content(event: &Value) -> String {
+    if let Some(s) = event.get("content").and_then(|v| v.as_str()) {
+        return s.to_string();
+    }
+    if let Some(s) = event.get("raw_message").and_then(|v| v.as_str()) {
+        return s.to_string();
+    }
+    String::new()
+}
+
+pub fn json_i64(v: Option<&Value>) -> Option<i64> {
+    let v = v?;
+    if let Some(n) = v.as_i64() {
+        return Some(n);
+    }
+    if let Some(n) = v.as_u64() {
+        return i64::try_from(n).ok();
+    }
+    if let Some(s) = v.as_str() {
+        return s.trim().parse().ok();
+    }
+    None
+}
+
+pub fn first_match_group(match_data: &Option<nyanyabot_proto::CommandMatch>) -> String {
+    match_data
+        .as_ref()
+        .and_then(|m| m.groups.first())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default()
 }
 
 pub async fn send_text(
@@ -119,6 +194,33 @@ pub async fn send_image(
     Ok(())
 }
 
+pub async fn send_forward(
+    host: &mut HostClient,
+    event: &Value,
+    nodes: Value,
+    trace_id: &str,
+) -> Result<(), nyanyabot_proto::StructuredError> {
+    let self_id = event_self_id(event);
+    if event_message_type(event) == "group" {
+        host.call_onebot(
+            "send_group_forward_msg",
+            &json!({"group_id": event_group_id(event), "messages": nodes}),
+            self_id,
+            trace_id,
+        )
+        .await?;
+    } else {
+        host.call_onebot(
+            "send_private_forward_msg",
+            &json!({"user_id": event_user_id(event), "messages": nodes}),
+            self_id,
+            trace_id,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
 pub async fn screenshot_and_upload(
     host: &mut HostClient,
     page_url: &str,
@@ -160,6 +262,105 @@ pub async fn screenshot_and_upload(
         .ok_or_else(|| nyanyabot_proto::StructuredError::internal("blob upload result missing url"))
 }
 
+pub async fn upload_remote_blob(
+    host: &mut HostClient,
+    download_url: &str,
+    blob_id: &str,
+    kind: &str,
+) -> Result<String, nyanyabot_proto::StructuredError> {
+    let uploaded = host
+        .call_dependency(
+            "external.blobserver",
+            "blob.upload_remote",
+            &json!({
+                "download_url": download_url,
+                "blob_id": blob_id,
+                "kind": kind
+            }),
+        )
+        .await?;
+    uploaded
+        .get("onebot_url")
+        .or_else(|| uploaded.get("blob_url"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| nyanyabot_proto::StructuredError::internal("blob upload result missing url"))
+}
+
+/// Collect image file URLs from message segments / CQ codes, including reply chain if present.
+pub fn extract_image_urls(event: &Value) -> Vec<String> {
+    let mut out = Vec::new();
+    collect_images_from_value(event.get("message"), &mut out);
+    if out.is_empty()
+        && let Some(raw) = event.get("raw_message").and_then(|v| v.as_str())
+    {
+        collect_images_from_cq(raw, &mut out);
+    }
+    // reply / source message if nested
+    if let Some(reply) = event.get("reply") {
+        collect_images_from_value(reply.get("message"), &mut out);
+        if let Some(raw) = reply.get("raw_message").and_then(|v| v.as_str()) {
+            collect_images_from_cq(raw, &mut out);
+        }
+    }
+    out
+}
+
+fn collect_images_from_value(message: Option<&Value>, out: &mut Vec<String>) {
+    let Some(message) = message else { return };
+    match message {
+        Value::Array(arr) => {
+            for seg in arr {
+                let ty = seg.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                if ty == "image"
+                    && let Some(file) = seg
+                        .get("data")
+                        .and_then(|d| d.get("url").or_else(|| d.get("file")))
+                        .and_then(|v| v.as_str())
+                {
+                    let f = file.trim();
+                    if !f.is_empty() && !out.iter().any(|x| x == f) {
+                        out.push(f.to_string());
+                    }
+                }
+            }
+        }
+        Value::String(s) => collect_images_from_cq(s, out),
+        _ => {}
+    }
+}
+
+fn collect_images_from_cq(raw: &str, out: &mut Vec<String>) {
+    // [CQ:image,file=xxx,url=yyy]
+    let bytes = raw.as_bytes();
+    let mut i = 0;
+    while i + 10 < bytes.len() {
+        if raw[i..].starts_with("[CQ:image")
+            && let Some(end) = raw[i..].find(']')
+        {
+            let body = &raw[i + 1..i + end];
+            for part in body.split(',') {
+                if let Some(v) = part.strip_prefix("url=") {
+                    let v = v.trim();
+                    if !v.is_empty() && !out.iter().any(|x| x == v) {
+                        out.push(v.to_string());
+                    }
+                } else if let Some(v) = part.strip_prefix("file=") {
+                    let v = v.trim();
+                    if (v.starts_with("http://") || v.starts_with("https://"))
+                        && !out.iter().any(|x| x == v)
+                    {
+                        out.push(v.to_string());
+                    }
+                }
+            }
+            i += end + 1;
+            continue;
+        }
+        i += 1;
+    }
+}
+
 pub fn ensure_url(raw: &str) -> Result<Url, String> {
     Url::parse(raw).map_err(|e| e.to_string())
 }
@@ -167,13 +368,7 @@ pub fn ensure_url(raw: &str) -> Result<Url, String> {
 pub mod jsonata {
     use serde_json::{Value, json};
 
-    /// Minimal JSONata-like subset used by AmiaBot filters/templates:
-    /// - `$` identity
-    /// - `$.a.b` / `$.arr.0` path
-    /// - string/number/bool literals
-    /// - `expr = expr` equality -> bool
-    /// - `expr != expr`
-    /// - `a and b` / `a or b` (left-associative, low precedence)
+    /// Minimal JSONata-like subset used by AmiaBot filters/templates.
     pub fn evaluate(expr: &str, data: &Value) -> Result<Value, String> {
         let expr = expr.trim();
         if expr.is_empty() {
@@ -200,6 +395,13 @@ pub mod jsonata {
             return Ok(Value::Bool(evaluate(l, data)? == evaluate(r, data)?));
         }
         eval_atom(expr, data)
+    }
+
+    pub fn is_truthy_filter(expr: &str, data: &Value) -> bool {
+        match evaluate(expr, data) {
+            Ok(v) => truthy(&v),
+            Err(_) => false,
+        }
     }
 
     fn eval_atom(expr: &str, data: &Value) -> Result<Value, String> {
@@ -257,7 +459,6 @@ pub mod jsonata {
     }
 
     fn split_top<'a>(expr: &'a str, sep: &str) -> Option<(&'a str, &'a str)> {
-        // split on first sep not inside quotes
         let bytes = expr.as_bytes();
         let sep_b = sep.as_bytes();
         let mut i = 0;
@@ -291,6 +492,12 @@ mod tests {
     fn url_helpers() {
         assert_eq!(normalize_http_base("example.com/"), "http://example.com");
         assert_eq!(join_url("http://a", "/b"), "http://a/b");
+        let mut q = BTreeMap::new();
+        q.insert("pid".into(), "123".into());
+        assert_eq!(
+            build_pages_url("http://pages", "/pixiv/illust/info", &q),
+            "http://pages/pixiv/illust/info?pid=123"
+        );
     }
 
     #[test]
@@ -304,14 +511,29 @@ mod tests {
     fn event_fields() {
         let event = json!({
             "self_id": 11,
-            "user_id": 22,
+            "user_id": "22",
             "group_id": 33,
-            "message_type": "group"
+            "message_type": "group",
+            "content": "hi"
         });
         assert_eq!(event_self_id(&event), 11);
         assert_eq!(event_user_id(&event), 22);
         assert_eq!(event_group_id(&event), 33);
         assert_eq!(event_message_type(&event), "group");
+        assert_eq!(event_content(&event), "hi");
+    }
+
+    #[test]
+    fn extract_images() {
+        let event = json!({
+            "message": [
+                {"type":"text","data":{"text":"x"}},
+                {"type":"image","data":{"url":"https://a/b.jpg"}}
+            ],
+            "raw_message": "[CQ:image,file=https://c/d.png]"
+        });
+        let urls = extract_image_urls(&event);
+        assert!(urls.iter().any(|u| u.contains("a/b.jpg")));
     }
 
     #[test]
@@ -338,5 +560,9 @@ mod tests {
             jsonata::evaluate("$.nested.x = 'y' and $.user_id = 1", &data).unwrap(),
             json!(true)
         );
+        assert!(jsonata::is_truthy_filter(
+            "$.post_type = \"message\"",
+            &data
+        ));
     }
 }

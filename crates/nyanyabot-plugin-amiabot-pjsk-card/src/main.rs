@@ -36,7 +36,7 @@ fn plugin_descriptor() -> Descriptor {
             name: "cmd.pjsk-card".into(),
             id: "cmd.pjsk-card".into(),
             description: "PJSK 卡面查询".into(),
-            pattern: r"(?i)^(?:(?P<server>cn|jp|tw|en|kr))?(?:card|查卡)(?P<id>[0-9]+)$".into(),
+            pattern: r"^(?i)(?:(?P<server>cn|jp|tw|en|kr))?(?:card|查卡)(?P<id>[0-9]+)$".into(),
             match_raw: true,
             handler: "Handle".into(),
         }],

@@ -1,32 +1,76 @@
 {
-  "name": "OneBot WebSocket Client",
-  "plugin_id": "external.amiabot-onebot-websocket-client",
-  "version": "0.1.0",
   "author": "amiabot",
-  "description": "正向 OneBot WebSocket 客户端桥接",
-  "dependencies": [],
-  "exports": [],
+  "commands": [],
   "config": {
-    "version": "1",
-    "description": "config",
-    "schema": {
-      "type": "object"
-    },
     "default": {
       "access_token": "",
       "event_filter": "$",
-      "url": ""
-    }
+      "url": "",
+      "ws_token": "",
+      "ws_url": ""
+    },
+    "description": "OneBot WS Client 配置",
+    "schema": {
+      "additionalProperties": true,
+      "properties": {
+        "access_token": {
+          "type": "string"
+        },
+        "event_filter": {
+          "description": "JSONata 子集过滤，默认 $ 全通",
+          "type": "string"
+        },
+        "url": {
+          "description": "下游 OneBot WS URL（兼容字段）",
+          "type": "string"
+        },
+        "ws_token": {
+          "type": "string"
+        },
+        "ws_url": {
+          "description": "下游 OneBot WS URL",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "version": "1"
   },
-  "commands": [],
+  "crons": [],
+  "dependencies": [],
+  "description": "正向 OneBot WebSocket 客户端桥接",
   "events": [
     {
-      "name": "all",
-      "id": "evt.all",
-      "description": "转发全部事件",
-      "event": "*",
-      "handler": "Handle"
+      "description": "转发 message 事件",
+      "event": "message",
+      "handler": "Handle",
+      "id": "evt.onebot-ws.message",
+      "name": "onebot-ws-message"
+    },
+    {
+      "description": "转发 notice 事件",
+      "event": "notice",
+      "handler": "Handle",
+      "id": "evt.onebot-ws.notice",
+      "name": "onebot-ws-notice"
+    },
+    {
+      "description": "转发 request 事件",
+      "event": "request",
+      "handler": "Handle",
+      "id": "evt.onebot-ws.request",
+      "name": "onebot-ws-request"
+    },
+    {
+      "description": "转发 meta_event 事件",
+      "event": "meta_event",
+      "handler": "Handle",
+      "id": "evt.onebot-ws.meta_event",
+      "name": "onebot-ws-meta"
     }
   ],
-  "crons": []
+  "exports": [],
+  "name": "OneBot WebSocket Client",
+  "plugin_id": "external.amiabot-onebot-websocket-client",
+  "version": "0.1.0"
 }

@@ -1,42 +1,48 @@
 {
-  "name": "Amiabot Query",
-  "plugin_id": "external.amiabot-query",
-  "version": "0.1.0",
   "author": "amiabot",
-  "description": "用户/群查询",
+  "commands": [
+    {
+      "description": "查询用户资料卡",
+      "handler": "HandleUser",
+      "id": "cmd.query-user",
+      "match_raw": false,
+      "name": "query-user",
+      "pattern": "^(?:query|资料卡|用户资料)(?:\\s+.*|\\[CQ:at,[^\\]]+\\].*)?$"
+    },
+    {
+      "description": "查询群资料卡",
+      "handler": "HandleGroup",
+      "id": "cmd.query-group",
+      "match_raw": false,
+      "name": "query-group",
+      "pattern": "^(?:group|群资料卡|群信息)$"
+    }
+  ],
+  "config": {
+    "default": {
+      "amiabot_pages": ""
+    },
+    "description": "Query 插件配置",
+    "schema": {
+      "additionalProperties": true,
+      "properties": {
+        "amiabot_pages": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "version": "1"
+  },
+  "crons": [],
   "dependencies": [
     "external.screenshot",
     "external.blobserver"
   ],
-  "exports": [],
-  "config": {
-    "version": "1",
-    "description": "config",
-    "schema": {
-      "type": "object"
-    },
-    "default": {
-      "amiabot_pages": ""
-    }
-  },
-  "commands": [
-    {
-      "name": "query-user",
-      "id": "cmd.query-user",
-      "description": "查用户",
-      "pattern": "(?i)^查用户\\s*(\\d+)?$",
-      "match_raw": true,
-      "handler": "Handle"
-    },
-    {
-      "name": "query-group",
-      "id": "cmd.query-group",
-      "description": "查群",
-      "pattern": "(?i)^查群\\s*(\\d+)?$",
-      "match_raw": true,
-      "handler": "Handle"
-    }
-  ],
+  "description": "用户/群资料卡查询",
   "events": [],
-  "crons": []
+  "exports": [],
+  "name": "Amiabot Query",
+  "plugin_id": "external.amiabot-query",
+  "version": "0.1.0"
 }

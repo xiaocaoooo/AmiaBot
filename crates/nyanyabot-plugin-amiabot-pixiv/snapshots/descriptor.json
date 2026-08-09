@@ -1,34 +1,44 @@
 {
-  "name": "Amiabot Pixiv",
-  "plugin_id": "external.amiabot-pixiv",
-  "version": "0.1.0",
   "author": "amiabot",
-  "description": "Pixiv 作品查询",
+  "commands": [
+    {
+      "description": "解析 pixiv artwork 链接",
+      "handler": "Handle",
+      "id": "cmd.pixiv-artwork",
+      "match_raw": false,
+      "name": "pixiv-artwork",
+      "pattern": "(?i)\\b(?:https?://)?(?:www\\.)?pixiv\\.net/(?:[a-z]{2}/)?artworks/(\\d+)(?:[?#/][^\\s]*)?"
+    }
+  ],
+  "config": {
+    "default": {
+      "amiabot_pages": "",
+      "amiabot_pages_download_base": ""
+    },
+    "description": "Pixiv 插件配置",
+    "schema": {
+      "additionalProperties": true,
+      "properties": {
+        "amiabot_pages": {
+          "type": "string"
+        },
+        "amiabot_pages_download_base": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "version": "1"
+  },
+  "crons": [],
   "dependencies": [
     "external.screenshot",
     "external.blobserver"
   ],
-  "exports": [],
-  "config": {
-    "version": "1",
-    "description": "config",
-    "schema": {
-      "type": "object"
-    },
-    "default": {
-      "amiabot_pages": ""
-    }
-  },
-  "commands": [
-    {
-      "name": "pixiv",
-      "id": "cmd.pixiv-artwork",
-      "description": "pixiv artwork",
-      "pattern": "(?i)(?:https?://)?(?:www\\.)?pixiv\\.net/\\S+|pid[:：\\s]*([0-9]+)",
-      "match_raw": true,
-      "handler": "Handle"
-    }
-  ],
+  "description": "Pixiv 作品卡片与原图",
   "events": [],
-  "crons": []
+  "exports": [],
+  "name": "Amiabot Pixiv",
+  "plugin_id": "external.amiabot-pixiv",
+  "version": "0.1.0"
 }

@@ -25,7 +25,7 @@
       "name": "cmd.pjsk-card",
       "id": "cmd.pjsk-card",
       "description": "PJSK 卡面查询",
-      "pattern": "(?i)^(?:(?P<server>cn|jp|tw|en|kr))?(?:card|查卡)(?P<id>[0-9]+)$",
+      "pattern": "^(?i)(?:(?P<server>cn|jp|tw|en|kr))?(?:card|查卡)(?P<id>[0-9]+)$",
       "match_raw": true,
       "handler": "Handle"
     }

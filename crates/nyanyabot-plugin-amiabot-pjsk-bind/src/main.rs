@@ -49,7 +49,7 @@ fn plugin_descriptor() -> Descriptor {
                 name: "default-server".into(),
                 id: "cmd.set-default-server".into(),
                 description: "默认区服".into(),
-                pattern: r"(?i)^默认区服\s*(cn|jp|tw|en|kr)$".into(),
+                pattern: r"^(?:默认服务器|server)(?P<server>cn|jp|tw|en|kr)$".into(),
                 match_raw: true,
                 handler: "Handle".into(),
             },

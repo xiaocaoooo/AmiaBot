@@ -1,39 +1,44 @@
 {
-  "name": "Amiabot Bilibili",
-  "plugin_id": "external.amiabot-bilibili",
-  "version": "0.1.0",
   "author": "amiabot",
-  "description": "Bilibili 链接解析与截图",
-  "dependencies": [
-    "external.screenshot",
-    "external.blobserver"
+  "commands": [
+    {
+      "description": "解析 bilibili av/bv/b23 链接",
+      "handler": "Handle",
+      "id": "cmd.bilibili",
+      "match_raw": false,
+      "name": "bilibili",
+      "pattern": "(?i)\\b(?:av(\\d+)|(bv1[0-9a-zA-Z]+)|(?:(?:https?://)?b23\\.tv/([a-z0-9]+)))\\b"
+    }
   ],
-  "exports": [],
   "config": {
-    "version": "1",
-    "description": "config",
+    "default": {
+      "amiabot_pages": "",
+      "bilibili_downloader_server": ""
+    },
+    "description": "Bilibili 插件配置",
     "schema": {
+      "additionalProperties": true,
       "properties": {
         "amiabot_pages": {
+          "type": "string"
+        },
+        "bilibili_downloader_server": {
           "type": "string"
         }
       },
       "type": "object"
     },
-    "default": {
-      "amiabot_pages": ""
-    }
+    "version": "1"
   },
-  "commands": [
-    {
-      "name": "bilibili",
-      "id": "cmd.bilibili",
-      "description": "解析 bilibili 链接",
-      "pattern": "(?i)(?:https?://)?(?:www\\.)?(?:bilibili\\.com|b23\\.tv)\\S+",
-      "match_raw": true,
-      "handler": "Handle"
-    }
+  "crons": [],
+  "dependencies": [
+    "external.screenshot",
+    "external.blobserver"
   ],
+  "description": "B站视频解析与卡片",
   "events": [],
-  "crons": []
+  "exports": [],
+  "name": "Amiabot Bilibili",
+  "plugin_id": "external.amiabot-bilibili",
+  "version": "0.1.0"
 }

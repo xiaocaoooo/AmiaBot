@@ -26,7 +26,7 @@
       "name": "cmd.profile-show",
       "id": "cmd.profile-show",
       "description": "PJSK Profile",
-      "pattern": "(?i)^(?:(?P<server>cn|jp|tw|en|kr))?(?:profile|面包)$",
+      "pattern": "^(?:(?P<server>cn|jp|tw|en|kr))?(?:个人信息|profile)$",
       "match_raw": true,
       "handler": "Handle"
     }

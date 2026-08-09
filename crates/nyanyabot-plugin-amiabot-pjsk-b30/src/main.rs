@@ -37,7 +37,7 @@ fn plugin_descriptor() -> Descriptor {
             name: "cmd.pjsk-b30".into(),
             id: "cmd.pjsk-b30".into(),
             description: "PJSK B30".into(),
-            pattern: r"(?i)^(?:(?P<server>cn|jp|tw|en|kr))?b30$".into(),
+            pattern: r"^(?:(?P<server>cn|jp|tw|en|kr))?b30$".into(),
             match_raw: true,
             handler: "Handle".into(),
         }],
