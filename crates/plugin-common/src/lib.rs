@@ -387,10 +387,14 @@ pub mod jsonata {
     use serde_json::{Value, json};
 
     /// Minimal JSONata-like subset used by AmiaBot filters/templates.
+    /// Covers the Go onebot-ws rules subset: path, and/or/not, =/!=, parens, numbers.
     pub fn evaluate(expr: &str, data: &Value) -> Result<Value, String> {
-        let expr = expr.trim();
+        let expr = strip_outer_parens(expr.trim());
         if expr.is_empty() {
             return Ok(data.clone());
+        }
+        if let Some(rest) = strip_not(expr) {
+            return Ok(Value::Bool(!truthy(&evaluate(rest, data)?)));
         }
         if let Some((l, r)) = split_top(expr, " or ") {
             let lv = truthy(&evaluate(l, data)?);
@@ -407,10 +411,22 @@ pub mod jsonata {
             return Ok(Value::Bool(truthy(&evaluate(r, data)?)));
         }
         if let Some((l, r)) = split_top(expr, "!=") {
-            return Ok(Value::Bool(evaluate(l, data)? != evaluate(r, data)?));
+            return Ok(Value::Bool(!values_equal(
+                &evaluate(l, data)?,
+                &evaluate(r, data)?,
+            )));
+        }
+        if let Some((l, r)) = split_top(expr, "==") {
+            return Ok(Value::Bool(values_equal(
+                &evaluate(l, data)?,
+                &evaluate(r, data)?,
+            )));
         }
         if let Some((l, r)) = split_top(expr, "=") {
-            return Ok(Value::Bool(evaluate(l, data)? == evaluate(r, data)?));
+            return Ok(Value::Bool(values_equal(
+                &evaluate(l, data)?,
+                &evaluate(r, data)?,
+            )));
         }
         eval_atom(expr, data)
     }
@@ -422,8 +438,105 @@ pub mod jsonata {
         }
     }
 
+    fn strip_outer_parens(expr: &str) -> &str {
+        let mut expr = expr.trim();
+        while expr.starts_with('(') && expr.ends_with(')') && parens_balanced(expr) {
+            if matching_paren_end(expr) == expr.len() - 1 {
+                expr = expr[1..expr.len() - 1].trim();
+            } else {
+                break;
+            }
+        }
+        expr
+    }
+
+    fn matching_paren_end(expr: &str) -> usize {
+        let bytes = expr.as_bytes();
+        let mut depth = 0i32;
+        let mut in_sq = false;
+        let mut in_dq = false;
+        for (i, &b) in bytes.iter().enumerate() {
+            let c = b as char;
+            if c == '\'' && !in_dq {
+                in_sq = !in_sq;
+            } else if c == '"' && !in_sq {
+                in_dq = !in_dq;
+            } else if !in_sq && !in_dq {
+                if c == '(' {
+                    depth += 1;
+                } else if c == ')' {
+                    depth -= 1;
+                    if depth == 0 {
+                        return i;
+                    }
+                }
+            }
+        }
+        0
+    }
+
+    fn parens_balanced(expr: &str) -> bool {
+        let mut depth = 0i32;
+        let mut in_sq = false;
+        let mut in_dq = false;
+        for &b in expr.as_bytes() {
+            let c = b as char;
+            if c == '\'' && !in_dq {
+                in_sq = !in_sq;
+            } else if c == '"' && !in_sq {
+                in_dq = !in_dq;
+            } else if !in_sq && !in_dq {
+                if c == '(' {
+                    depth += 1;
+                } else if c == ')' {
+                    depth -= 1;
+                    if depth < 0 {
+                        return false;
+                    }
+                }
+            }
+        }
+        depth == 0
+    }
+
+    fn strip_not(expr: &str) -> Option<&str> {
+        let bytes = expr.as_bytes();
+        if bytes.len() < 4 {
+            return None;
+        }
+        if !expr[..3].eq_ignore_ascii_case("not") {
+            return None;
+        }
+        let boundary = bytes.get(3).copied()?;
+        if !(boundary.is_ascii_whitespace() || boundary == b'(') {
+            return None;
+        }
+        let rest = expr[3..].trim_start();
+        if rest.is_empty() { None } else { Some(rest) }
+    }
+
+    fn values_equal(a: &Value, b: &Value) -> bool {
+        if a == b {
+            return true;
+        }
+        match (as_f64(a), as_f64(b)) {
+            (Some(x), Some(y)) => (x - y).abs() < f64::EPSILON,
+            _ => false,
+        }
+    }
+
+    fn as_f64(v: &Value) -> Option<f64> {
+        match v {
+            Value::Number(n) => n.as_f64(),
+            Value::String(s) => s.trim().parse().ok(),
+            Value::Bool(true) => Some(1.0),
+            Value::Bool(false) => Some(0.0),
+            _ => None,
+        }
+    }
+
     fn eval_atom(expr: &str, data: &Value) -> Result<Value, String> {
-        let expr = expr.trim();
+        let expr = strip_outer_parens(expr.trim());
         if expr == "$" {
             return Ok(data.clone());
         }
@@ -504,17 +617,24 @@ pub mod jsonata {
         let mut i = 0;
         let mut in_sq = false;
         let mut in_dq = false;
+        let mut depth = 0i32;
         while i + sep_b.len() <= bytes.len() {
             let c = bytes[i] as char;
             if c == '\'' && !in_dq {
                 in_sq = !in_sq;
             } else if c == '"' && !in_sq {
                 in_dq = !in_dq;
-            } else if !in_sq && !in_dq && bytes[i..].starts_with(sep_b) {
-                let l = expr[..i].trim();
-                let r = expr[i + sep.len()..].trim();
-                if !l.is_empty() && !r.is_empty() {
-                    return Some((l, r));
+            } else if !in_sq && !in_dq {
+                if c == '(' {
+                    depth += 1;
+                } else if c == ')' {
+                    depth -= 1;
+                } else if depth == 0 && bytes[i..].starts_with(sep_b) {
+                    let l = expr[..i].trim();
+                    let r = expr[i + sep.len()..].trim();
+                    if !l.is_empty() && !r.is_empty() {
+                        return Some((l, r));
+                    }
                 }
             }
             i += 1;
@@ -609,7 +729,6 @@ mod tests {
             jsonata::evaluate("$.nested.x = 'y' and $.user_id = 1", &data).unwrap(),
             json!(true)
         );
-        // bare field path (Go JSONata style used by onebot-ws rules)
         assert_eq!(
             jsonata::evaluate("post_type = 'message'", &data).unwrap(),
             json!(true)
@@ -626,5 +745,27 @@ mod tests {
             "$.post_type = \"message\"",
             &data
         ));
+        // Go jsonata_test.go parity
+        assert_eq!(
+            jsonata::evaluate("not (action = 'send_msg')", &data).unwrap(),
+            json!(false)
+        );
+        assert_eq!(
+            jsonata::evaluate("not (action = 'get_status')", &data).unwrap(),
+            json!(true)
+        );
+        let sender = json!({"sender":{"user_id": 12345.0}});
+        assert_eq!(
+            jsonata::evaluate("sender.user_id = 12345", &sender).unwrap(),
+            json!(true)
+        );
+        assert_eq!(
+            jsonata::evaluate(
+                "post_type = 'message' and message_type = 'group'",
+                &json!({"post_type":"message","message_type":"private"})
+            )
+            .unwrap(),
+            json!(false)
+        );
     }
 }
