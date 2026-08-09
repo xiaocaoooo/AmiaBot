@@ -229,6 +229,35 @@ pub async fn send_image(
     Ok(())
 }
 
+/// Go bilibili local sendVideo: OneBot video segment.
+pub async fn send_video(
+    host: &mut HostClient,
+    event: &Value,
+    video_url: &str,
+    trace_id: &str,
+) -> Result<(), nyanyabot_proto::StructuredError> {
+    let segment = json!([{"type":"video","data":{"file": video_url}}]);
+    let self_id = event_self_id(event);
+    if event_message_type(event) == "group" {
+        host.call_onebot(
+            "send_group_msg",
+            &json!({"group_id": event_group_id(event), "message": segment}),
+            self_id,
+            trace_id,
+        )
+        .await?;
+    } else {
+        host.call_onebot(
+            "send_private_msg",
+            &json!({"user_id": event_user_id(event), "message": segment}),
+            self_id,
+            trace_id,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
 pub async fn send_forward(
     host: &mut HostClient,
     event: &Value,

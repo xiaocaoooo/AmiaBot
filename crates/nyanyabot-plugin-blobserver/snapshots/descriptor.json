@@ -31,9 +31,11 @@
     "schema": {
       "properties": {
         "blob_onebot_url": {
+          "description": "发送给 OneBot 的 Blob URL 前缀",
           "type": "string"
         },
         "blob_server": {
+          "description": "Blob Server 域名/地址",
           "type": "string"
         },
         "blob_token": {

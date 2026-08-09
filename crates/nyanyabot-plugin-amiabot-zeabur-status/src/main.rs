@@ -78,9 +78,7 @@ impl Plugin for Plug {
             .unwrap_or("")
             .to_string();
         if pages.is_empty() {
-            let _ =
-                plugin_common::send_text(&mut host, &event_raw, "amiabot_pages 未配置", trace_id)
-                    .await;
+            // Go: silent no-op when pages host empty
             return Ok(HandleResult {});
         }
         let default_server = cfg
@@ -126,7 +124,12 @@ impl Plugin for Plug {
 }
 
 fn build_page_path(_full: &str, _groups: &[String], _default_server: &str) -> (String, String) {
-    ("/status".into(), "zeabur-status".into())
+    // Go buildStatusPageURL: {amiabot_pages}/status/zeabur
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    ("/status/zeabur".into(), format!("zeabur-status-{ts}"))
 }
 
 #[tokio::main]

@@ -9,11 +9,10 @@ use nyanyabot_proto::{
 };
 use parking_lot::RwLock;
 use plugin_common::{
-    build_pages_url, event_content, first_match_group, redact_secrets, screenshot_and_upload,
-    send_image, send_text, upload_remote_blob,
+    build_pages_url, event_content, first_match_group, normalize_http_base, screenshot_and_upload,
+    send_image, send_video, upload_remote_blob,
 };
 use regex::Regex;
-use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::sync::RwLock as AsyncRwLock;
 use tracing::warn;
@@ -155,13 +154,28 @@ fn extract_bvid(s: &str) -> String {
         .unwrap_or_default()
 }
 
-#[derive(Debug, Deserialize)]
-struct DownloaderResp {
-    #[serde(default)]
-    url: String,
-    #[serde(default)]
-    download_url: String,
+fn chrono_like_unix() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
 }
+
+fn build_downloader_url(downloader_server: &str, id: &str) -> String {
+    let base = normalize_http_base(downloader_server).trim_end_matches('/').to_string();
+    if base.is_empty() || id.is_empty() {
+        return String::new();
+    }
+    let mut enc = String::new();
+    for b in id.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => enc.push(b as char),
+            _ => enc.push_str(&format!("%{b:02X}")),
+        }
+    }
+    format!("{base}/bilibili/download/{enc}")
+}
+
 
 #[async_trait]
 impl Plugin for Plug {
@@ -207,6 +221,9 @@ impl Plugin for Plug {
             return Ok(HandleResult {});
         }
         let cfg = self.cfg.read().clone();
+
+        // Screenshot via pages + screenshot/blob plugins (Go: silent if pages empty).
+        let mut screenshot_url = String::new();
         if !cfg.amiabot_pages.is_empty() {
             let mut q = BTreeMap::new();
             if !aid.is_empty() {
@@ -216,93 +233,58 @@ impl Plugin for Plug {
                 q.insert("bvid".into(), bvid.clone());
             }
             let page = build_pages_url(&cfg.amiabot_pages, "/bilibili/video", &q);
+            let id_for_blob = if !aid.is_empty() {
+                aid.clone()
+            } else {
+                bvid.clone()
+            };
             match screenshot_and_upload(
                 &mut host,
                 &page,
-                &format!("bilibili-{}{}", aid, bvid),
+                &format!("{id_for_blob}-image-{}", chrono_like_unix()),
                 json!({}),
             )
             .await
             {
-                Ok(url) => {
-                    let _ = send_image(&mut host, &event_raw, &url, trace_id).await;
-                }
-                Err(err) => {
-                    let _ = send_text(
-                        &mut host,
-                        &event_raw,
-                        &format!("截图失败：{}", redact_secrets(&err.to_string())),
-                        trace_id,
-                    )
-                    .await;
-                }
+                Ok(url) => screenshot_url = url,
+                Err(err) => warn!(error=%err, "bilibili screenshot failed"),
             }
-        } else {
-            let label = if !bvid.is_empty() {
-                format!("BV{bvid}")
-            } else {
-                format!("av{aid}")
-            };
-            // bvid already includes BV prefix sometimes
-            let label = if bvid.to_lowercase().starts_with("bv") {
-                bvid.clone()
-            } else if !bvid.is_empty() {
-                format!("BV{bvid}")
-            } else {
-                label
-            };
-            let _ = send_text(
-                &mut host,
-                &event_raw,
-                &format!("检测到 B 站视频：{label}（amiabot_pages 未配置，仅文本）"),
-                trace_id,
-            )
-            .await;
         }
 
-        // optional downloader
-        if !cfg.bilibili_downloader_server.is_empty() {
-            let mut q = BTreeMap::new();
-            if !aid.is_empty() {
-                q.insert("aid".into(), aid.clone());
-            }
-            if !bvid.is_empty() {
-                q.insert("bvid".into(), bvid.clone());
-            }
-            let api = build_pages_url(&cfg.bilibili_downloader_server, "/api/video", &q);
-            if let Ok(client) = reqwest::Client::builder()
-                .timeout(Duration::from_secs(20))
-                .build()
-                && let Ok(resp) = client.get(&api).send().await
-                && resp.status().is_success()
-                && let Ok(body) = resp.json::<DownloaderResp>().await
+        // Downloader URL: {server}/bilibili/download/{id} (Go buildDownloaderURL).
+        let id = if !aid.is_empty() {
+            aid.clone()
+        } else {
+            bvid.clone()
+        };
+        let mut video_url = String::new();
+        if !cfg.bilibili_downloader_server.is_empty() && !id.is_empty() {
+            video_url = build_downloader_url(&cfg.bilibili_downloader_server, &id);
+        }
+
+        if screenshot_url.is_empty() && video_url.is_empty() {
+            let _ = first_match_group(&match_data);
+            return Ok(HandleResult {});
+        }
+
+        if !screenshot_url.is_empty() {
+            let _ = send_image(&mut host, &event_raw, &screenshot_url, trace_id).await;
+        }
+        if !video_url.is_empty() {
+            let mut final_video = video_url;
+            match upload_remote_blob(
+                &mut host,
+                &final_video,
+                &format!("{id}-video"),
+                "video",
+            )
+            .await
             {
-                let media = if !body.download_url.is_empty() {
-                    body.download_url
-                } else {
-                    body.url
-                };
-                if !media.is_empty() {
-                    match upload_remote_blob(
-                        &mut host,
-                        &media,
-                        &format!("bili-media-{}{}", aid, bvid),
-                        "video",
-                    )
-                    .await
-                    {
-                        Ok(url) => {
-                            let _ = send_text(
-                                &mut host,
-                                &event_raw,
-                                &format!("下载地址：{url}"),
-                                trace_id,
-                            )
-                            .await;
-                        }
-                        Err(err) => warn!(error=%err, "bilibili media upload failed"),
-                    }
-                }
+                Ok(url) => final_video = url,
+                Err(err) => warn!(error=%err, "bilibili video blob upload failed; send raw url"),
+            }
+            if let Err(err) = send_video(&mut host, &event_raw, &final_video, trace_id).await {
+                warn!(error=%err, "bilibili send_video failed");
             }
         }
         let _ = first_match_group(&match_data);
@@ -372,6 +354,14 @@ mod unit_tests {
         assert_eq!(
             extract_aid("https://www.bilibili.com/video/av170001"),
             "170001"
+        );
+    }
+
+    #[test]
+    fn downloader_url_shape() {
+        assert_eq!(
+            build_downloader_url("http://dl.example.com", "BV1xx"),
+            "http://dl.example.com/bilibili/download/BV1xx"
         );
     }
 }
