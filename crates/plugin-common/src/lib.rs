@@ -301,6 +301,26 @@ mod tests {
     }
 
     #[test]
+    fn event_fields() {
+        let event = json!({
+            "self_id": 11,
+            "user_id": 22,
+            "group_id": 33,
+            "message_type": "group"
+        });
+        assert_eq!(event_self_id(&event), 11);
+        assert_eq!(event_user_id(&event), 22);
+        assert_eq!(event_group_id(&event), 33);
+        assert_eq!(event_message_type(&event), "group");
+    }
+
+    #[test]
+    fn join_url_empty_base() {
+        assert_eq!(join_url("", "x"), "/x");
+        assert_eq!(normalize_http_base(""), "");
+    }
+
+    #[test]
     fn jsonata_subset() {
         let data = json!({"post_type":"message","user_id":1,"arr":[10,20],"nested":{"x":"y"}});
         assert_eq!(jsonata::evaluate("$", &data).unwrap(), data);
