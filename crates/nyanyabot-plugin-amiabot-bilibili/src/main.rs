@@ -108,42 +108,51 @@ fn parse_ids(content: &str, match_data: &Option<CommandMatch>) -> (String, Strin
 }
 
 async fn resolve_b23(short: &str) -> Result<(String, String), String> {
+    let short = short.trim();
+    if short.is_empty() {
+        return Err("short is empty".into());
+    }
+    // Follow redirects like Go default http.Client.
     let client = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
-        .timeout(Duration::from_secs(15))
+        .redirect(reqwest::redirect::Policy::limited(10))
+        .timeout(Duration::from_secs(10))
         .build()
         .map_err(|e| e.to_string())?;
-    let url = format!("https://b23.tv/{}", short.trim());
-    let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
-    let loc = resp
-        .headers()
-        .get(reqwest::header::LOCATION)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("")
-        .to_string();
-    let target = if loc.is_empty() {
-        resp.url().to_string()
-    } else {
-        loc
-    };
-    let re = Regex::new(BILI_PATTERN).unwrap();
-    if let Some(caps) = re.captures(&target) {
-        return Ok((
-            caps.get(1).map(|m| m.as_str()).unwrap_or("").to_string(),
-            caps.get(2).map(|m| m.as_str()).unwrap_or("").to_string(),
+    let url = format!("https://b23.tv/{short}");
+    let resp = client
+        .get(&url)
+        .header("User-Agent", "nyanyabot-plugin-amiabot-bilibili/0.1")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let final_url = resp.url().to_string();
+    // Discard body like Go (up to 64KiB conceptually).
+    let _ = resp.bytes().await;
+    if final_url.trim().is_empty() {
+        return Err("empty final url".into());
+    }
+    let aid = extract_aid(&final_url);
+    let bvid = extract_bvid(&final_url);
+    if aid.is_empty() && bvid.is_empty() {
+        return Err(format!(
+            "cannot extract aid/bvid from redirect url: {final_url}"
         ));
     }
-    // also try BV/av in path
-    let re2 = Regex::new(r"(?i)/(av(\d+)| (BV1[0-9A-Za-z]+))").unwrap();
-    let _ = re2;
-    let re3 = Regex::new(r"(?i)(?:/av(\d+)|/(BV1[0-9A-Za-z]+))").unwrap();
-    if let Some(caps) = re3.captures(&target) {
-        return Ok((
-            caps.get(1).map(|m| m.as_str()).unwrap_or("").to_string(),
-            caps.get(2).map(|m| m.as_str()).unwrap_or("").to_string(),
-        ));
-    }
-    Err(format!("unable to resolve b23: {target}"))
+    Ok((aid, bvid))
+}
+
+fn extract_aid(s: &str) -> String {
+    let re = Regex::new(r"(?i)\bav(\d+)\b").unwrap();
+    re.captures(s)
+        .and_then(|c| c.get(1).map(|m| m.as_str().to_string()))
+        .unwrap_or_default()
+}
+
+fn extract_bvid(s: &str) -> String {
+    let re = Regex::new(r"(?i)\b(bv1[0-9a-zA-Z]+)\b").unwrap();
+    re.captures(s)
+        .and_then(|c| c.get(1).map(|m| m.as_str().to_uppercase()))
+        .unwrap_or_default()
 }
 
 #[derive(Debug, Deserialize)]
@@ -353,5 +362,16 @@ mod unit_tests {
         assert!(aid.is_empty());
         assert!(bvid.to_lowercase().starts_with("bv1"));
         assert!(short.is_empty());
+    }
+
+    #[test]
+    fn extract_from_redirect_url() {
+        let url = "https://www.bilibili.com/video/BV1xx411c7mD?spm=1";
+        assert_eq!(extract_aid(url), "");
+        assert_eq!(extract_bvid(url), "BV1XX411C7MD");
+        assert_eq!(
+            extract_aid("https://www.bilibili.com/video/av170001"),
+            "170001"
+        );
     }
 }
