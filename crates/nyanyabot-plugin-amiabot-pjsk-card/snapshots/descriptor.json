@@ -1,0 +1,35 @@
+{
+  "name": "Amiabot PJSK Card",
+  "plugin_id": "external.amiabot-pjsk-card",
+  "version": "0.1.0",
+  "author": "amiabot",
+  "description": "PJSK 卡面查询",
+  "dependencies": [
+    "external.screenshot",
+    "external.blobserver"
+  ],
+  "exports": [],
+  "config": {
+    "version": "1",
+    "description": "config",
+    "schema": {
+      "type": "object"
+    },
+    "default": {
+      "amiabot_pages": "",
+      "default_server": "jp"
+    }
+  },
+  "commands": [
+    {
+      "name": "cmd.pjsk-card",
+      "id": "cmd.pjsk-card",
+      "description": "PJSK 卡面查询",
+      "pattern": "(?i)^(?:(?P<server>cn|jp|tw|en|kr))?(?:card|查卡)(?P<id>[0-9]+)$",
+      "match_raw": true,
+      "handler": "Handle"
+    }
+  ],
+  "events": [],
+  "crons": []
+}

@@ -1,0 +1,34 @@
+{
+  "name": "Amiabot Pixiv",
+  "plugin_id": "external.amiabot-pixiv",
+  "version": "0.1.0",
+  "author": "amiabot",
+  "description": "Pixiv 作品查询",
+  "dependencies": [
+    "external.screenshot",
+    "external.blobserver"
+  ],
+  "exports": [],
+  "config": {
+    "version": "1",
+    "description": "config",
+    "schema": {
+      "type": "object"
+    },
+    "default": {
+      "amiabot_pages": ""
+    }
+  },
+  "commands": [
+    {
+      "name": "pixiv",
+      "id": "cmd.pixiv-artwork",
+      "description": "pixiv artwork",
+      "pattern": "(?i)(?:https?://)?(?:www\\.)?pixiv\\.net/\\S+|pid[:：\\s]*([0-9]+)",
+      "match_raw": true,
+      "handler": "Handle"
+    }
+  ],
+  "events": [],
+  "crons": []
+}

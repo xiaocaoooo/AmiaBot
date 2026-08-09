@@ -1,0 +1,38 @@
+{
+  "name": "Amiabot PJSK Song",
+  "plugin_id": "external.amiabot-pjsk-song",
+  "version": "0.1.0",
+  "author": "amiabot",
+  "description": "PJSK 歌曲查询",
+  "dependencies": [
+    "external.screenshot",
+    "external.blobserver"
+  ],
+  "exports": [],
+  "config": {
+    "version": "1",
+    "description": "config",
+    "schema": {
+      "type": "object"
+    },
+    "default": {
+      "alias_cache_dir": "",
+      "alias_cache_ttl": 86400,
+      "alias_data_url": "",
+      "amiabot_pages": "",
+      "default_server": "jp"
+    }
+  },
+  "commands": [
+    {
+      "name": "song",
+      "id": "cmd.pjsk-song",
+      "description": "song query",
+      "pattern": "(?i)^(?:(?P<server>cn|jp|tw|en|kr))?song(?P<name>.+)$",
+      "match_raw": true,
+      "handler": "Handle"
+    }
+  ],
+  "events": [],
+  "crons": []
+}

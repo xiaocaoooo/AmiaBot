@@ -1,0 +1,51 @@
+{
+  "name": "Amiabot Gallery",
+  "plugin_id": "external.amiabot-gallery",
+  "version": "0.1.0",
+  "author": "amiabot",
+  "description": "图库管理",
+  "dependencies": [
+    "external.screenshot",
+    "external.blobserver"
+  ],
+  "exports": [],
+  "config": {
+    "version": "1",
+    "description": "config",
+    "schema": {
+      "type": "object"
+    },
+    "default": {
+      "amiabot_pages": "",
+      "gallery_api": ""
+    }
+  },
+  "commands": [
+    {
+      "name": "create-tag",
+      "id": "cmd.gallery-create-tag",
+      "description": "创建标签",
+      "pattern": "(?i)^创建标签\\s+(\\S+)$",
+      "match_raw": true,
+      "handler": "Handle"
+    },
+    {
+      "name": "upload",
+      "id": "cmd.gallery-upload",
+      "description": "上传图片",
+      "pattern": "(?i)^上传(?:\\s+(\\S+))?$",
+      "match_raw": true,
+      "handler": "Handle"
+    },
+    {
+      "name": "view",
+      "id": "cmd.gallery-view",
+      "description": "查看图库",
+      "pattern": "(?i)^图库(?:\\s+(\\S+))?$",
+      "match_raw": true,
+      "handler": "Handle"
+    }
+  ],
+  "events": [],
+  "crons": []
+}

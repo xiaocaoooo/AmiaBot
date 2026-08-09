@@ -1,0 +1,42 @@
+{
+  "name": "Amiabot Query",
+  "plugin_id": "external.amiabot-query",
+  "version": "0.1.0",
+  "author": "amiabot",
+  "description": "用户/群查询",
+  "dependencies": [
+    "external.screenshot",
+    "external.blobserver"
+  ],
+  "exports": [],
+  "config": {
+    "version": "1",
+    "description": "config",
+    "schema": {
+      "type": "object"
+    },
+    "default": {
+      "amiabot_pages": ""
+    }
+  },
+  "commands": [
+    {
+      "name": "query-user",
+      "id": "cmd.query-user",
+      "description": "查用户",
+      "pattern": "(?i)^查用户\\s*(\\d+)?$",
+      "match_raw": true,
+      "handler": "Handle"
+    },
+    {
+      "name": "query-group",
+      "id": "cmd.query-group",
+      "description": "查群",
+      "pattern": "(?i)^查群\\s*(\\d+)?$",
+      "match_raw": true,
+      "handler": "Handle"
+    }
+  ],
+  "events": [],
+  "crons": []
+}

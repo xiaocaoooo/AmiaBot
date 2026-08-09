@@ -1,0 +1,32 @@
+{
+  "name": "OneBot WebSocket Client",
+  "plugin_id": "external.amiabot-onebot-websocket-client",
+  "version": "0.1.0",
+  "author": "amiabot",
+  "description": "正向 OneBot WebSocket 客户端桥接",
+  "dependencies": [],
+  "exports": [],
+  "config": {
+    "version": "1",
+    "description": "config",
+    "schema": {
+      "type": "object"
+    },
+    "default": {
+      "access_token": "",
+      "event_filter": "$",
+      "url": ""
+    }
+  },
+  "commands": [],
+  "events": [
+    {
+      "name": "all",
+      "id": "evt.all",
+      "description": "转发全部事件",
+      "event": "*",
+      "handler": "Handle"
+    }
+  ],
+  "crons": []
+}

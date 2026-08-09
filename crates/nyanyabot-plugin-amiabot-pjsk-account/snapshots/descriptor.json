@@ -1,0 +1,74 @@
+{
+  "name": "Amiabot PJSK Account",
+  "plugin_id": "external.amiabot-pjsk-account",
+  "version": "0.1.0",
+  "author": "amiabot",
+  "description": "PJSK 账户存储",
+  "dependencies": [],
+  "exports": [
+    {
+      "name": "account.add",
+      "description": "添加账户",
+      "params_schema": {
+        "type": "object"
+      },
+      "result_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "account.get",
+      "description": "获取账户",
+      "params_schema": {
+        "type": "object"
+      },
+      "result_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "account.list",
+      "description": "列出账户",
+      "params_schema": {
+        "type": "object"
+      },
+      "result_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "account.set_enabled",
+      "description": "启用/禁用",
+      "params_schema": {
+        "type": "object"
+      },
+      "result_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "account.remove",
+      "description": "删除账户",
+      "params_schema": {
+        "type": "object"
+      },
+      "result_schema": {
+        "type": "object"
+      }
+    }
+  ],
+  "config": {
+    "version": "1",
+    "description": "config",
+    "schema": {
+      "type": "object"
+    },
+    "default": {
+      "database_url": "",
+      "default_server": "jp"
+    }
+  },
+  "commands": [],
+  "events": [],
+  "crons": []
+}

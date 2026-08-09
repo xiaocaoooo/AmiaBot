@@ -1,0 +1,46 @@
+{
+  "name": "Screenshot",
+  "plugin_id": "external.screenshot",
+  "version": "0.1.0",
+  "author": "nyanyabot",
+  "description": "Screenshot URL builder plugin",
+  "dependencies": [],
+  "exports": [
+    {
+      "name": "screenshot.build_url",
+      "description": "根据 page_url 生成截图服务 URL",
+      "params_schema": {
+        "type": "object"
+      },
+      "result_schema": {
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      }
+    }
+  ],
+  "config": {
+    "version": "1",
+    "description": "Screenshot plugin config",
+    "schema": {
+      "properties": {
+        "screenshot_server": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "default": {
+      "screenshot_server": ""
+    }
+  },
+  "commands": [],
+  "events": [],
+  "crons": []
+}

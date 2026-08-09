@@ -1,0 +1,39 @@
+{
+  "name": "Amiabot Bilibili",
+  "plugin_id": "external.amiabot-bilibili",
+  "version": "0.1.0",
+  "author": "amiabot",
+  "description": "Bilibili 链接解析与截图",
+  "dependencies": [
+    "external.screenshot",
+    "external.blobserver"
+  ],
+  "exports": [],
+  "config": {
+    "version": "1",
+    "description": "config",
+    "schema": {
+      "properties": {
+        "amiabot_pages": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "default": {
+      "amiabot_pages": ""
+    }
+  },
+  "commands": [
+    {
+      "name": "bilibili",
+      "id": "cmd.bilibili",
+      "description": "解析 bilibili 链接",
+      "pattern": "(?i)(?:https?://)?(?:www\\.)?(?:bilibili\\.com|b23\\.tv)\\S+",
+      "match_raw": true,
+      "handler": "Handle"
+    }
+  ],
+  "events": [],
+  "crons": []
+}

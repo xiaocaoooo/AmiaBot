@@ -1,0 +1,49 @@
+{
+  "name": "Amiabot PJSK Bind",
+  "plugin_id": "external.amiabot-pjsk-bind",
+  "version": "0.1.0",
+  "author": "amiabot",
+  "description": "PJSK 账户绑定",
+  "dependencies": [
+    "external.amiabot-pjsk-account"
+  ],
+  "exports": [],
+  "config": {
+    "version": "1",
+    "description": "config",
+    "schema": {
+      "type": "object"
+    },
+    "default": {
+      "amiabot_pages": ""
+    }
+  },
+  "commands": [
+    {
+      "name": "bind",
+      "id": "cmd.profile-bind",
+      "description": "绑定",
+      "pattern": "^(?i)(?:(?P<server>cn|jp|tw|en|kr))?绑定(?P<id>\\d+)$",
+      "match_raw": true,
+      "handler": "Handle"
+    },
+    {
+      "name": "id",
+      "id": "cmd.profile-id",
+      "description": "查询id",
+      "pattern": "^(?:(?P<server>cn|jp|tw|en|kr)|(?:烤))id$",
+      "match_raw": true,
+      "handler": "Handle"
+    },
+    {
+      "name": "default-server",
+      "id": "cmd.set-default-server",
+      "description": "默认区服",
+      "pattern": "(?i)^默认区服\\s*(cn|jp|tw|en|kr)$",
+      "match_raw": true,
+      "handler": "Handle"
+    }
+  ],
+  "events": [],
+  "crons": []
+}

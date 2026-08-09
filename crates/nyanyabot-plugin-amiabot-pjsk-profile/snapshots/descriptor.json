@@ -1,0 +1,36 @@
+{
+  "name": "Amiabot PJSK Profile",
+  "plugin_id": "external.amiabot-pjsk-profile",
+  "version": "0.1.0",
+  "author": "amiabot",
+  "description": "PJSK Profile",
+  "dependencies": [
+    "external.amiabot-pjsk-account",
+    "external.screenshot",
+    "external.blobserver"
+  ],
+  "exports": [],
+  "config": {
+    "version": "1",
+    "description": "config",
+    "schema": {
+      "type": "object"
+    },
+    "default": {
+      "amiabot_pages": "",
+      "default_server": "jp"
+    }
+  },
+  "commands": [
+    {
+      "name": "cmd.profile-show",
+      "id": "cmd.profile-show",
+      "description": "PJSK Profile",
+      "pattern": "(?i)^(?:(?P<server>cn|jp|tw|en|kr))?(?:profile|面包)$",
+      "match_raw": true,
+      "handler": "Handle"
+    }
+  ],
+  "events": [],
+  "crons": []
+}
