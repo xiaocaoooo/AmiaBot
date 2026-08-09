@@ -1,3 +1,5 @@
+mod message;
+
 mod client;
 
 use std::collections::BTreeMap;
@@ -11,8 +13,8 @@ use nyanyabot_proto::{
 };
 use parking_lot::RwLock;
 use plugin_common::{
-    build_pages_url, event_content, extract_image_urls, first_match_group, redact_secrets,
-    screenshot_and_upload, send_image, send_text,
+    build_pages_url, event_content, first_match_group, redact_secrets, screenshot_and_upload,
+    send_image, send_text,
 };
 use serde_json::{Value, json};
 use tokio::sync::RwLock as AsyncRwLock;
@@ -317,8 +319,21 @@ impl Plugin for Plug {
                     _ => {}
                 }
 
-                let urls = extract_image_urls(&event_raw);
-                if urls.is_empty() {
+                let (images, source_label) =
+                    match message::extract_images_from_event(&mut host, &event_raw).await {
+                        Ok(v) => v,
+                        Err(err) => {
+                            let _ = send_text(
+                                &mut host,
+                                &event_raw,
+                                &format!("提取图片失败：{}", redact_secrets(&err)),
+                                trace_id,
+                            )
+                            .await;
+                            return Ok(HandleResult {});
+                        }
+                    };
+                if images.is_empty() {
                     let _ = send_text(
                         &mut host,
                         &event_raw,
@@ -328,15 +343,16 @@ impl Plugin for Plug {
                     .await;
                     return Ok(HandleResult {});
                 }
-                let source_label = if event_raw.get("reply").is_some() {
-                    "引用消息"
-                } else {
+                let source_label = if source_label.is_empty() {
                     "当前消息"
+                } else {
+                    source_label.as_str()
                 };
                 let mut outcomes: Vec<UploadOutcome> = Vec::new();
-                for (idx, url) in urls.iter().enumerate() {
+                for (idx, image) in images.iter().enumerate() {
                     let index = idx + 1;
-                    let (filename, data) = match download_bytes(url).await {
+                    let url = &image.source_url;
+                    let (mut filename, data) = match download_bytes(url).await {
                         Ok(v) => v,
                         Err(err) => {
                             outcomes.push(UploadOutcome {
@@ -348,6 +364,9 @@ impl Plugin for Plug {
                             continue;
                         }
                     };
+                    if !image.name.is_empty() {
+                        filename = image.name.clone();
+                    }
                     match client.upload_image(&filename, data, &tags, false).await {
                         Ok(uploaded) => {
                             outcomes.push(UploadOutcome {
