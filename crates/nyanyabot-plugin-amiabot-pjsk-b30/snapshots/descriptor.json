@@ -38,7 +38,7 @@
       "id": "cmd.pjsk-b30",
       "description": "查看 PJSK B30（如 b30, cnb30）",
       "pattern": "^(?:(?P<server>cn|jp|tw|en|kr))?b30$",
-      "match_raw": true,
+      "match_raw": false,
       "handler": "Handle"
     }
   ],

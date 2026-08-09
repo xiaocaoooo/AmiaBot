@@ -38,7 +38,7 @@
       "id": "cmd.profile-show",
       "description": "查看 PJSK 个人信息（如 profile, 个人信息, cn个人信息）",
       "pattern": "^(?:(?P<server>cn|jp|tw|en|kr))?(?:个人信息|profile)$",
-      "match_raw": true,
+      "match_raw": false,
       "handler": "Handle"
     }
   ],

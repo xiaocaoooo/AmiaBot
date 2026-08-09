@@ -45,7 +45,7 @@ fn plugin_descriptor() -> Descriptor {
                 id: "cmd.profile-bind".into(),
                 description: "绑定 PJSK 游戏账号（如 绑定12345, jp绑定12345）".into(),
                 pattern: r"^(?i)(?:(?P<server>cn|jp|tw|en|kr))?绑定(?P<id>\d+)$".into(),
-                match_raw: true,
+                match_raw: false,
                 handler: "Handle".into(),
             },
             CommandListener {
@@ -53,7 +53,7 @@ fn plugin_descriptor() -> Descriptor {
                 id: "cmd.profile-id".into(),
                 description: "查询已绑定的游戏 ID（如 id, jpid, 烤id）".into(),
                 pattern: r"^(?:(?P<server>cn|jp|tw|en|kr)|(?:烤))id$".into(),
-                match_raw: true,
+                match_raw: false,
                 handler: "Handle".into(),
             },
             CommandListener {
@@ -61,7 +61,7 @@ fn plugin_descriptor() -> Descriptor {
                 id: "cmd.set-default-server".into(),
                 description: "设置默认服务器（如 serverjp, 默认服务器cn）".into(),
                 pattern: r"^(?:默认服务器|server)(?P<server>cn|jp|tw|en|kr)$".into(),
-                match_raw: true,
+                match_raw: false,
                 handler: "Handle".into(),
             },
         ],

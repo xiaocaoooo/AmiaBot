@@ -5,7 +5,7 @@
       "description": "song query",
       "handler": "HandlePJSKSong",
       "id": "cmd.pjsk-song",
-      "match_raw": true,
+      "match_raw": false,
       "name": "song",
       "pattern": "^(?i)(?:(?P<server>cn|jp|tw|en|kr))?song(?P<name>.+)$"
     }

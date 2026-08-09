@@ -44,7 +44,7 @@ fn plugin_descriptor() -> Descriptor {
             id: "cmd.pjsk-event".into(),
             description: "PJSK 活动查询（如 event, jpevent, cn查活动, enevent50）".into(),
             pattern: r"^(?i)(?:(?P<server>cn|jp|tw|en|kr))?(?:event|查活动)(?P<id>[0-9]*)$".into(),
-            match_raw: true,
+            match_raw: false,
             handler: "Handle".into(),
         }],
         ..Default::default()

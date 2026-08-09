@@ -49,7 +49,7 @@ fn plugin_descriptor() -> Descriptor {
             id: "cmd.profile-show".into(),
             description: "查看 PJSK 个人信息（如 profile, 个人信息, cn个人信息）".into(),
             pattern: r"^(?:(?P<server>cn|jp|tw|en|kr))?(?:个人信息|profile)$".into(),
-            match_raw: true,
+            match_raw: false,
             handler: "Handle".into(),
         }],
         ..Default::default()

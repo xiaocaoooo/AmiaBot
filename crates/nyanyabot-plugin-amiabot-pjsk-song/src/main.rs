@@ -108,7 +108,7 @@ fn plugin_descriptor() -> Descriptor {
             id: "cmd.pjsk-song".into(),
             description: "song query".into(),
             pattern: r"^(?i)(?:(?P<server>cn|jp|tw|en|kr))?song(?P<name>.+)$".into(),
-            match_raw: true,
+            match_raw: false,
             handler: "HandlePJSKSong".into(),
         }],
         ..Default::default()

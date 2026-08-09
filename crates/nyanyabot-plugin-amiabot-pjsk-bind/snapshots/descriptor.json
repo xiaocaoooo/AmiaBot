@@ -31,7 +31,7 @@
       "id": "cmd.profile-bind",
       "description": "绑定 PJSK 游戏账号（如 绑定12345, jp绑定12345）",
       "pattern": "^(?i)(?:(?P<server>cn|jp|tw|en|kr))?绑定(?P<id>\\d+)$",
-      "match_raw": true,
+      "match_raw": false,
       "handler": "Handle"
     },
     {
@@ -39,7 +39,7 @@
       "id": "cmd.profile-id",
       "description": "查询已绑定的游戏 ID（如 id, jpid, 烤id）",
       "pattern": "^(?:(?P<server>cn|jp|tw|en|kr)|(?:烤))id$",
-      "match_raw": true,
+      "match_raw": false,
       "handler": "Handle"
     },
     {
@@ -47,7 +47,7 @@
       "id": "cmd.set-default-server",
       "description": "设置默认服务器（如 serverjp, 默认服务器cn）",
       "pattern": "^(?:默认服务器|server)(?P<server>cn|jp|tw|en|kr)$",
-      "match_raw": true,
+      "match_raw": false,
       "handler": "Handle"
     }
   ],

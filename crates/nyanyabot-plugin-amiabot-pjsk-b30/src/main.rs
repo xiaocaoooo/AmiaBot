@@ -49,7 +49,7 @@ fn plugin_descriptor() -> Descriptor {
             id: "cmd.pjsk-b30".into(),
             description: "查看 PJSK B30（如 b30, cnb30）".into(),
             pattern: r"^(?:(?P<server>cn|jp|tw|en|kr))?b30$".into(),
-            match_raw: true,
+            match_raw: false,
             handler: "Handle".into(),
         }],
         ..Default::default()

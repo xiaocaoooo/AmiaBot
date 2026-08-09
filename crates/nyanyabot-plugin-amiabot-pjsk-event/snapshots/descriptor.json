@@ -37,7 +37,7 @@
       "id": "cmd.pjsk-event",
       "description": "PJSK 活动查询（如 event, jpevent, cn查活动, enevent50）",
       "pattern": "^(?i)(?:(?P<server>cn|jp|tw|en|kr))?(?:event|查活动)(?P<id>[0-9]*)$",
-      "match_raw": true,
+      "match_raw": false,
       "handler": "Handle"
     }
   ],
