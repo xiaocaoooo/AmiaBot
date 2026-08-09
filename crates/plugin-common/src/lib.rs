@@ -157,6 +157,23 @@ pub fn first_match_group(match_data: &Option<nyanyabot_proto::CommandMatch>) -> 
         .unwrap_or_default()
 }
 
+/// Go util.SendError: prefix + redacted detail.
+pub async fn send_error(
+    host: &mut HostClient,
+    event: &Value,
+    prefix: &str,
+    err: impl std::fmt::Display,
+    trace_id: &str,
+) -> Result<(), nyanyabot_proto::StructuredError> {
+    let detail = redact_secrets(&err.to_string());
+    let text = if detail.is_empty() {
+        prefix.to_string()
+    } else {
+        format!("{prefix}：{detail}")
+    };
+    send_text(host, event, &text, trace_id).await
+}
+
 pub async fn send_text(
     host: &mut HostClient,
     event: &Value,

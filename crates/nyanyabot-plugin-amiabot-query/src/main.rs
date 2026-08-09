@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
+use chrono::Datelike;
 use nyanyabot_proto::{
     CommandListener, CommandMatch, ConfigSpec, Descriptor, HandleResult, HostClient, Plugin,
     StructuredError, run_plugin_with_host,
@@ -65,18 +66,18 @@ fn plugin_descriptor() -> Descriptor {
             CommandListener {
                 name: "query-user".into(),
                 id: "cmd.query-user".into(),
-                description: "查询用户资料卡".into(),
+                description: "查询用户资料卡（支持 query/资料卡/用户资料，可 @ 或指定对象）".into(),
                 pattern: USER_PATTERN.into(),
                 match_raw: false,
-                handler: "HandleUser".into(),
+                handler: "HandleQueryUser".into(),
             },
             CommandListener {
                 name: "query-group".into(),
                 id: "cmd.query-group".into(),
-                description: "查询群资料卡".into(),
+                description: "查询当前群资料卡（如 group、群资料卡、群信息）".into(),
                 pattern: GROUP_PATTERN.into(),
                 match_raw: false,
-                handler: "HandleGroup".into(),
+                handler: "HandleQueryGroup".into(),
             },
         ],
         ..Default::default()
@@ -84,34 +85,47 @@ fn plugin_descriptor() -> Descriptor {
 }
 
 fn extract_target_user_id(content: &str, event: &Value) -> i64 {
-    if let Some(caps) = Regex::new(r"\[CQ:at,qq=(\d+)\]")
-        .ok()
-        .and_then(|re| re.captures(content))
-        && let Ok(id) = caps[1].parse::<i64>()
-    {
-        return id;
-    }
-    if let Some(caps) = Regex::new(r"(\d{5,})")
-        .ok()
-        .and_then(|re| re.captures(content))
-        && let Ok(id) = caps[1].parse::<i64>()
-    {
-        return id;
-    }
-    if let Some(id) = event.get("reply").and_then(|r| json_i64(r.get("user_id"))) {
-        return id;
-    }
-    // also message segments at
+    // Go order: message segments first, then raw CQ:at in content. No bare digits / reply.
     if let Some(arr) = event.get("message").and_then(|v| v.as_array()) {
         for seg in arr {
-            if seg.get("type").and_then(|v| v.as_str()) == Some("at")
-                && let Some(id) = json_i64(seg.get("data").and_then(|d| d.get("qq")))
-            {
+            if let Some(id) = extract_at_from_segment(seg) {
                 return id;
             }
         }
     }
-    event_user_id(event)
+    extract_at_from_content(content)
+}
+
+fn extract_at_from_segment(seg: &Value) -> Option<i64> {
+    if !seg
+        .get("type")
+        .and_then(|v| v.as_str())
+        .is_some_and(|t| t.eq_ignore_ascii_case("at"))
+    {
+        return None;
+    }
+    let qq = seg
+        .get("data")
+        .and_then(|d| d.get("qq"))
+        .map(|v| match v {
+            Value::String(s) => s.trim().to_string(),
+            Value::Number(n) => n.to_string(),
+            _ => String::new(),
+        })
+        .unwrap_or_default();
+    if qq.is_empty() || qq.eq_ignore_ascii_case("all") {
+        return None;
+    }
+    qq.parse::<i64>().ok().filter(|id| *id > 0)
+}
+
+fn extract_at_from_content(content: &str) -> i64 {
+    Regex::new(r"\[CQ:at,qq=(\d+)\]")
+        .ok()
+        .and_then(|re| re.captures(content))
+        .and_then(|caps| caps[1].parse::<i64>().ok())
+        .filter(|id| *id > 0)
+        .unwrap_or(0)
 }
 
 fn s(v: &Value, keys: &[&str]) -> String {
@@ -133,10 +147,6 @@ fn n_i64(v: &Value, keys: &[&str]) -> i64 {
         }
     }
     0
-}
-
-fn n_i32(v: &Value, keys: &[&str]) -> i32 {
-    n_i64(v, keys) as i32
 }
 
 fn first_positive(vals: &[i64]) -> i64 {
@@ -166,15 +176,42 @@ fn api_data(resp: &Value) -> Value {
     resp.get("data").cloned().unwrap_or(json!({}))
 }
 
-fn put(q: &mut BTreeMap<String, String>, k: &str, v: impl ToString) {
+/// Go setStringParam: skip empty only (keeps "false" / non-empty zeros-as-text).
+fn put_str(q: &mut BTreeMap<String, String>, k: &str, v: impl ToString) {
     let s = v.to_string();
-    if !s.trim().is_empty() && s != "0" && s != "false" {
-        q.insert(k.to_string(), s);
+    let t = s.trim();
+    if !t.is_empty() {
+        q.insert(k.to_string(), t.to_string());
     }
+}
+
+/// Go setInt/setInt64Param: skip <= 0.
+fn put_int(q: &mut BTreeMap<String, String>, k: &str, v: i64) {
+    if v > 0 {
+        q.insert(k.to_string(), v.to_string());
+    }
+}
+
+fn put_bool(q: &mut BTreeMap<String, String>, k: &str, v: bool) {
+    q.insert(k.to_string(), if v { "true" } else { "false" }.to_string());
 }
 
 fn put_always(q: &mut BTreeMap<String, String>, k: &str, v: impl ToString) {
     q.insert(k.to_string(), v.to_string());
+}
+
+// Back-compat wrapper used by group fetch for mixed values.
+fn put(q: &mut BTreeMap<String, String>, k: &str, v: impl ToString) {
+    let s = v.to_string();
+    let t = s.trim();
+    if t.is_empty() {
+        return;
+    }
+    // Numeric zero skip (Go setInt*); keep "false".
+    if t == "0" {
+        return;
+    }
+    q.insert(k.to_string(), t.to_string());
 }
 
 async fn onebot(
@@ -191,10 +228,53 @@ fn format_timestamp(ts: i64) -> String {
     if ts <= 0 {
         return String::new();
     }
-    use chrono::{TimeZone, Utc};
-    match Utc.timestamp_opt(ts, 0) {
+    use chrono::{Local, TimeZone};
+    // Go accepts unix seconds or milliseconds.
+    let (secs, nsecs) = if ts > 1_000_000_000_000 {
+        let ms = ts;
+        (ms / 1000, ((ms % 1000) * 1_000_000) as u32)
+    } else {
+        (ts, 0)
+    };
+    match Local.timestamp_opt(secs, nsecs) {
         chrono::LocalResult::Single(dt) => dt.format("%Y-%m-%d %H:%M:%S").to_string(),
         _ => ts.to_string(),
+    }
+}
+
+fn normalize_reg_year(reg_year: i64, reg_time: i64) -> i64 {
+    if reg_year > 0 {
+        return reg_year;
+    }
+    if reg_time <= 0 {
+        return 0;
+    }
+    use chrono::{Local, TimeZone};
+    let secs = if reg_time > 1_000_000_000_000 {
+        reg_time / 1000
+    } else {
+        reg_time
+    };
+    match Local.timestamp_opt(secs, 0) {
+        chrono::LocalResult::Single(dt) => i64::from(dt.year()),
+        _ => 0,
+    }
+}
+
+fn normalize_qage(v: &Value) -> String {
+    let text = match v {
+        Value::Null => String::new(),
+        Value::String(s) => s.trim().to_string(),
+        Value::Number(n) => n.to_string(),
+        other => other.to_string(),
+    };
+    if text.is_empty() || text == "0" {
+        return String::new();
+    }
+    if text.contains('年') {
+        text
+    } else {
+        format!("{text} 年")
     }
 }
 
@@ -354,9 +434,7 @@ async fn fetch_group_page_params(
     put(&mut q, "rules", &rules);
     put(&mut q, "join_question", &join_question);
     put(&mut q, "description", &description);
-    if is_muted_all {
-        put_always(&mut q, "is_muted_all", "true");
-    }
+    put_bool(&mut q, "is_muted_all", is_muted_all);
 
     // member list stats
     let mut admin_count = 0i64;
@@ -629,55 +707,35 @@ impl Plugin for Plug {
 
                 let mut q = BTreeMap::new();
                 put_always(&mut q, "id", target);
-                let nickname = {
+                let mut nickname = {
                     let n = s(&stranger, &["nickname", "nick"]);
                     if n.is_empty() { target.to_string() } else { n }
                 };
-                put(&mut q, "nickname", &nickname);
-                put(&mut q, "remark", s(&stranger, &["remark"]));
-                put(&mut q, "uid", s(&stranger, &["uid"]));
-                put(&mut q, "qid", s(&stranger, &["qid", "q_id"]));
-                put(
+                put_str(&mut q, "nickname", &nickname);
+                put_str(&mut q, "remark", s(&stranger, &["remark"]));
+                put_str(&mut q, "qid", s(&stranger, &["qid", "q_id"]));
+                put_str(
                     &mut q,
                     "long_nick",
-                    truncate_text(&s(&stranger, &["long_nick", "longNick", "signature"]), 80),
+                    truncate_text(&s(&stranger, &["long_nick", "longNick", "signature"]), 120),
                 );
-                put(
-                    &mut q,
-                    "sex",
-                    normalize_enum(&s(&stranger, &["sex", "gender"])),
+                let mut sex = normalize_enum(&s(&stranger, &["sex", "gender"]));
+                put_str(&mut q, "sex", &sex);
+                let mut age = n_i64(&stranger, &["age"]);
+                put_int(&mut q, "age", age);
+                let reg_year = normalize_reg_year(
+                    n_i64(&stranger, &["reg_year", "regYear"]),
+                    first_positive(&[
+                        n_i64(&stranger, &["reg_time", "regTime"]),
+                        n_i64(&stranger, &["regTime"]),
+                    ]),
                 );
-                put(&mut q, "age", n_i32(&stranger, &["age"]));
-                let reg_year = {
-                    let y = n_i64(&stranger, &["reg_year", "regYear"]);
-                    if y > 0 {
-                        y
-                    } else {
-                        let ts = first_positive(&[
-                            n_i64(&stranger, &["reg_time", "regTime"]),
-                            n_i64(&stranger, &["regTime"]),
-                        ]);
-                        if ts > 10_000_000_000 {
-                            // ms
-                            ((ts / 1000) / 31_536_000) + 1970
-                        } else if ts > 0 {
-                            (ts / 31_536_000) + 1970
-                        } else {
-                            0
-                        }
-                    }
-                };
-                put(&mut q, "reg_year", reg_year);
-                put(
-                    &mut q,
-                    "login_days",
-                    n_i64(&stranger, &["login_days", "loginDays"]),
-                );
+                put_int(&mut q, "reg_year", reg_year);
                 let mut qq_level = first_positive(&[
                     n_i64(&stranger, &["qq_level", "qqLevel"]),
                     n_i64(&stranger, &["level"]),
                 ]);
-                put(
+                put_str(
                     &mut q,
                     "birthday",
                     format_birthday(
@@ -686,49 +744,40 @@ impl Plugin for Plug {
                         n_i64(&stranger, &["birthday_day", "birthdayDay"]),
                     ),
                 );
-                put(
+                put_str(
                     &mut q,
                     "phone_num",
                     s(&stranger, &["phone_num", "phoneNum"]),
                 );
-                put(&mut q, "email", s(&stranger, &["email"]));
-                put(
+                put_str(&mut q, "email", s(&stranger, &["email"]));
+                put_str(
                     &mut q,
                     "category_name",
                     s(&stranger, &["category_name", "categoryName"]),
                 );
-                put(
-                    &mut q,
-                    "category_id",
-                    first_positive(&[
-                        n_i64(&stranger, &["category_id", "categoryId"]),
-                        n_i64(&stranger, &["categoryID"]),
-                    ]),
-                );
-                put(
-                    &mut q,
-                    "is_vip",
-                    stranger
-                        .get("is_vip")
-                        .or_else(|| stranger.get("isVip"))
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false),
-                );
-                put(
-                    &mut q,
-                    "is_years_vip",
+                let category_id =
+                    first_positive(&[n_i64(&stranger, &["category_id", "categoryId"])]);
+                if category_id > 0 {
+                    put_str(&mut q, "category_id", category_id.to_string());
+                }
+                if let Some(b) =
+                    bool_from_value(stranger.get("is_vip").or_else(|| stranger.get("isVip")))
+                {
+                    put_bool(&mut q, "is_vip", b);
+                }
+                if let Some(b) = bool_from_value(
                     stranger
                         .get("is_years_vip")
-                        .or_else(|| stranger.get("isYearsVip"))
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false),
-                );
-                put(
+                        .or_else(|| stranger.get("isYearsVip")),
+                ) {
+                    put_bool(&mut q, "is_years_vip", b);
+                }
+                put_int(
                     &mut q,
                     "vip_level",
                     n_i64(&stranger, &["vip_level", "vipLevel"]),
                 );
-                put(
+                put_int(
                     &mut q,
                     "online_status",
                     n_i64(&stranger, &["status", "online_status"]),
@@ -748,49 +797,74 @@ impl Plugin for Plug {
                         {
                             Ok(resp) => {
                                 let m = api_data(&resp);
-                                put(&mut q, "card", s(&m, &["card"]));
-                                put(&mut q, "role", normalize_enum(&s(&m, &["role"])));
-                                put(&mut q, "group_level", s(&m, &["level"]));
-                                put(&mut q, "title", s(&m, &["title"]));
-                                put(&mut q, "join_time", n_i64(&m, &["join_time", "joinTime"]));
-                                put(
+                                put_str(&mut q, "card", s(&m, &["card"]));
+                                put_str(&mut q, "role", normalize_enum(&s(&m, &["role"])));
+                                put_str(&mut q, "group_level", s(&m, &["level"]));
+                                put_str(&mut q, "title", truncate_text(&s(&m, &["title"]), 48));
+                                put_str(
+                                    &mut q,
+                                    "join_time",
+                                    format_timestamp(n_i64(&m, &["join_time", "joinTime"])),
+                                );
+                                put_str(
                                     &mut q,
                                     "last_sent_time",
-                                    n_i64(&m, &["last_sent_time", "lastSentTime"]),
+                                    format_timestamp(n_i64(
+                                        &m,
+                                        &["last_sent_time", "lastSentTime"],
+                                    )),
                                 );
-                                put(&mut q, "area", s(&m, &["area"]));
-                                put(&mut q, "q_age", n_i64(&m, &["q_age", "qAge"]));
-                                put(
+                                put_str(&mut q, "area", s(&m, &["area"]));
+                                let qage_src = m
+                                    .get("qage")
+                                    .or_else(|| m.get("q_age"))
+                                    .or_else(|| m.get("qAge"))
+                                    .cloned()
+                                    .unwrap_or(Value::Null);
+                                put_str(&mut q, "qage", normalize_qage(&qage_src));
+                                put_str(
                                     &mut q,
                                     "mute_until",
-                                    n_i64(&m, &["shut_up_timestamp", "shutUpTimestamp"]),
+                                    format_timestamp(n_i64(
+                                        &m,
+                                        &["shut_up_timestamp", "shutUpTimestamp"],
+                                    )),
                                 );
-                                put(
+                                put_str(
                                     &mut q,
                                     "title_expire_time",
-                                    n_i64(&m, &["title_expire_time", "titleExpireTime"]),
+                                    format_timestamp(n_i64(
+                                        &m,
+                                        &["title_expire_time", "titleExpireTime"],
+                                    )),
                                 );
-                                if let Some(b) = m
-                                    .get("card_changeable")
-                                    .or_else(|| m.get("cardChangeable"))
-                                    .and_then(|v| v.as_bool())
-                                {
-                                    put(&mut q, "card_changeable", b);
+                                if let Some(b) = bool_from_value(m.get("unfriendly")) {
+                                    put_bool(&mut q, "unfriendly", b);
                                 }
-                                if let Some(b) = m.get("unfriendly").and_then(|v| v.as_bool()) {
-                                    put(&mut q, "unfriendly", b);
-                                }
-                                if let Some(b) = m
-                                    .get("is_robot")
-                                    .or_else(|| m.get("isRobot"))
-                                    .and_then(|v| v.as_bool())
+                                if let Some(b) =
+                                    bool_from_value(m.get("is_robot").or_else(|| m.get("isRobot")))
                                 {
-                                    put(&mut q, "is_robot", b);
+                                    put_bool(&mut q, "is_robot", b);
                                 }
                                 qq_level = first_positive(&[
                                     qq_level,
                                     n_i64(&m, &["qq_level", "qqLevel"]),
                                 ]);
+                                if nickname == target.to_string() {
+                                    let alt = s(&m, &["card", "nickname"]);
+                                    if !alt.is_empty() {
+                                        nickname = alt;
+                                        put_str(&mut q, "nickname", &nickname);
+                                    }
+                                }
+                                if sex.is_empty() {
+                                    sex = normalize_enum(&s(&m, &["sex"]));
+                                    put_str(&mut q, "sex", &sex);
+                                }
+                                if age <= 0 {
+                                    age = n_i64(&m, &["age"]);
+                                    put_int(&mut q, "age", age);
+                                }
                             }
                             Err(err) => {
                                 warn!(error=%err, "get_group_member_info failed; continue");
@@ -798,9 +872,8 @@ impl Plugin for Plug {
                         }
                     }
                 }
-                put(&mut q, "qq_level", qq_level);
+                put_int(&mut q, "qq_level", qq_level);
 
-                // optional napcat status
                 if let Ok(st) = onebot(
                     &mut host,
                     "nc_get_user_status",
@@ -811,22 +884,18 @@ impl Plugin for Plug {
                 .await
                 {
                     let d = api_data(&st);
-                    put(&mut q, "online_status", n_i64(&d, &["status"]));
-                    put(
+                    put_int(&mut q, "online_status", n_i64(&d, &["status"]));
+                    put_int(
                         &mut q,
                         "online_ext_status",
                         n_i64(&d, &["ext_status", "extStatus"]),
                     );
+                } else {
+                    warn!(target_user_id = target, "nc_get_user_status failed; ignore");
                 }
 
                 if cfg.amiabot_pages.is_empty() {
-                    let _ = send_text(
-                        &mut host,
-                        &event_raw,
-                        &format!("用户 {target}\n昵称：{nickname}"),
-                        trace_id,
-                    )
-                    .await;
+                    let _ = send_text(&mut host, &event_raw, "❌ 服务未配置", trace_id).await;
                     return Ok(HandleResult {});
                 }
                 let page = build_pages_url(&cfg.amiabot_pages, "/query/user", &q);
@@ -853,6 +922,7 @@ impl Plugin for Plug {
                     }
                 }
             }
+
             "cmd.query-group" => {
                 if event_message_type(&event_raw) != "group" {
                     let _ =
@@ -879,19 +949,7 @@ impl Plugin for Plug {
                     }
                 };
                 if cfg.amiabot_pages.is_empty() {
-                    let name = q.get("name").cloned().unwrap_or_default();
-                    let members = q.get("member_count").cloned().unwrap_or_else(|| "?".into());
-                    let _ = send_text(
-                        &mut host,
-                        &event_raw,
-                        &format!(
-                            "群 {group_id}
-群名：{name}
-人数：{members}"
-                        ),
-                        trace_id,
-                    )
-                    .await;
+                    let _ = send_text(&mut host, &event_raw, "❌ 服务未配置", trace_id).await;
                     return Ok(HandleResult {});
                 }
                 let page = build_pages_url(&cfg.amiabot_pages, "/query/group", &q);
@@ -982,12 +1040,24 @@ mod unit_tests {
     }
 
     #[test]
-    fn extract_at_segment() {
+    fn extract_at_segment_preferred_over_content() {
         let event = json!({
             "user_id": 1,
             "message": [{"type":"at","data":{"qq":"998877"}}]
         });
-        assert_eq!(extract_target_user_id("资料卡", &event), 998877);
+        assert_eq!(
+            extract_target_user_id("资料卡 [CQ:at,qq=12345]", &event),
+            998877
+        );
+    }
+
+    #[test]
+    fn extract_ignores_bare_digits_and_all() {
+        let event = json!({
+            "user_id": 1,
+            "message": [{"type":"at","data":{"qq":"all"}}]
+        });
+        assert_eq!(extract_target_user_id("资料卡 123456789", &event), 0);
     }
 
     #[test]
@@ -1003,5 +1073,42 @@ mod unit_tests {
         assert!(s.contains("Alice(123)"));
         assert_eq!(super::format_timestamp(0), "");
         assert!(!super::format_timestamp(1_700_000_000).is_empty());
+        assert!(super::format_timestamp(1_700_000_000_000).contains('-'));
+    }
+
+    #[test]
+    fn normalize_qage_appends_year() {
+        assert_eq!(normalize_qage(&json!(8)), "8 年");
+        assert_eq!(normalize_qage(&json!("8 年")), "8 年");
+        assert_eq!(normalize_qage(&json!(0)), "");
+        assert_eq!(normalize_qage(&json!("")), "");
+    }
+
+    #[test]
+    fn put_helpers_match_go_semantics() {
+        let mut q = BTreeMap::new();
+        put_str(&mut q, "unfriendly", "false");
+        put_int(&mut q, "age", 0);
+        put_int(&mut q, "vip_level", 7);
+        put_bool(&mut q, "is_robot", false);
+        assert_eq!(q.get("unfriendly").map(String::as_str), Some("false"));
+        assert!(!q.contains_key("age"));
+        assert_eq!(q.get("vip_level").map(String::as_str), Some("7"));
+        assert_eq!(q.get("is_robot").map(String::as_str), Some("false"));
+    }
+
+    #[test]
+    fn user_page_omits_removed_keys_and_uses_qage() {
+        let mut q = BTreeMap::new();
+        put_always(&mut q, "id", 12345);
+        put_str(&mut q, "qage", normalize_qage(&json!("8")));
+        put_str(&mut q, "join_time", format_timestamp(1_700_000_000));
+        put_bool(&mut q, "unfriendly", false);
+        assert!(!q.contains_key("uid"));
+        assert!(!q.contains_key("login_days"));
+        assert!(!q.contains_key("card_changeable"));
+        assert_eq!(q.get("qage").map(String::as_str), Some("8 年"));
+        assert!(q["join_time"].contains('-'));
+        assert_eq!(q.get("unfriendly").map(String::as_str), Some("false"));
     }
 }

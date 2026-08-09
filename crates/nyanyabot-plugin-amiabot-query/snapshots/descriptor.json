@@ -2,16 +2,16 @@
   "author": "amiabot",
   "commands": [
     {
-      "description": "查询用户资料卡",
-      "handler": "HandleUser",
+      "description": "查询用户资料卡（支持 query/资料卡/用户资料，可 @ 或指定对象）",
+      "handler": "HandleQueryUser",
       "id": "cmd.query-user",
       "match_raw": false,
       "name": "query-user",
       "pattern": "^(?:query|资料卡|用户资料)(?:\\s+.*|\\[CQ:at,[^\\]]+\\].*)?$"
     },
     {
-      "description": "查询群资料卡",
-      "handler": "HandleGroup",
+      "description": "查询当前群资料卡（如 group、群资料卡、群信息）",
+      "handler": "HandleQueryGroup",
       "id": "cmd.query-group",
       "match_raw": false,
       "name": "query-group",
