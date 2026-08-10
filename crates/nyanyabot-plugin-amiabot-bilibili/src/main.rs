@@ -20,11 +20,24 @@ use tracing_subscriber::EnvFilter;
 
 const BILI_PATTERN: &str =
     r"(?i)\b(?:av(\d+)|(bv1[0-9a-zA-Z]+)|(?:(?:https?://)?b23\.tv/([a-z0-9]+)))\b";
+const DEFAULT_QUALITY: i64 = 80;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct Cfg {
     amiabot_pages: String,
     bilibili_downloader_server: String,
+    /// Upstream qn; `None` means omit query (server default). Values `< 1` are treated as unset.
+    quality: Option<i64>,
+}
+
+impl Default for Cfg {
+    fn default() -> Self {
+        Self {
+            amiabot_pages: String::new(),
+            bilibili_downloader_server: String::new(),
+            quality: Some(DEFAULT_QUALITY),
+        }
+    }
 }
 
 impl Cfg {
@@ -40,7 +53,37 @@ impl Cfg {
                     .and_then(|x| x.as_str())
                     .unwrap_or(""),
             ),
+            quality: parse_quality(v.get("quality")),
         }
+    }
+}
+
+fn parse_quality(v: Option<&Value>) -> Option<i64> {
+    let Some(v) = v else {
+        return Some(DEFAULT_QUALITY);
+    };
+    if v.is_null() {
+        return Some(DEFAULT_QUALITY);
+    }
+    let q = if let Some(n) = v.as_i64() {
+        n
+    } else if let Some(n) = v.as_u64() {
+        i64::try_from(n).unwrap_or(-1)
+    } else if let Some(s) = v.as_str() {
+        let s = s.trim();
+        if s.is_empty() {
+            return Some(DEFAULT_QUALITY);
+        }
+        s.parse::<i64>().unwrap_or(-1)
+    } else if let Some(n) = v.as_f64() {
+        n as i64
+    } else {
+        return Some(DEFAULT_QUALITY);
+    };
+    if q < 1 {
+        None
+    } else {
+        Some(q)
     }
 }
 
@@ -64,11 +107,16 @@ fn plugin_descriptor() -> Descriptor {
                 "type":"object",
                 "properties":{
                     "amiabot_pages":{"type":"string"},
-                    "bilibili_downloader_server":{"type":"string"}
+                    "bilibili_downloader_server":{"type":"string"},
+                    "quality":{"type":"integer","minimum":1,"description":"下载画质 qn，默认 80（1080P）"}
                 },
                 "additionalProperties": true
             })),
-            default: Some(json!({"amiabot_pages":"","bilibili_downloader_server":""})),
+            default: Some(json!({
+                "amiabot_pages":"",
+                "bilibili_downloader_server":"",
+                "quality": DEFAULT_QUALITY
+            })),
         }),
         commands: vec![CommandListener {
             name: "bilibili".into(),
@@ -106,7 +154,24 @@ fn parse_ids(content: &str, match_data: &Option<CommandMatch>) -> (String, Strin
     (String::new(), String::new(), String::new())
 }
 
-async fn resolve_b23(short: &str) -> Result<(String, String), String> {
+/// Prefer bvid when both are present.
+fn pick_video_id(aid: &str, bvid: &str) -> String {
+    let bvid = bvid.trim();
+    if !bvid.is_empty() {
+        return bvid.to_string();
+    }
+    aid.trim().to_string()
+}
+
+fn extract_part(s: &str) -> Option<u32> {
+    let re = Regex::new(r"(?i)[?&]p=(\d+)").unwrap();
+    re.captures(s)
+        .and_then(|c| c.get(1).map(|m| m.as_str()))
+        .and_then(|raw| raw.parse::<u32>().ok())
+        .filter(|&p| p >= 1)
+}
+
+async fn resolve_b23(short: &str) -> Result<(String, String, Option<u32>), String> {
     let short = short.trim();
     if short.is_empty() {
         return Err("short is empty".into());
@@ -137,7 +202,8 @@ async fn resolve_b23(short: &str) -> Result<(String, String), String> {
             "cannot extract aid/bvid from redirect url: {final_url}"
         ));
     }
-    Ok((aid, bvid))
+    let p = extract_part(&final_url);
+    Ok((aid, bvid, p))
 }
 
 fn extract_aid(s: &str) -> String {
@@ -161,13 +227,7 @@ fn chrono_like_unix() -> i64 {
         .unwrap_or(0)
 }
 
-fn build_downloader_url(downloader_server: &str, id: &str) -> String {
-    let base = normalize_http_base(downloader_server)
-        .trim_end_matches('/')
-        .to_string();
-    if base.is_empty() || id.is_empty() {
-        return String::new();
-    }
+fn percent_encode_path_segment(id: &str) -> String {
     let mut enc = String::new();
     for b in id.bytes() {
         match b {
@@ -177,7 +237,32 @@ fn build_downloader_url(downloader_server: &str, id: &str) -> String {
             _ => enc.push_str(&format!("%{b:02X}")),
         }
     }
-    format!("{base}/bilibili/download/{enc}")
+    enc
+}
+
+/// New API: `{base}/api/v1/videos/{id}/download?p=&quality=`
+fn build_downloader_url(
+    downloader_server: &str,
+    id: &str,
+    p: Option<u32>,
+    quality: Option<i64>,
+) -> String {
+    let base = normalize_http_base(downloader_server)
+        .trim_end_matches('/')
+        .to_string();
+    if base.is_empty() || id.is_empty() {
+        return String::new();
+    }
+    let enc = percent_encode_path_segment(id);
+    let path = format!("/api/v1/videos/{enc}/download");
+    let mut q = BTreeMap::new();
+    if let Some(p) = p.filter(|&p| p >= 1) {
+        q.insert("p".into(), p.to_string());
+    }
+    if let Some(quality) = quality.filter(|&q| q >= 1) {
+        q.insert("quality".into(), quality.to_string());
+    }
+    build_pages_url(&base, &path, &q)
 }
 
 #[async_trait]
@@ -208,11 +293,15 @@ impl Plugin for Plug {
         };
         let content = event_content(&event_raw);
         let (mut aid, mut bvid, short) = parse_ids(&content, &match_data);
+        let mut part = extract_part(&content);
         if !short.is_empty() && aid.is_empty() && bvid.is_empty() {
             match resolve_b23(&short).await {
-                Ok((a, b)) => {
+                Ok((a, b, p)) => {
                     aid = a;
                     bvid = b;
+                    if part.is_none() {
+                        part = p;
+                    }
                 }
                 Err(err) => {
                     warn!(error=%err, "b23 resolve failed");
@@ -224,8 +313,9 @@ impl Plugin for Plug {
             return Ok(HandleResult {});
         }
         let cfg = self.cfg.read().clone();
+        let id = pick_video_id(&aid, &bvid);
 
-        // Screenshot via pages + screenshot/blob plugins (Go: silent if pages empty).
+        // Screenshot via pages + screenshot/blob plugins (silent if pages empty).
         let mut screenshot_url = String::new();
         if !cfg.amiabot_pages.is_empty() {
             let mut q = BTreeMap::new();
@@ -236,10 +326,10 @@ impl Plugin for Plug {
                 q.insert("bvid".into(), bvid.clone());
             }
             let page = build_pages_url(&cfg.amiabot_pages, "/bilibili/video", &q);
-            let id_for_blob = if !aid.is_empty() {
-                aid.clone()
+            let id_for_blob = if id.is_empty() {
+                pick_video_id(&aid, &bvid)
             } else {
-                bvid.clone()
+                id.clone()
             };
             match screenshot_and_upload(
                 &mut host,
@@ -254,15 +344,11 @@ impl Plugin for Plug {
             }
         }
 
-        // Downloader URL: {server}/bilibili/download/{id} (Go buildDownloaderURL).
-        let id = if !aid.is_empty() {
-            aid.clone()
-        } else {
-            bvid.clone()
-        };
+        // Downloader URL: {server}/api/v1/videos/{id}/download
         let mut video_url = String::new();
         if !cfg.bilibili_downloader_server.is_empty() && !id.is_empty() {
-            video_url = build_downloader_url(&cfg.bilibili_downloader_server, &id);
+            video_url =
+                build_downloader_url(&cfg.bilibili_downloader_server, &id, part, cfg.quality);
         }
 
         if screenshot_url.is_empty() && video_url.is_empty() {
@@ -335,6 +421,7 @@ mod descriptor_snapshot_tests {
 #[cfg(test)]
 mod unit_tests {
     use super::*;
+
     #[test]
     fn parse_bv() {
         let (aid, bvid, short) = parse_ids("看看 bv1xx411c7mD 这个", &None);
@@ -355,10 +442,48 @@ mod unit_tests {
     }
 
     #[test]
+    fn pick_prefers_bvid() {
+        assert_eq!(pick_video_id("170001", "BV1xx411c7mD"), "BV1xx411c7mD");
+        assert_eq!(pick_video_id("170001", ""), "170001");
+        assert_eq!(pick_video_id("", "BV1xx"), "BV1xx");
+    }
+
+    #[test]
+    fn extract_part_from_query() {
+        assert_eq!(
+            extract_part("https://www.bilibili.com/video/BV1xx411c7mD?p=2&spm=1"),
+            Some(2)
+        );
+        assert_eq!(
+            extract_part("看看 BV1xx411c7mD 这个 &p=3 分P"),
+            Some(3)
+        );
+        assert_eq!(extract_part("no part here"), None);
+        assert_eq!(extract_part("?p=0"), None);
+    }
+
+    #[test]
     fn downloader_url_shape() {
         assert_eq!(
-            build_downloader_url("http://dl.example.com", "BV1xx"),
-            "http://dl.example.com/bilibili/download/BV1xx"
+            build_downloader_url("http://dl.example.com", "BV1xx", None, None),
+            "http://dl.example.com/api/v1/videos/BV1xx/download"
         );
+        assert_eq!(
+            build_downloader_url("http://dl.example.com", "BV1xx", Some(2), Some(64)),
+            "http://dl.example.com/api/v1/videos/BV1xx/download?p=2&quality=64"
+        );
+        assert_eq!(
+            build_downloader_url("http://dl.example.com", "170001", None, Some(80)),
+            "http://dl.example.com/api/v1/videos/170001/download?quality=80"
+        );
+    }
+
+    #[test]
+    fn parse_quality_defaults_and_invalid() {
+        assert_eq!(parse_quality(None), Some(80));
+        assert_eq!(parse_quality(Some(&json!(64))), Some(64));
+        assert_eq!(parse_quality(Some(&json!("112"))), Some(112));
+        assert_eq!(parse_quality(Some(&json!(0))), None);
+        assert_eq!(parse_quality(Some(&json!(-1))), None);
     }
 }

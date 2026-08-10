@@ -13,7 +13,8 @@
   "config": {
     "default": {
       "amiabot_pages": "",
-      "bilibili_downloader_server": ""
+      "bilibili_downloader_server": "",
+      "quality": 80
     },
     "description": "Bilibili 插件配置",
     "schema": {
@@ -24,6 +25,11 @@
         },
         "bilibili_downloader_server": {
           "type": "string"
+        },
+        "quality": {
+          "description": "下载画质 qn，默认 80（1080P）",
+          "minimum": 1,
+          "type": "integer"
         }
       },
       "type": "object"
