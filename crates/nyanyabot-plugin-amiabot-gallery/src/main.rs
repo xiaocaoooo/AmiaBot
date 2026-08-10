@@ -24,10 +24,8 @@ use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
 
 const OPEN_PATTERN: &str = r"(?i)^gallery\s+open\s+(?P<gallery_name>\S+)\s*$";
-const UPLOAD_PATTERN: &str =
-    r"(?i)^(?:gallery\s+upload|上传)\s+(?P<gallery_name>\S+)\s*$";
-const VIEW_PATTERN: &str =
-    r"(?i)^看\s+(?P<input>\S+?)(?:\s*\*\s*(?P<num>\d+))?\s*$";
+const UPLOAD_PATTERN: &str = r"(?i)^(?:gallery\s+upload|上传)\s+(?P<gallery_name>\S+)\s*$";
+const VIEW_PATTERN: &str = r"(?i)^看\s+(?P<input>\S+?)(?:\s*\*\s*(?P<num>\d+))?\s*$";
 
 const MAX_VIEW_COUNT: u32 = 5;
 
@@ -105,13 +103,7 @@ fn parse_image_uuid(input: &str) -> Option<Uuid> {
 /// Only meaningful for gallery-name view. Defaults to 1, clamps to 1..=MAX_VIEW_COUNT.
 fn parse_view_count(raw: &str) -> u32 {
     let n = raw.trim().parse::<u32>().unwrap_or(1);
-    if n < 1 {
-        1
-    } else if n > MAX_VIEW_COUNT {
-        MAX_VIEW_COUNT
-    } else {
-        n
-    }
+    n.clamp(1, MAX_VIEW_COUNT)
 }
 
 fn human_bytes(n: i64) -> String {
@@ -131,7 +123,12 @@ fn human_bytes(n: i64) -> String {
 
 fn build_image_meta_text(image: &ImageDetail) -> String {
     let mut lines = vec![format!("图片 {}", image.id)];
-    if let Some(name) = image.name.as_ref().map(|s| s.trim()).filter(|s| !s.is_empty()) {
+    if let Some(name) = image
+        .name
+        .as_ref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+    {
         lines.push(format!("名称：{name}"));
     }
     if !image.aliases.is_empty() {
@@ -158,9 +155,7 @@ struct UploadOutcome {
 }
 
 fn build_upload_summary(source_label: &str, gallery: &str, outcomes: &[UploadOutcome]) -> String {
-    let mut lines = vec![format!(
-        "上传完成（来源：{source_label}，画廊：{gallery}）"
-    )];
+    let mut lines = vec![format!("上传完成（来源：{source_label}，画廊：{gallery}）")];
     for o in outcomes {
         if let Some(id) = o.uploaded {
             lines.push(format!("第 {} 张：成功 {}", o.index, id));
@@ -212,9 +207,7 @@ fn sample_random<T: Clone>(items: &[T], n: usize) -> Vec<T> {
         seed = 1;
     }
     for i in (1..idxs.len()).rev() {
-        seed = seed
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1);
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
         let j = (seed as usize) % (i + 1);
         idxs.swap(i, j);
     }
@@ -327,10 +320,7 @@ impl Plugin for Plug {
 
                 let self_id = event_self_id(&event_raw);
                 let (images, source_label) = match message::extract_images_from_event(
-                    &mut host,
-                    &event_raw,
-                    self_id,
-                    trace_id,
+                    &mut host, &event_raw, self_id, trace_id,
                 )
                 .await
                 {
@@ -634,7 +624,9 @@ impl Plugin for Plug {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
         .with_writer(std::io::stderr)
         .init();
     let host = Arc::new(AsyncRwLock::new(None));

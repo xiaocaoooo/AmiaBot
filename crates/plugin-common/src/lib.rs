@@ -816,12 +816,8 @@ mod tests {
     }
 }
 
-
 /// Tell host this command handle is effective (for optional emoji reactions).
-pub async fn mark_command_effective(
-    host: &mut nyanyabot_proto::HostClient,
-    trace_id: &str,
-) {
+pub async fn mark_command_effective(host: &mut nyanyabot_proto::HostClient, trace_id: &str) {
     if trace_id.trim().is_empty() {
         return;
     }

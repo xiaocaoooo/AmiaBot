@@ -9,9 +9,8 @@ use nyanyabot_proto::{
 };
 use parking_lot::RwLock;
 use plugin_common::{
-    mark_command_effective,
-    build_pages_url, event_content, first_match_group, normalize_http_base, screenshot_and_upload,
-    send_image, send_video, upload_remote_blob,
+    build_pages_url, event_content, first_match_group, mark_command_effective, normalize_http_base,
+    screenshot_and_upload, send_image, send_video, upload_remote_blob,
 };
 use regex::Regex;
 use serde_json::{Value, json};
@@ -81,11 +80,7 @@ fn parse_quality(v: Option<&Value>) -> Option<i64> {
     } else {
         return Some(DEFAULT_QUALITY);
     };
-    if q < 1 {
-        None
-    } else {
-        Some(q)
-    }
+    if q < 1 { None } else { Some(q) }
 }
 
 struct Plug {
@@ -386,7 +381,9 @@ impl Plugin for Plug {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
         .with_writer(std::io::stderr)
         .init();
     let host = Arc::new(AsyncRwLock::new(None));
@@ -456,10 +453,7 @@ mod unit_tests {
             extract_part("https://www.bilibili.com/video/BV1xx411c7mD?p=2&spm=1"),
             Some(2)
         );
-        assert_eq!(
-            extract_part("看看 BV1xx411c7mD 这个 &p=3 分P"),
-            Some(3)
-        );
+        assert_eq!(extract_part("看看 BV1xx411c7mD 这个 &p=3 分P"), Some(3));
         assert_eq!(extract_part("no part here"), None);
         assert_eq!(extract_part("?p=0"), None);
     }

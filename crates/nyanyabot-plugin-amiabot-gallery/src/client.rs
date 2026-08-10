@@ -204,8 +204,7 @@ impl GalleryClient {
         let list = self.list_galleries(Some(name)).await?;
         let needle = name.to_lowercase();
         Ok(list.into_iter().find(|g| {
-            g.name.to_lowercase() == needle
-                || g.aliases.iter().any(|a| a.to_lowercase() == needle)
+            g.name.to_lowercase() == needle || g.aliases.iter().any(|a| a.to_lowercase() == needle)
         }))
     }
 
