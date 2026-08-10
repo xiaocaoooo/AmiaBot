@@ -200,11 +200,11 @@ impl Plugin for Plug {
         trace_id: &str,
     ) -> Result<HandleResult, StructuredError> {
         if listener_id != "cmd.pjsk-song" {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         let host = self.host.read().await.clone();
         let Some(mut host) = host else {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         };
         let cfg = {
             let g = self.cfg.read();
@@ -226,7 +226,7 @@ impl Plugin for Plug {
                 trace_id,
             )
             .await;
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
 
         // numeric id shortcut: song123 / song#123
@@ -255,7 +255,7 @@ impl Plugin for Plug {
                 trace_id,
             )
             .await;
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         if cfg.amiabot_pages.is_empty() {
             let top = &results[0];
@@ -270,7 +270,7 @@ impl Plugin for Plug {
                 msg.push_str(&build_candidate_message(&results[1..], &server));
             }
             let _ = send_text(&mut host, &event_raw, &msg, trace_id).await;
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
 
         let top = &results[0];
@@ -299,7 +299,7 @@ impl Plugin for Plug {
                     trace_id,
                 )
                 .await;
-                return Ok(HandleResult {});
+                return Ok(HandleResult::ignored());
             }
         }
         if results.len() > 1 {
@@ -312,7 +312,7 @@ impl Plugin for Plug {
             .await;
         }
         info!(music_id = top.music_id, %server, "pjsk song handled");
-        Ok(HandleResult {})
+        Ok(HandleResult::handled())
     }
     async fn status(&self) -> Result<String, StructuredError> {
         let n = self.aliases.read().await.data().musics.len();

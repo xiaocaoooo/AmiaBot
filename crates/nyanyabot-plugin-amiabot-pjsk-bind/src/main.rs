@@ -156,7 +156,7 @@ impl Plugin for Plug {
     ) -> Result<HandleResult, StructuredError> {
         let host = self.host.read().await.clone();
         let Some(mut host) = host else {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         };
         let qq = plugin_common::event_user_id(&event_raw);
         let groups = match_data.map(|m| m.groups).unwrap_or_default();
@@ -176,7 +176,7 @@ impl Plugin for Plug {
                         trace_id,
                     )
                     .await;
-                    return Ok(HandleResult {});
+                    return Ok(HandleResult::ignored());
                 }
                 match host
                     .call_dependency(
@@ -203,7 +203,7 @@ impl Plugin for Plug {
                                 trace_id,
                             )
                             .await;
-                            return Ok(HandleResult {});
+                            return Ok(HandleResult::ignored());
                         }
                         // Auto-set preferred server if unset (Go parity).
                         if let Ok(pref) = host
@@ -350,7 +350,7 @@ impl Plugin for Plug {
                         trace_id,
                     )
                     .await;
-                    return Ok(HandleResult {});
+                    return Ok(HandleResult::ignored());
                 }
                 match host
                     .call_dependency(
@@ -393,7 +393,7 @@ impl Plugin for Plug {
             }
             _ => {}
         }
-        Ok(HandleResult {})
+        Ok(HandleResult::handled())
     }
 
     async fn status(&self) -> Result<String, StructuredError> {

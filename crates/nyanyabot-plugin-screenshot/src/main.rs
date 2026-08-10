@@ -123,7 +123,7 @@ impl Plugin for ScreenshotPlugin {
         _: Option<CommandMatch>,
         _: &str,
     ) -> Result<HandleResult, StructuredError> {
-        Ok(HandleResult {})
+        Ok(HandleResult::handled())
     }
     async fn status(&self) -> Result<String, StructuredError> {
         Ok("OK".into())

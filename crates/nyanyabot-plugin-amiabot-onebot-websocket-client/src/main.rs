@@ -504,7 +504,7 @@ impl Plugin for Plug {
             decide_upstream(&ups, &event_raw)
         };
         if !allow {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         let payload = serde_json::to_string(&event_raw).unwrap_or_else(|_| "{}".into());
         if let Some(tx) = self.send_tx.lock().await.as_ref()
@@ -512,7 +512,7 @@ impl Plugin for Plug {
         {
             warn!("upstream event send queue full; dropping");
         }
-        Ok(HandleResult {})
+        Ok(HandleResult::handled())
     }
     async fn status(&self) -> Result<String, StructuredError> {
         let url = cfg_url(&self.cfg.read());

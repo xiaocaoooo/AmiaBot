@@ -665,7 +665,7 @@ impl Plugin for Plug {
     ) -> Result<HandleResult, StructuredError> {
         let host = self.host.read().await.clone();
         let Some(mut host) = host else {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         };
         let cfg = self.cfg.read().clone();
         let self_id = event_self_id(&event_raw);
@@ -679,7 +679,7 @@ impl Plugin for Plug {
                 if target <= 0 {
                     let _ =
                         send_text(&mut host, &event_raw, "❌ 无法识别要查询的用户", trace_id).await;
-                    return Ok(HandleResult {});
+                    return Ok(HandleResult::ignored());
                 }
 
                 let stranger_resp = match onebot(
@@ -700,7 +700,7 @@ impl Plugin for Plug {
                             trace_id,
                         )
                         .await;
-                        return Ok(HandleResult {});
+                        return Ok(HandleResult::ignored());
                     }
                 };
                 let stranger = api_data(&stranger_resp);
@@ -896,7 +896,7 @@ impl Plugin for Plug {
 
                 if cfg.amiabot_pages.is_empty() {
                     let _ = send_text(&mut host, &event_raw, "❌ 服务未配置", trace_id).await;
-                    return Ok(HandleResult {});
+                    return Ok(HandleResult::ignored());
                 }
                 let page = build_pages_url(&cfg.amiabot_pages, "/query/user", &q);
                 let blob = format!(
@@ -927,12 +927,12 @@ impl Plugin for Plug {
                 if event_message_type(&event_raw) != "group" {
                     let _ =
                         send_text(&mut host, &event_raw, "该命令只能在群聊中使用", trace_id).await;
-                    return Ok(HandleResult {});
+                    return Ok(HandleResult::ignored());
                 }
                 let group_id = event_group_id(&event_raw);
                 if group_id <= 0 {
                     let _ = send_text(&mut host, &event_raw, "❌ 无法识别当前群聊", trace_id).await;
-                    return Ok(HandleResult {});
+                    return Ok(HandleResult::ignored());
                 }
                 let q = match fetch_group_page_params(&mut host, group_id, self_id, trace_id).await
                 {
@@ -945,12 +945,12 @@ impl Plugin for Plug {
                             trace_id,
                         )
                         .await;
-                        return Ok(HandleResult {});
+                        return Ok(HandleResult::ignored());
                     }
                 };
                 if cfg.amiabot_pages.is_empty() {
                     let _ = send_text(&mut host, &event_raw, "❌ 服务未配置", trace_id).await;
-                    return Ok(HandleResult {});
+                    return Ok(HandleResult::ignored());
                 }
                 let page = build_pages_url(&cfg.amiabot_pages, "/query/group", &q);
                 let blob = format!(
@@ -978,7 +978,7 @@ impl Plugin for Plug {
             }
             _ => {}
         }
-        Ok(HandleResult {})
+        Ok(HandleResult::handled())
     }
     async fn status(&self) -> Result<String, StructuredError> {
         Ok("OK".into())

@@ -64,12 +64,12 @@ impl Plugin for Plug {
         trace_id: &str,
     ) -> Result<HandleResult, StructuredError> {
         if listener_id != "cmd.zeabur-status" {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
 
         let host = self.host.read().await.clone();
         let Some(mut host) = host else {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         };
         let cfg = self.cfg.read().clone();
         let pages = cfg
@@ -79,7 +79,7 @@ impl Plugin for Plug {
             .to_string();
         if pages.is_empty() {
             // Go: silent no-op when pages host empty
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         let default_server = cfg
             .get("default_server")
@@ -113,7 +113,7 @@ impl Plugin for Plug {
                 .await;
             }
         }
-        Ok(HandleResult {})
+        Ok(HandleResult::handled())
     }
     async fn status(&self) -> Result<String, StructuredError> {
         Ok("OK".into())

@@ -485,7 +485,7 @@ impl Plugin for Plug {
         _: Option<CommandMatch>,
         _: &str,
     ) -> Result<HandleResult, StructuredError> {
-        Ok(HandleResult {})
+        Ok(HandleResult::handled())
     }
     async fn status(&self) -> Result<String, StructuredError> {
         Ok(if self.pool.read().await.is_some() {

@@ -101,11 +101,11 @@ impl Plugin for Plug {
         trace_id: &str,
     ) -> Result<HandleResult, StructuredError> {
         if listener_id != "cmd.pjsk-event" {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         let host = self.host.read().await.clone();
         let Some(mut host) = host else {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         };
         let cfg = self.cfg.read().clone();
         let pages = cfg
@@ -127,11 +127,11 @@ impl Plugin for Plug {
         let (server, id) = parse_args(&groups, default_server);
         if !valid_server(&server) {
             let _ = send_text(&mut host, &event_raw, "❌ 服务器参数无效", trace_id).await;
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         if pages.is_empty() {
             let _ = send_text(&mut host, &event_raw, "❌ 服务未配置", trace_id).await;
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         let mut q = BTreeMap::new();
         q.insert("server".into(), server.clone());
@@ -158,7 +158,7 @@ impl Plugin for Plug {
                 .await;
             }
         }
-        Ok(HandleResult {})
+        Ok(HandleResult::handled())
     }
     async fn status(&self) -> Result<String, StructuredError> {
         Ok("OK".into())

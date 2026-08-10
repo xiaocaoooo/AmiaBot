@@ -147,21 +147,21 @@ impl Plugin for Plug {
         trace_id: &str,
     ) -> Result<HandleResult, StructuredError> {
         if listener_id != "cmd.pixiv-artwork" {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         let host = self.host.read().await.clone();
         let Some(mut host) = host else {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         };
         let content = event_content(&event_raw);
         let pid = extract_pid(&content, &match_data);
         if pid.is_empty() {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         let cfg = self.cfg.read().clone();
         if cfg.amiabot_pages.is_empty() {
             let _ = send_text(&mut host, &event_raw, "❌ 服务未配置", trace_id).await;
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         let mut q = BTreeMap::new();
         q.insert("pid".into(), pid.clone());
@@ -192,7 +192,7 @@ impl Plugin for Plug {
                     trace_id,
                 )
                 .await;
-                return Ok(HandleResult {});
+                return Ok(HandleResult::ignored());
             }
         }
 
@@ -207,7 +207,7 @@ impl Plugin for Plug {
             .build()
         {
             Ok(c) => c,
-            Err(_) => return Ok(HandleResult {}),
+            Err(_) => return Ok(HandleResult::handled()),
         };
         let manifest = match client.get(&manifest_url).send().await {
             Ok(resp) if resp.status().is_success() => resp.json::<MediaManifest>().await.ok(),
@@ -233,11 +233,11 @@ impl Plugin for Plug {
             }
         };
         let Some(manifest) = manifest else {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         };
         if manifest.items.is_empty() {
             let _ = send_text(&mut host, &event_raw, "⚠️ 未获取到可发送的原图", trace_id).await;
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         let ts = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -260,11 +260,11 @@ impl Plugin for Plug {
         }
         if media_urls.is_empty() {
             let _ = send_text(&mut host, &event_raw, "⚠️ 未获取到可发送的原图", trace_id).await;
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         if media_urls.len() == 1 {
             let _ = send_image(&mut host, &event_raw, &media_urls[0], trace_id).await;
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         let self_id = event_self_id(&event_raw);
         let total = media_urls.len();
@@ -295,7 +295,7 @@ impl Plugin for Plug {
             .await;
         }
         let _ = manifest.kind;
-        Ok(HandleResult {})
+        Ok(HandleResult::handled())
     }
     async fn status(&self) -> Result<String, StructuredError> {
         Ok("OK".into())

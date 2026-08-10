@@ -9,6 +9,7 @@ use nyanyabot_proto::{
 };
 use parking_lot::RwLock;
 use plugin_common::{
+    mark_command_effective,
     build_pages_url, event_content, first_match_group, normalize_http_base, screenshot_and_upload,
     send_image, send_video, upload_remote_blob,
 };
@@ -285,11 +286,11 @@ impl Plugin for Plug {
         trace_id: &str,
     ) -> Result<HandleResult, StructuredError> {
         if listener_id != "cmd.bilibili" {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         let host = self.host.read().await.clone();
         let Some(mut host) = host else {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         };
         let content = event_content(&event_raw);
         let (mut aid, mut bvid, short) = parse_ids(&content, &match_data);
@@ -305,15 +306,16 @@ impl Plugin for Plug {
                 }
                 Err(err) => {
                     warn!(error=%err, "b23 resolve failed");
-                    return Ok(HandleResult {});
+                    return Ok(HandleResult::ignored());
                 }
             }
         }
         if aid.is_empty() && bvid.is_empty() {
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
         let cfg = self.cfg.read().clone();
         let id = pick_video_id(&aid, &bvid);
+        mark_command_effective(&mut host, trace_id).await;
 
         // Screenshot via pages + screenshot/blob plugins (silent if pages empty).
         let mut screenshot_url = String::new();
@@ -353,7 +355,7 @@ impl Plugin for Plug {
 
         if screenshot_url.is_empty() && video_url.is_empty() {
             let _ = first_match_group(&match_data);
-            return Ok(HandleResult {});
+            return Ok(HandleResult::ignored());
         }
 
         if !screenshot_url.is_empty() {
@@ -371,7 +373,7 @@ impl Plugin for Plug {
             }
         }
         let _ = first_match_group(&match_data);
-        Ok(HandleResult {})
+        Ok(HandleResult::handled())
     }
     async fn status(&self) -> Result<String, StructuredError> {
         Ok("OK".into())
