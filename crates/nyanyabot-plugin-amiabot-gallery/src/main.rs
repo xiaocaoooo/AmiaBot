@@ -4,9 +4,10 @@ mod client;
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
-use client::{GalleryClient, GalleryConfig, GalleryImageWithTags, download_bytes};
+use client::{GalleryClient, GalleryConfig, ImageDetail, download_bytes};
 use nyanyabot_proto::{
     CommandListener, CommandMatch, ConfigSpec, Descriptor, HandleResult, HostClient, Plugin,
     StructuredError, run_plugin_with_host,
@@ -20,10 +21,15 @@ use serde_json::{Value, json};
 use tokio::sync::RwLock as AsyncRwLock;
 use tracing::warn;
 use tracing_subscriber::EnvFilter;
+use uuid::Uuid;
 
-const CREATE_TAG_PATTERN: &str = r"(?i)^新建tag(?P<tag>.+)$";
-const UPLOAD_PATTERN: &str = r"(?i)^上传(?P<tag>.+)$";
-const VIEW_PATTERN: &str = r"(?i)^看(?P<input>.+)$";
+const OPEN_PATTERN: &str = r"(?i)^gallery\s+open\s+(?P<gallery_name>\S+)\s*$";
+const UPLOAD_PATTERN: &str =
+    r"(?i)^(?:gallery\s+upload|上传)\s+(?P<gallery_name>\S+)\s*$";
+const VIEW_PATTERN: &str =
+    r"(?i)^看\s+(?P<input>\S+?)(?:\s*\*\s*(?P<num>\d+))?\s*$";
+
+const MAX_VIEW_COUNT: u32 = 5;
 
 struct Plug {
     host: Arc<AsyncRwLock<Option<HostClient>>>,
@@ -36,7 +42,7 @@ fn plugin_descriptor() -> Descriptor {
         plugin_id: "external.amiabot-gallery".into(),
         version: "0.1.0".into(),
         author: "nyanyabot".into(),
-        description: "画廊插件，支持创建标签、上传图片，以及按图片 ID 或标签查看图片".into(),
+        description: "画廊插件：创建画廊、上传图片、按 UUID 或画廊名查看".into(),
         dependencies: vec!["external.screenshot".into(), "external.blobserver".into()],
         config: Some(ConfigSpec {
             version: Some("1".into()),
@@ -44,33 +50,29 @@ fn plugin_descriptor() -> Descriptor {
             schema: Some(json!({
                 "type":"object",
                 "properties":{
-                    "gallery_server":{"type":"string","description":"Gallery Server 的 API / Render 地址，默认 http://127.0.0.1:25006"},
-                    "gallery_read_token":{"type":"string","description":"Gallery Server 读令牌"},
-                    "gallery_write_token":{"type":"string","description":"Gallery Server 写令牌"},
-                    "amiabot_pages":{"type":"string","description":"Amiabot Pages 地址，用于生成重复图片对比卡"}
+                    "gallery_server":{"type":"string","description":"Gallery Server 地址，默认 http://127.0.0.1:3000"},
+                    "amiabot_pages":{"type":"string","description":"Amiabot Pages 地址（可选，用于重复图对比卡）"}
                 },
                 "additionalProperties": true
             })),
             default: Some(json!({
-                "gallery_server":"http://127.0.0.1:25006",
-                "gallery_read_token":"",
-                "gallery_write_token":"",
+                "gallery_server":"http://127.0.0.1:3000",
                 "amiabot_pages":""
             })),
         }),
         commands: vec![
             CommandListener {
-                name: "gallery-create-tag".into(),
-                id: "cmd.gallery-create-tag".into(),
-                description: "新建画廊标签".into(),
-                pattern: CREATE_TAG_PATTERN.into(),
+                name: "gallery-open".into(),
+                id: "cmd.gallery-open".into(),
+                description: "创建画廊：gallery open <name>".into(),
+                pattern: OPEN_PATTERN.into(),
                 match_raw: false,
-                handler: "HandleCreateTag".into(),
+                handler: "HandleOpen".into(),
             },
             CommandListener {
                 name: "gallery-upload".into(),
                 id: "cmd.gallery-upload".into(),
-                description: "将当前消息或引用消息中的图片上传到画廊".into(),
+                description: "上传图片到画廊：gallery upload <name> / 上传 <name>".into(),
                 pattern: UPLOAD_PATTERN.into(),
                 match_raw: false,
                 handler: "HandleUpload".into(),
@@ -78,7 +80,7 @@ fn plugin_descriptor() -> Descriptor {
             CommandListener {
                 name: "gallery-view".into(),
                 id: "cmd.gallery-view".into(),
-                description: "按图片 ID 或标签查看画廊中的图片".into(),
+                description: "查看图片：看 <uuid|画廊名> 或 看 <画廊名>*N".into(),
                 pattern: VIEW_PATTERN.into(),
                 match_raw: false,
                 handler: "HandleView".into(),
@@ -88,65 +90,102 @@ fn plugin_descriptor() -> Descriptor {
     }
 }
 
-fn parse_tags(input: &str) -> Vec<String> {
-    let mut out = Vec::new();
-    let mut seen = std::collections::HashSet::new();
-    for part in input.split(',') {
-        let trimmed = part.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        let key = trimmed.to_lowercase();
-        if seen.insert(key) {
-            out.push(trimmed.to_string());
-        }
-    }
-    out
+fn match_group(match_data: &Option<CommandMatch>, idx: usize) -> String {
+    match_data
+        .as_ref()
+        .and_then(|m| m.groups.get(idx))
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default()
 }
 
-fn looks_like_image_id(input: &str) -> bool {
-    input.trim().parse::<i64>().is_ok()
+fn parse_image_uuid(input: &str) -> Option<Uuid> {
+    Uuid::parse_str(input.trim()).ok()
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum GalleryPagesViewMode {
-    None,
-    AllTags,
-    AllImages,
-}
-
-/// Go parseGalleryPagesViewInput: "所有" => all tags; "所有tag1, tag2" => all images.
-fn parse_gallery_pages_view_input(input: &str) -> (GalleryPagesViewMode, Vec<String>) {
-    let input = input.trim();
-    if input == "所有" {
-        return (GalleryPagesViewMode::AllTags, Vec::new());
+/// Only meaningful for gallery-name view. Defaults to 1, clamps to 1..=MAX_VIEW_COUNT.
+fn parse_view_count(raw: &str) -> u32 {
+    let n = raw.trim().parse::<u32>().unwrap_or(1);
+    if n < 1 {
+        1
+    } else if n > MAX_VIEW_COUNT {
+        MAX_VIEW_COUNT
+    } else {
+        n
     }
-    if let Some(rest) = input.strip_prefix("所有") {
-        let tags = parse_tags(rest.trim());
-        if tags.is_empty() {
-            return (GalleryPagesViewMode::None, Vec::new());
+}
+
+fn human_bytes(n: i64) -> String {
+    if n < 1024 {
+        return format!("{n} B");
+    }
+    let kb = n as f64 / 1024.0;
+    if kb < 1024.0 {
+        return format!("{kb:.1} KB");
+    }
+    let mb = kb / 1024.0;
+    if mb < 1024.0 {
+        return format!("{mb:.1} MB");
+    }
+    format!("{:.2} GB", mb / 1024.0)
+}
+
+fn build_image_meta_text(image: &ImageDetail) -> String {
+    let mut lines = vec![format!("图片 {}", image.id)];
+    if let Some(name) = image.name.as_ref().map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        lines.push(format!("名称：{name}"));
+    }
+    if !image.aliases.is_empty() {
+        lines.push(format!("别名：{}", image.aliases.join(", ")));
+    }
+    if image.width > 0 && image.height > 0 {
+        lines.push(format!("尺寸：{}×{}", image.width, image.height));
+    }
+    if image.size_bytes > 0 {
+        lines.push(format!("大小：{}", human_bytes(image.size_bytes)));
+    }
+    if let Some(ts) = image.created_at {
+        lines.push(format!("时间：{}", ts.format("%Y-%m-%d %H:%M:%S UTC")));
+    }
+    lines.join("\n")
+}
+
+#[derive(Debug)]
+struct UploadOutcome {
+    index: usize,
+    uploaded: Option<Uuid>,
+    duplicate: Option<Uuid>,
+    failure: Option<String>,
+}
+
+fn build_upload_summary(source_label: &str, gallery: &str, outcomes: &[UploadOutcome]) -> String {
+    let mut lines = vec![format!(
+        "上传完成（来源：{source_label}，画廊：{gallery}）"
+    )];
+    for o in outcomes {
+        if let Some(id) = o.uploaded {
+            lines.push(format!("第 {} 张：成功 {}", o.index, id));
+        } else if let Some(id) = o.duplicate {
+            lines.push(format!("第 {} 张：感知重复，已有图片 {}", o.index, id));
+        } else if let Some(err) = &o.failure {
+            lines.push(format!("第 {} 张：失败 — {err}", o.index));
         }
-        return (GalleryPagesViewMode::AllImages, tags);
     }
-    (GalleryPagesViewMode::None, Vec::new())
+    lines.join("\n")
 }
 
 async fn send_gallery_image(
     host: &mut HostClient,
     event: &Value,
     client: &GalleryClient,
-    image: &GalleryImageWithTags,
+    image: &ImageDetail,
     trace_id: &str,
 ) -> Result<(), String> {
-    let render = client.build_render_url(image.image.id);
-    if render.trim().is_empty() {
-        return Err("图片渲染地址为空，无法发送".into());
-    }
+    let render = client.build_render_url(image.id);
     let blob_id = format!(
         "gallery-image-{}-{}",
-        image.image.id,
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
+        image.id,
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
             .map(|d| d.as_secs())
             .unwrap_or(0)
     );
@@ -159,103 +198,31 @@ async fn send_gallery_image(
     Ok(())
 }
 
-fn tag_names(img: &GalleryImageWithTags) -> Vec<String> {
-    img.tags
-        .iter()
-        .map(|t| t.name.trim().to_string())
-        .filter(|s| !s.is_empty())
+/// Fisher–Yates sample up to n items without replacement.
+fn sample_random<T: Clone>(items: &[T], n: usize) -> Vec<T> {
+    if items.is_empty() || n == 0 {
+        return Vec::new();
+    }
+    let mut idxs: Vec<usize> = (0..items.len()).collect();
+    let mut seed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(1);
+    if seed == 0 {
+        seed = 1;
+    }
+    for i in (1..idxs.len()).rev() {
+        seed = seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1);
+        let j = (seed as usize) % (i + 1);
+        idxs.swap(i, j);
+    }
+    let take = n.min(items.len());
+    idxs.into_iter()
+        .take(take)
+        .map(|i| items[i].clone())
         .collect()
-}
-
-fn human_bytes(size: i64) -> String {
-    const UNIT: f64 = 1024.0;
-    let size = size as f64;
-    if size < UNIT {
-        return format!("{size} B");
-    }
-    let mut div = UNIT;
-    let mut exp = 0;
-    let mut n = size / UNIT;
-    while n >= UNIT && exp < 5 {
-        div *= UNIT;
-        exp += 1;
-        n = size / div;
-    }
-    let label = ['K', 'M', 'G', 'T', 'P', 'E'][exp];
-    format!("{:.1} {label}iB", size / div)
-}
-
-fn build_image_meta_text(image: &GalleryImageWithTags) -> String {
-    let mut lines = vec![format!("图片 #{}", image.image.id)];
-    let names = tag_names(image);
-    if !names.is_empty() {
-        lines.push(format!("标签：{}", names.join("、")));
-    }
-    if image.image.width > 0 && image.image.height > 0 {
-        lines.push(format!(
-            "尺寸：{}×{}",
-            image.image.width, image.image.height
-        ));
-    }
-    if image.image.file_size > 0 {
-        lines.push(format!("大小：{}", human_bytes(image.image.file_size)));
-    }
-    if let Some(ts) = image.image.created_at {
-        lines.push(format!(
-            "收录时间：{}",
-            ts.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M:%S")
-        ));
-    }
-    lines.join("\n")
-}
-
-struct UploadOutcome {
-    index: usize,
-    uploaded: Option<i64>,
-    duplicate: Option<i64>,
-    failure: Option<String>,
-}
-
-fn build_upload_summary(source_label: &str, tags: &[String], outcomes: &[UploadOutcome]) -> String {
-    let mut success = Vec::new();
-    let mut dup = Vec::new();
-    let mut fail = Vec::new();
-    for outcome in outcomes {
-        if let Some(id) = outcome.uploaded {
-            success.push(format!("#{id}"));
-        } else if let Some(id) = outcome.duplicate {
-            dup.push(format!("第 {} 张→#{id}", outcome.index));
-        } else if let Some(msg) = &outcome.failure {
-            fail.push(format!("第 {} 张：{msg}", outcome.index));
-        }
-    }
-    let mut lines = vec![format!(
-        "画廊上传结果（来源：{}）",
-        if source_label.trim().is_empty() {
-            "未知来源"
-        } else {
-            source_label
-        }
-    )];
-    if !tags.is_empty() {
-        lines.push(format!("目标标签：{}", tags.join("、")));
-    }
-    lines.push(format!(
-        "成功 {} 张 / 重复 {} 张 / 失败 {} 张",
-        success.len(),
-        dup.len(),
-        fail.len()
-    ));
-    if !success.is_empty() {
-        lines.push(format!("新上传：{}", success.join("、")));
-    }
-    if !dup.is_empty() {
-        lines.push(format!("重复图片：{}", dup.join("、")));
-    }
-    if !fail.is_empty() {
-        lines.push(format!("失败详情：{}", fail.join("；")));
-    }
-    lines.join("\n")
 }
 
 #[async_trait]
@@ -286,72 +253,58 @@ impl Plugin for Plug {
         };
         let cfg = self.cfg.read().clone();
         let client = GalleryClient::new(&cfg);
+        let _ = event_content(&event_raw);
 
         match listener_id {
-            "cmd.gallery-create-tag" => {
-                let tag_name = first_match_group(&match_data);
-                if tag_name.is_empty() {
-                    let _ = send_text(&mut host, &event_raw, "标签名不能为空", trace_id).await;
+            "cmd.gallery-open" => {
+                let name = first_match_group(&match_data);
+                if name.is_empty() {
+                    let _ = send_text(&mut host, &event_raw, "请输入画廊名称", trace_id).await;
                     return Ok(HandleResult {});
                 }
-                match client.create_tag(&tag_name).await {
-                    Ok(tag) => {
+                match client.create_gallery(&name).await {
+                    Ok(g) => {
+                        let aliases = if g.aliases.is_empty() {
+                            "-".into()
+                        } else {
+                            g.aliases.join(", ")
+                        };
                         let _ = send_text(
                             &mut host,
                             &event_raw,
-                            &format!("标签创建成功：#{}（ID：{}）", tag.name, tag.id),
+                            &format!(
+                                "画廊已创建\n名称：{}\nID：{}\n别名：{aliases}",
+                                g.name, g.id
+                            ),
                             trace_id,
                         )
                         .await;
-                    }
-                    Err(err) if err.status_code == 409 => {
-                        match client.find_exact_tag(&tag_name).await {
-                            Ok(Some(existing)) => {
-                                let _ = send_text(
-                                    &mut host,
-                                    &event_raw,
-                                    &format!(
-                                        "标签已存在：#{}（ID：{}）",
-                                        existing.name, existing.id
-                                    ),
-                                    trace_id,
-                                )
-                                .await;
-                            }
-                            _ => {
-                                let _ = send_text(
-                                    &mut host,
-                                    &event_raw,
-                                    &format!("创建标签失败：{}", redact_secrets(&err.to_string())),
-                                    trace_id,
-                                )
-                                .await;
-                            }
-                        }
                     }
                     Err(err) => {
                         let _ = send_text(
                             &mut host,
                             &event_raw,
-                            &format!("创建标签失败：{}", redact_secrets(&err.to_string())),
+                            &format!("❌ 创建画廊失败：{}", redact_secrets(&err.to_string())),
                             trace_id,
                         )
                         .await;
                     }
                 }
             }
+
             "cmd.gallery-upload" => {
-                let tags = parse_tags(&first_match_group(&match_data));
-                if tags.is_empty() {
-                    let _ = send_text(&mut host, &event_raw, "请至少提供一个标签", trace_id).await;
+                let gallery_name = first_match_group(&match_data);
+                if gallery_name.is_empty() {
+                    let _ = send_text(&mut host, &event_raw, "请输入画廊名称", trace_id).await;
                     return Ok(HandleResult {});
                 }
-                match client.find_missing_tags(&tags).await {
-                    Ok(missing) if !missing.is_empty() => {
+                let gallery = match client.resolve_gallery(&gallery_name).await {
+                    Ok(Some(g)) => g,
+                    Ok(None) => {
                         let _ = send_text(
                             &mut host,
                             &event_raw,
-                            &format!("以下标签尚未创建，请先创建后再上传：{}", missing.join("、")),
+                            &format!("找不到画廊：{gallery_name}（请先 gallery open）"),
                             trace_id,
                         )
                         .await;
@@ -361,19 +314,19 @@ impl Plugin for Plug {
                         let _ = send_text(
                             &mut host,
                             &event_raw,
-                            &format!("标签校验失败：{}", redact_secrets(&err.to_string())),
+                            &format!("❌ 查询画廊失败：{}", redact_secrets(&err.to_string())),
                             trace_id,
                         )
                         .await;
                         return Ok(HandleResult {});
                     }
-                    _ => {}
-                }
+                };
 
+                let self_id = event_self_id(&event_raw);
                 let (images, source_label) = match message::extract_images_from_event(
                     &mut host,
                     &event_raw,
-                    event_self_id(&event_raw),
+                    self_id,
                     trace_id,
                 )
                 .await
@@ -383,7 +336,7 @@ impl Plugin for Plug {
                         let _ = send_text(
                             &mut host,
                             &event_raw,
-                            &format!("提取图片失败：{}", redact_secrets(&err)),
+                            &format!("❌ 提取图片失败：{}", redact_secrets(&err)),
                             trace_id,
                         )
                         .await;
@@ -394,7 +347,7 @@ impl Plugin for Plug {
                     let _ = send_text(
                         &mut host,
                         &event_raw,
-                        "当前消息和引用消息中都没有找到图片",
+                        "没有找到可上传的图片（可在当前消息或引用消息中带图）",
                         trace_id,
                     )
                     .await;
@@ -405,6 +358,7 @@ impl Plugin for Plug {
                 } else {
                     source_label.as_str()
                 };
+
                 let mut outcomes: Vec<UploadOutcome> = Vec::new();
                 for (idx, image) in images.iter().enumerate() {
                     let index = idx + 1;
@@ -424,34 +378,38 @@ impl Plugin for Plug {
                     if !image.name.is_empty() {
                         filename = image.name.clone();
                     }
-                    match client.upload_image(&filename, data, &tags, false).await {
+                    match client
+                        .upload_image(gallery.id, &filename, data, false)
+                        .await
+                    {
                         Ok(uploaded) => {
                             outcomes.push(UploadOutcome {
                                 index,
-                                uploaded: Some(uploaded.image.id),
+                                uploaded: Some(uploaded.id),
                                 duplicate: None,
                                 failure: None,
                             });
                         }
-                        Err(err) if err.status_code == 409 && err.duplicate_image_id > 0 => {
+                        Err(err) if err.status_code == 409 && err.duplicate_image_id.is_some() => {
+                            let dup_id = err.duplicate_image_id.unwrap();
                             outcomes.push(UploadOutcome {
                                 index,
                                 uploaded: None,
-                                duplicate: Some(err.duplicate_image_id),
+                                duplicate: Some(dup_id),
                                 failure: None,
                             });
-                            // duplicate compare card via pages if configured
+                            // Optional pages compare card; ignore path/API drift failures.
                             if !cfg.amiabot_pages.is_empty() {
                                 let mut q = BTreeMap::new();
                                 q.insert("current_image_url".into(), url.clone());
-                                q.insert("duplicate_id".into(), err.duplicate_image_id.to_string());
-                                q.insert("current_tags".into(), tags.join(", "));
+                                q.insert("duplicate_id".into(), dup_id.to_string());
+                                q.insert("gallery".into(), gallery.name.clone());
                                 let page =
                                     build_pages_url(&cfg.amiabot_pages, "/gallery/duplicate", &q);
                                 match screenshot_and_upload(
                                     &mut host,
                                     &page,
-                                    &format!("gallery-dup-{}", err.duplicate_image_id),
+                                    &format!("gallery-dup-{dup_id}"),
                                     json!({}),
                                 )
                                 .await
@@ -466,8 +424,7 @@ impl Plugin for Plug {
                                             &mut host,
                                             &event_raw,
                                             &format!(
-                                                "第 {index} 张图片已存在于图库中，对应图片 ID：#{}",
-                                                err.duplicate_image_id
+                                                "第 {index} 张图片与图库中已有图片相似，对应 ID：{dup_id}"
                                             ),
                                             trace_id,
                                         )
@@ -479,13 +436,23 @@ impl Plugin for Plug {
                                     &mut host,
                                     &event_raw,
                                     &format!(
-                                        "第 {index} 张图片已存在于图库中，对应图片 ID：#{}",
-                                        err.duplicate_image_id
+                                        "第 {index} 张图片与图库中已有图片相似，对应 ID：{dup_id}"
                                     ),
                                     trace_id,
                                 )
                                 .await;
                             }
+                        }
+                        Err(err) if err.status_code == 409 => {
+                            outcomes.push(UploadOutcome {
+                                index,
+                                uploaded: None,
+                                duplicate: None,
+                                failure: Some(format!(
+                                    "冲突：{}",
+                                    redact_secrets(&err.to_string())
+                                )),
+                            });
                         }
                         Err(err) => {
                             outcomes.push(UploadOutcome {
@@ -500,101 +467,28 @@ impl Plugin for Plug {
                 let _ = send_text(
                     &mut host,
                     &event_raw,
-                    &build_upload_summary(source_label, &tags, &outcomes),
+                    &build_upload_summary(source_label, &gallery.name, &outcomes),
                     trace_id,
                 )
                 .await;
             }
+
             "cmd.gallery-view" => {
-                let input = first_match_group(&match_data);
+                let input = match_group(&match_data, 0);
+                let num_raw = match_group(&match_data, 1);
                 if input.is_empty() {
                     let _ = send_text(
                         &mut host,
                         &event_raw,
-                        "请输入图片 ID 或至少一个标签",
+                        "请输入图片 UUID 或画廊名称",
                         trace_id,
                     )
                     .await;
                     return Ok(HandleResult {});
                 }
 
-                let (mode, page_tags) = parse_gallery_pages_view_input(&input);
-                match mode {
-                    GalleryPagesViewMode::AllTags => {
-                        if cfg.amiabot_pages.is_empty() {
-                            let _ = send_text(
-                                &mut host,
-                                &event_raw,
-                                "❌ 生成画廊页面失败：未配置 amiabot_pages",
-                                trace_id,
-                            )
-                            .await;
-                            return Ok(HandleResult {});
-                        }
-                        let page =
-                            build_pages_url(&cfg.amiabot_pages, "/gallery/tags", &BTreeMap::new());
-                        match screenshot_and_upload(&mut host, &page, "gallery-tags", json!({}))
-                            .await
-                        {
-                            Ok(url) => {
-                                let _ = send_image(&mut host, &event_raw, &url, trace_id).await;
-                            }
-                            Err(err) => {
-                                let _ = send_text(
-                                    &mut host,
-                                    &event_raw,
-                                    &format!(
-                                        "❌ 生成画廊页面失败：{}",
-                                        redact_secrets(&err.to_string())
-                                    ),
-                                    trace_id,
-                                )
-                                .await;
-                            }
-                        }
-                        return Ok(HandleResult {});
-                    }
-                    GalleryPagesViewMode::AllImages => {
-                        if cfg.amiabot_pages.is_empty() {
-                            let _ = send_text(
-                                &mut host,
-                                &event_raw,
-                                "❌ 生成画廊页面失败：未配置 amiabot_pages",
-                                trace_id,
-                            )
-                            .await;
-                            return Ok(HandleResult {});
-                        }
-                        let mut q = BTreeMap::new();
-                        q.insert("tags".into(), page_tags.join(","));
-                        let page = build_pages_url(&cfg.amiabot_pages, "/gallery/images", &q);
-                        match screenshot_and_upload(&mut host, &page, "gallery-images", json!({}))
-                            .await
-                        {
-                            Ok(url) => {
-                                let _ = send_image(&mut host, &event_raw, &url, trace_id).await;
-                            }
-                            Err(err) => {
-                                let _ = send_text(
-                                    &mut host,
-                                    &event_raw,
-                                    &format!(
-                                        "❌ 生成画廊页面失败：{}",
-                                        redact_secrets(&err.to_string())
-                                    ),
-                                    trace_id,
-                                )
-                                .await;
-                            }
-                        }
-                        return Ok(HandleResult {});
-                    }
-                    GalleryPagesViewMode::None => {}
-                }
-
-                // Image ID path (404 falls through to tag search like Go).
-                if looks_like_image_id(&input) {
-                    let id: i64 = input.trim().parse().unwrap_or(0);
+                // UUID path: ignore *N.
+                if let Some(id) = parse_image_uuid(&input) {
                     match client.get_image(id).await {
                         Ok(image) => {
                             if let Err(err) =
@@ -617,9 +511,17 @@ impl Plugin for Plug {
                                 trace_id,
                             )
                             .await;
-                            return Ok(HandleResult {});
                         }
-                        Err(err) if err.status_code != 404 && err.status_code != 0 => {
+                        Err(err) if err.status_code == 404 => {
+                            let _ = send_text(
+                                &mut host,
+                                &event_raw,
+                                &format!("找不到图片：{id}"),
+                                trace_id,
+                            )
+                            .await;
+                        }
+                        Err(err) => {
                             let _ = send_text(
                                 &mut host,
                                 &event_raw,
@@ -627,89 +529,86 @@ impl Plugin for Plug {
                                 trace_id,
                             )
                             .await;
-                            return Ok(HandleResult {});
-                        }
-                        Err(_) => {
-                            // 404 / transport ambiguity: fall through to tag parsing
                         }
                     }
+                    return Ok(HandleResult {});
                 }
 
-                let tags = parse_tags(&input);
-                if tags.is_empty() {
+                // Gallery-name path: honor *N (clamped).
+                let count = parse_view_count(&num_raw);
+                let gallery = match client.resolve_gallery(&input).await {
+                    Ok(Some(g)) => g,
+                    Ok(None) => {
+                        let _ = send_text(
+                            &mut host,
+                            &event_raw,
+                            &format!("找不到画廊或图片：{input}"),
+                            trace_id,
+                        )
+                        .await;
+                        return Ok(HandleResult {});
+                    }
+                    Err(err) => {
+                        let _ = send_text(
+                            &mut host,
+                            &event_raw,
+                            &format!("❌ 查询画廊失败：{}", redact_secrets(&err.to_string())),
+                            trace_id,
+                        )
+                        .await;
+                        return Ok(HandleResult {});
+                    }
+                };
+
+                let images = match client.list_gallery_images(gallery.id).await {
+                    Ok(v) => v,
+                    Err(err) => {
+                        let _ = send_text(
+                            &mut host,
+                            &event_raw,
+                            &format!("❌ 获取画廊图片失败：{}", redact_secrets(&err.to_string())),
+                            trace_id,
+                        )
+                        .await;
+                        return Ok(HandleResult {});
+                    }
+                };
+                if images.is_empty() {
                     let _ = send_text(
                         &mut host,
                         &event_raw,
-                        "请输入图片 ID 或至少一个标签",
+                        &format!("画廊「{}」还没有图片", gallery.name),
                         trace_id,
                     )
                     .await;
                     return Ok(HandleResult {});
                 }
 
-                match client.find_missing_tags(&tags).await {
-                    Ok(missing) if !missing.is_empty() => {
-                        let _ =
-                            send_text(&mut host, &event_raw, "没有找到匹配的图片或标签", trace_id)
-                                .await;
-                        return Ok(HandleResult {});
-                    }
-                    Err(err) => {
+                let picked = sample_random(&images, count as usize);
+                for image in &picked {
+                    if let Err(err) =
+                        send_gallery_image(&mut host, &event_raw, &client, image, trace_id).await
+                    {
                         let _ = send_text(
                             &mut host,
                             &event_raw,
-                            &format!("❌ 查询标签失败：{}", redact_secrets(&err.to_string())),
+                            &format!("❌ 发送图片失败：{}", redact_secrets(&err)),
                             trace_id,
                         )
                         .await;
-                        return Ok(HandleResult {});
+                        continue;
                     }
-                    Ok(_) => {}
-                }
-
-                match client.random_image(&tags).await {
-                    Ok(image) => {
-                        if let Err(err) =
-                            send_gallery_image(&mut host, &event_raw, &client, &image, trace_id)
-                                .await
-                        {
-                            let _ = send_text(
-                                &mut host,
-                                &event_raw,
-                                &format!("❌ 发送图片失败：{}", redact_secrets(&err)),
-                                trace_id,
-                            )
-                            .await;
-                            return Ok(HandleResult {});
-                        }
-                        let _ = send_text(
-                            &mut host,
-                            &event_raw,
-                            &build_image_meta_text(&image),
-                            trace_id,
-                        )
-                        .await;
-                    }
-                    Err(err) if err.status_code == 404 => {
-                        let _ =
-                            send_text(&mut host, &event_raw, "没有找到匹配的图片或标签", trace_id)
-                                .await;
-                    }
-                    Err(err) => {
-                        let _ = send_text(
-                            &mut host,
-                            &event_raw,
-                            &format!("❌ 查询图片失败：{}", redact_secrets(&err.to_string())),
-                            trace_id,
-                        )
-                        .await;
-                    }
+                    let _ = send_text(
+                        &mut host,
+                        &event_raw,
+                        &build_image_meta_text(image),
+                        trace_id,
+                    )
+                    .await;
                 }
             }
 
-            _ => {
-                let _ = event_content(&event_raw);
-            }
+            _ => {}
         }
         Ok(HandleResult {})
     }
@@ -743,11 +642,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 #[cfg(test)]
 mod descriptor_snapshot_tests {
     use super::plugin_descriptor;
-
     #[test]
     fn descriptor_matches_snapshot() {
         let desc = plugin_descriptor();
-        let got = serde_json::to_value(&desc).expect("serialize descriptor");
+        let got = serde_json::to_value(&desc).unwrap();
         let path =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("snapshots/descriptor.json");
         if std::env::var("UPDATE_SNAPSHOTS").ok().as_deref() == Some("1") {
@@ -755,47 +653,97 @@ mod descriptor_snapshot_tests {
             std::fs::write(&path, serde_json::to_string_pretty(&got).unwrap()).unwrap();
             return;
         }
-        let raw = std::fs::read_to_string(&path)
-            .unwrap_or_else(|e| panic!("missing descriptor snapshot at {}: {e}", path.display()));
+        let raw = std::fs::read_to_string(&path).unwrap();
         let expected: serde_json::Value = serde_json::from_str(&raw).unwrap();
-        assert_eq!(
-            got, expected,
-            "descriptor snapshot mismatch; run with UPDATE_SNAPSHOTS=1"
-        );
+        assert_eq!(got, expected, "run UPDATE_SNAPSHOTS=1");
     }
 }
 
 #[cfg(test)]
 mod unit_tests {
     use super::*;
+    use regex::Regex;
 
     #[test]
-    fn parse_tags_dedup() {
+    fn open_pattern_captures_name() {
+        let re = Regex::new(OPEN_PATTERN).unwrap();
+        let caps = re.captures("gallery open cats").unwrap();
+        assert_eq!(caps.name("gallery_name").unwrap().as_str(), "cats");
+        assert!(re.captures("gallery open").is_none());
+    }
+
+    #[test]
+    fn upload_pattern_accepts_aliases() {
+        let re = Regex::new(UPLOAD_PATTERN).unwrap();
         assert_eq!(
-            parse_tags("Foo, bar, FOO,  "),
-            vec!["Foo".to_string(), "bar".to_string()]
+            re.captures("上传 cats")
+                .unwrap()
+                .name("gallery_name")
+                .unwrap()
+                .as_str(),
+            "cats"
+        );
+        assert_eq!(
+            re.captures("gallery upload cats")
+                .unwrap()
+                .name("gallery_name")
+                .unwrap()
+                .as_str(),
+            "cats"
+        );
+        // Comma is still one \S+ token; multi-gallery is intentionally unsupported at command level.
+        assert_eq!(
+            re.captures("上传 a,b")
+                .unwrap()
+                .name("gallery_name")
+                .unwrap()
+                .as_str(),
+            "a,b"
         );
     }
 
     #[test]
-    fn image_id_detect() {
-        assert!(looks_like_image_id("42"));
-        assert!(!looks_like_image_id("cat"));
+    fn view_pattern_and_count() {
+        let re = Regex::new(VIEW_PATTERN).unwrap();
+        let caps = re.captures("看 cats").unwrap();
+        assert_eq!(caps.name("input").unwrap().as_str(), "cats");
+        assert!(caps.name("num").is_none());
+
+        let caps = re.captures("看 cats*3").unwrap();
+        assert_eq!(caps.name("input").unwrap().as_str(), "cats");
+        assert_eq!(caps.name("num").unwrap().as_str(), "3");
+
+        let caps = re.captures("看 cats * 2").unwrap();
+        assert_eq!(caps.name("input").unwrap().as_str(), "cats");
+        assert_eq!(caps.name("num").unwrap().as_str(), "2");
     }
 
     #[test]
-    fn pages_view_input_matches_go() {
-        assert_eq!(
-            parse_gallery_pages_view_input("所有"),
-            (GalleryPagesViewMode::AllTags, Vec::<String>::new())
-        );
-        let (mode, tags) = parse_gallery_pages_view_input("所有cat, cover");
-        assert_eq!(mode, GalleryPagesViewMode::AllImages);
-        assert_eq!(tags, vec!["cat".to_string(), "cover".to_string()]);
-        let (mode, tags) = parse_gallery_pages_view_input("所有,");
-        assert_eq!(mode, GalleryPagesViewMode::None);
-        assert!(tags.is_empty());
-        let (mode, _) = parse_gallery_pages_view_input("cat");
-        assert_eq!(mode, GalleryPagesViewMode::None);
+    fn view_count_clamp() {
+        assert_eq!(parse_view_count(""), 1);
+        assert_eq!(parse_view_count("0"), 1);
+        assert_eq!(parse_view_count("3"), 3);
+        assert_eq!(parse_view_count("5"), 5);
+        assert_eq!(parse_view_count("9"), 5);
+    }
+
+    #[test]
+    fn uuid_detect() {
+        assert!(parse_image_uuid("11111111-1111-1111-1111-111111111111").is_some());
+        assert!(parse_image_uuid("cats").is_none());
+        assert!(parse_image_uuid("42").is_none());
+    }
+
+    #[test]
+    fn sample_random_respects_n() {
+        let items = vec![1, 2, 3, 4, 5];
+        let got = sample_random(&items, 3);
+        assert_eq!(got.len(), 3);
+        for x in &got {
+            assert!(items.contains(x));
+        }
+        let all = sample_random(&items, 10);
+        assert_eq!(all.len(), 5);
+        assert!(sample_random::<i32>(&[], 2).is_empty());
     }
 }

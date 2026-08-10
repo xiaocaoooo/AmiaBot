@@ -4,21 +4,18 @@ use chrono::{DateTime, Utc};
 use reqwest::multipart::{Form, Part};
 use serde::Deserialize;
 use serde_json::json;
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct GalleryConfig {
     pub gallery_server: String,
-    pub gallery_read_token: String,
-    pub gallery_write_token: String,
     pub amiabot_pages: String,
 }
 
 impl Default for GalleryConfig {
     fn default() -> Self {
         Self {
-            gallery_server: plugin_common::normalize_http_base("http://127.0.0.1:25006"),
-            gallery_read_token: String::new(),
-            gallery_write_token: String::new(),
+            gallery_server: plugin_common::normalize_http_base("http://127.0.0.1:3000"),
             amiabot_pages: String::new(),
         }
     }
@@ -33,12 +30,6 @@ impl GalleryConfig {
                 cfg.gallery_server = n;
             }
         }
-        if let Some(s) = v.get("gallery_read_token").and_then(|x| x.as_str()) {
-            cfg.gallery_read_token = s.trim().to_string();
-        }
-        if let Some(s) = v.get("gallery_write_token").and_then(|x| x.as_str()) {
-            cfg.gallery_write_token = s.trim().to_string();
-        }
         if let Some(s) = v.get("amiabot_pages").and_then(|x| x.as_str()) {
             cfg.amiabot_pages = plugin_common::normalize_http_base(s);
         }
@@ -48,48 +39,46 @@ impl GalleryConfig {
 
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
-pub struct GalleryTag {
-    pub id: i64,
+pub struct GalleryDetail {
+    pub id: Uuid,
     pub name: String,
     #[serde(default)]
+    pub aliases: Vec<String>,
+    #[serde(default)]
     pub created_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
-pub struct GalleryImage {
-    pub id: i64,
+pub struct ImageDetail {
+    pub id: Uuid,
     #[serde(default)]
-    pub filename: String,
+    pub sha256_hex: String,
     #[serde(default)]
-    pub fid: String,
+    pub name: Option<String>,
     #[serde(default)]
-    pub file_size: i64,
+    pub ext: String,
     #[serde(default)]
     pub width: i32,
     #[serde(default)]
     pub height: i32,
     #[serde(default)]
-    pub mime_type: String,
+    pub size_bytes: i64,
     #[serde(default)]
-    pub description: String,
+    pub aliases: Vec<String>,
     #[serde(default)]
     pub created_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct GalleryImageWithTags {
-    #[serde(flatten)]
-    pub image: GalleryImage,
     #[serde(default)]
-    pub tags: Vec<GalleryTag>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug)]
 pub struct GalleryApiError {
     pub status_code: u16,
     pub message: String,
-    pub duplicate_image_id: i64,
+    pub duplicate_image_id: Option<Uuid>,
 }
 
 impl std::fmt::Display for GalleryApiError {
@@ -109,8 +98,6 @@ impl std::error::Error for GalleryApiError {}
 #[derive(Clone)]
 pub struct GalleryClient {
     base: String,
-    read_token: String,
-    write_token: String,
     http: reqwest::Client,
 }
 
@@ -118,8 +105,6 @@ impl GalleryClient {
     pub fn new(cfg: &GalleryConfig) -> Self {
         Self {
             base: cfg.gallery_server.clone(),
-            read_token: cfg.gallery_read_token.clone(),
-            write_token: cfg.gallery_write_token.clone(),
             http: reqwest::Client::builder()
                 .timeout(Duration::from_secs(60))
                 .build()
@@ -127,32 +112,30 @@ impl GalleryClient {
         }
     }
 
-    pub fn build_render_url(&self, image_id: i64) -> String {
-        format!(
-            "{}/v1/images/{image_id}/file",
-            self.base.trim_end_matches('/')
-        )
+    pub fn build_render_url(&self, image_id: Uuid) -> String {
+        format!("{}/files/{image_id}", self.base.trim_end_matches('/'))
     }
 
     async fn decode_api_error(&self, resp: reqwest::Response) -> GalleryApiError {
         let status = resp.status().as_u16();
         let body = resp.text().await.unwrap_or_default();
         let mut message = body.clone();
-        let mut duplicate_image_id = 0i64;
+        let mut duplicate_image_id = None;
         if let Ok(v) = serde_json::from_str::<serde_json::Value>(&body) {
             if let Some(m) = v
-                .get("message")
-                .or_else(|| v.get("error"))
+                .get("error")
+                .or_else(|| v.get("message"))
                 .and_then(|x| x.as_str())
             {
                 message = m.to_string();
             }
             if let Some(id) = v
-                .get("duplicate_image_id")
-                .or_else(|| v.get("existing_id"))
-                .and_then(|x| x.as_i64())
+                .get("image_id")
+                .or_else(|| v.get("duplicate_image_id"))
+                .and_then(|x| x.as_str())
+                .and_then(|s| Uuid::parse_str(s).ok())
             {
-                duplicate_image_id = id;
+                duplicate_image_id = Some(id);
             }
         }
         GalleryApiError {
@@ -162,207 +145,159 @@ impl GalleryClient {
         }
     }
 
-    fn apply_auth(&self, mut req: reqwest::RequestBuilder, write: bool) -> reqwest::RequestBuilder {
-        let token = if write {
-            &self.write_token
-        } else {
-            &self.read_token
-        };
-        if !token.is_empty() {
-            req = req.bearer_auth(token);
-        }
-        req
-    }
-
-    pub async fn create_tag(&self, name: &str) -> Result<GalleryTag, GalleryApiError> {
-        let url = format!("{}/v1/tags", self.base.trim_end_matches('/'));
-        let req = self.http.post(&url).json(&json!({"name": name.trim()}));
-        let req = self.apply_auth(req, true);
-        let resp = req.send().await.map_err(|e| GalleryApiError {
+    fn transport_err(e: impl ToString) -> GalleryApiError {
+        GalleryApiError {
             status_code: 0,
             message: e.to_string(),
-            duplicate_image_id: 0,
-        })?;
-        if resp.status().as_u16() != 201 {
+            duplicate_image_id: None,
+        }
+    }
+
+    pub async fn create_gallery(&self, name: &str) -> Result<GalleryDetail, GalleryApiError> {
+        let url = format!("{}/galleries", self.base.trim_end_matches('/'));
+        let body = json!({
+            "name": name,
+            "aliases": [name],
+        });
+        let resp = self
+            .http
+            .post(&url)
+            .json(&body)
+            .send()
+            .await
+            .map_err(Self::transport_err)?;
+        if !(resp.status().is_success() || resp.status().as_u16() == 201) {
             return Err(self.decode_api_error(resp).await);
         }
-        resp.json().await.map_err(|e| GalleryApiError {
-            status_code: 0,
-            message: e.to_string(),
-            duplicate_image_id: 0,
-        })
+        resp.json().await.map_err(Self::transport_err)
     }
 
-    pub async fn list_tags(&self, q: &str, limit: i32) -> Result<Vec<GalleryTag>, GalleryApiError> {
-        let mut url = format!("{}/v1/tags", self.base.trim_end_matches('/'));
-        let mut params = vec![];
-        if !q.trim().is_empty() {
-            params.push(format!("q={}", urlencoding_simple(q.trim())));
+    pub async fn list_galleries(
+        &self,
+        search: Option<&str>,
+    ) -> Result<Vec<GalleryDetail>, GalleryApiError> {
+        let mut url = format!("{}/galleries", self.base.trim_end_matches('/'));
+        if let Some(q) = search.map(str::trim).filter(|s| !s.is_empty()) {
+            url.push_str(&format!("?search={}", urlencoding_simple(q)));
         }
-        if limit > 0 {
-            params.push(format!("limit={limit}"));
-        }
-        if !params.is_empty() {
-            url.push('?');
-            url.push_str(&params.join("&"));
-        }
-        let req = self.apply_auth(self.http.get(&url), false);
-        let resp = req.send().await.map_err(|e| GalleryApiError {
-            status_code: 0,
-            message: e.to_string(),
-            duplicate_image_id: 0,
-        })?;
+        let resp = self
+            .http
+            .get(&url)
+            .send()
+            .await
+            .map_err(Self::transport_err)?;
         if !resp.status().is_success() {
             return Err(self.decode_api_error(resp).await);
         }
-        #[derive(Deserialize)]
-        struct Payload {
-            items: Vec<GalleryTag>,
-        }
-        let payload: Payload = resp.json().await.map_err(|e| GalleryApiError {
-            status_code: 0,
-            message: e.to_string(),
-            duplicate_image_id: 0,
-        })?;
-        Ok(payload.items)
+        resp.json().await.map_err(Self::transport_err)
     }
 
-    pub async fn find_exact_tag(&self, name: &str) -> Result<Option<GalleryTag>, GalleryApiError> {
-        let items = self.list_tags(name, 100).await?;
-        Ok(items
-            .into_iter()
-            .find(|t| t.name.trim().eq_ignore_ascii_case(name.trim())))
-    }
-
-    pub async fn find_missing_tags(&self, tags: &[String]) -> Result<Vec<String>, GalleryApiError> {
-        let mut missing = Vec::new();
-        for tag in tags {
-            if self.find_exact_tag(tag).await?.is_none() {
-                missing.push(tag.clone());
-            }
+    /// Exact match on gallery name or alias (case-insensitive). First hit wins.
+    pub async fn resolve_gallery(
+        &self,
+        name: &str,
+    ) -> Result<Option<GalleryDetail>, GalleryApiError> {
+        let name = name.trim();
+        if name.is_empty() {
+            return Ok(None);
         }
-        Ok(missing)
+        let list = self.list_galleries(Some(name)).await?;
+        let needle = name.to_lowercase();
+        Ok(list.into_iter().find(|g| {
+            g.name.to_lowercase() == needle
+                || g.aliases.iter().any(|a| a.to_lowercase() == needle)
+        }))
     }
 
     pub async fn upload_image(
         &self,
+        gallery_id: Uuid,
         filename: &str,
         data: Vec<u8>,
-        tags: &[String],
         force: bool,
-    ) -> Result<GalleryImageWithTags, GalleryApiError> {
-        let mut form = Form::new();
-        let part = Part::bytes(data).file_name(filename.to_string());
-        form = form.part("file", part);
-        for tag in tags {
-            form = form.text("tags", tag.clone());
-        }
+    ) -> Result<ImageDetail, GalleryApiError> {
+        let mut url = format!(
+            "{}/galleries/{gallery_id}/images",
+            self.base.trim_end_matches('/')
+        );
         if force {
-            form = form.text("force", "true");
+            url.push_str("?force=true");
         }
-        let url = format!("{}/v1/images/upload", self.base.trim_end_matches('/'));
-        let req = self.apply_auth(self.http.post(&url).multipart(form), true);
-        let resp = req.send().await.map_err(|e| GalleryApiError {
-            status_code: 0,
-            message: e.to_string(),
-            duplicate_image_id: 0,
-        })?;
+        let filename = if filename.trim().is_empty() {
+            "image.bin"
+        } else {
+            filename
+        };
+        let mime = guess_mime(filename);
+        let part = Part::bytes(data)
+            .file_name(filename.to_string())
+            .mime_str(mime)
+            .map_err(Self::transport_err)?;
+        let form = Form::new().part("file", part);
+        let resp = self
+            .http
+            .post(&url)
+            .multipart(form)
+            .send()
+            .await
+            .map_err(Self::transport_err)?;
         let status = resp.status().as_u16();
+        // 200 reuse / 201 created
         if status != 200 && status != 201 {
             return Err(self.decode_api_error(resp).await);
         }
-        resp.json().await.map_err(|e| GalleryApiError {
-            status_code: 0,
-            message: e.to_string(),
-            duplicate_image_id: 0,
-        })
+        resp.json().await.map_err(Self::transport_err)
     }
 
-    pub async fn get_image(&self, id: i64) -> Result<GalleryImageWithTags, GalleryApiError> {
-        let url = format!("{}/v1/images/{id}", self.base.trim_end_matches('/'));
-        let req = self.apply_auth(self.http.get(&url), false);
-        let resp = req.send().await.map_err(|e| GalleryApiError {
-            status_code: 0,
-            message: e.to_string(),
-            duplicate_image_id: 0,
-        })?;
-        if !resp.status().is_success() {
-            return Err(self.decode_api_error(resp).await);
-        }
-        resp.json().await.map_err(|e| GalleryApiError {
-            status_code: 0,
-            message: e.to_string(),
-            duplicate_image_id: 0,
-        })
-    }
-
-    pub async fn random_image(
+    pub async fn list_gallery_images(
         &self,
-        tags: &[String],
-    ) -> Result<GalleryImageWithTags, GalleryApiError> {
-        let mut url = format!("{}/v1/images/random", self.base.trim_end_matches('/'));
-        if !tags.is_empty() {
-            let joined = tags
-                .iter()
-                .map(|t| t.trim())
-                .filter(|t| !t.is_empty())
-                .collect::<Vec<_>>()
-                .join(",");
-            if !joined.is_empty() {
-                url.push_str(&format!("?tags={}", urlencoding_simple(&joined)));
-            }
-        }
-        let req = self.apply_auth(self.http.get(&url), false);
-        let resp = req.send().await.map_err(|e| GalleryApiError {
-            status_code: 0,
-            message: e.to_string(),
-            duplicate_image_id: 0,
-        })?;
-        if !resp.status().is_success() {
-            return Err(self.decode_api_error(resp).await);
-        }
-        resp.json().await.map_err(|e| GalleryApiError {
-            status_code: 0,
-            message: e.to_string(),
-            duplicate_image_id: 0,
-        })
-    }
-
-    #[allow(dead_code)]
-    pub async fn list_images_by_tag(
-        &self,
-        tag: &str,
-        page: i32,
-        page_size: i32,
-    ) -> Result<(Vec<GalleryImageWithTags>, i64), GalleryApiError> {
+        gallery_id: Uuid,
+    ) -> Result<Vec<ImageDetail>, GalleryApiError> {
         let url = format!(
-            "{}/v1/images?tag={}&page={}&page_size={}",
-            self.base.trim_end_matches('/'),
-            urlencoding_simple(tag),
-            page.max(1),
-            page_size.max(1)
+            "{}/galleries/{gallery_id}/images",
+            self.base.trim_end_matches('/')
         );
-        let req = self.apply_auth(self.http.get(&url), false);
-        let resp = req.send().await.map_err(|e| GalleryApiError {
-            status_code: 0,
-            message: e.to_string(),
-            duplicate_image_id: 0,
-        })?;
+        let resp = self
+            .http
+            .get(&url)
+            .send()
+            .await
+            .map_err(Self::transport_err)?;
         if !resp.status().is_success() {
             return Err(self.decode_api_error(resp).await);
         }
-        #[derive(Deserialize)]
-        struct Payload {
-            items: Vec<GalleryImageWithTags>,
-            #[serde(default)]
-            total: i64,
+        resp.json().await.map_err(Self::transport_err)
+    }
+
+    pub async fn get_image(&self, id: Uuid) -> Result<ImageDetail, GalleryApiError> {
+        let url = format!("{}/images/{id}", self.base.trim_end_matches('/'));
+        let resp = self
+            .http
+            .get(&url)
+            .send()
+            .await
+            .map_err(Self::transport_err)?;
+        if !resp.status().is_success() {
+            return Err(self.decode_api_error(resp).await);
         }
-        let payload: Payload = resp.json().await.map_err(|e| GalleryApiError {
-            status_code: 0,
-            message: e.to_string(),
-            duplicate_image_id: 0,
-        })?;
-        Ok((payload.items, payload.total))
+        resp.json().await.map_err(Self::transport_err)
+    }
+}
+
+fn guess_mime(filename: &str) -> &'static str {
+    let lower = filename.to_ascii_lowercase();
+    if lower.ends_with(".png") {
+        "image/png"
+    } else if lower.ends_with(".jpg") || lower.ends_with(".jpeg") {
+        "image/jpeg"
+    } else if lower.ends_with(".gif") {
+        "image/gif"
+    } else if lower.ends_with(".webp") {
+        "image/webp"
+    } else if lower.ends_with(".bmp") {
+        "image/bmp"
+    } else {
+        "application/octet-stream"
     }
 }
 
@@ -396,4 +331,37 @@ pub async fn download_bytes(url: &str) -> Result<(String, Vec<u8>), String> {
         .to_string();
     let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
     Ok((name, bytes.to_vec()))
+}
+
+#[cfg(test)]
+mod client_unit_tests {
+    use super::*;
+
+    #[test]
+    fn render_url_shape() {
+        let cfg = GalleryConfig {
+            gallery_server: "http://g.example.com".into(),
+            amiabot_pages: String::new(),
+        };
+        let client = GalleryClient::new(&cfg);
+        let id = Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap();
+        assert_eq!(
+            client.build_render_url(id),
+            "http://g.example.com/files/11111111-1111-1111-1111-111111111111"
+        );
+    }
+
+    #[test]
+    fn decode_duplicate_image_id() {
+        let body = r#"{"error":"Perceptual duplicate detected","image_id":"22222222-2222-2222-2222-222222222222"}"#;
+        let v: serde_json::Value = serde_json::from_str(body).unwrap();
+        let id = v
+            .get("image_id")
+            .and_then(|x| x.as_str())
+            .and_then(|s| Uuid::parse_str(s).ok());
+        assert_eq!(
+            id,
+            Some(Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap())
+        );
+    }
 }

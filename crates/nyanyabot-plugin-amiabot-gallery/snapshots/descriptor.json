@@ -2,55 +2,45 @@
   "author": "nyanyabot",
   "commands": [
     {
-      "description": "新建画廊标签",
-      "handler": "HandleCreateTag",
-      "id": "cmd.gallery-create-tag",
+      "description": "创建画廊：gallery open <name>",
+      "handler": "HandleOpen",
+      "id": "cmd.gallery-open",
       "match_raw": false,
-      "name": "gallery-create-tag",
-      "pattern": "(?i)^新建tag(?P<tag>.+)$"
+      "name": "gallery-open",
+      "pattern": "(?i)^gallery\\s+open\\s+(?P<gallery_name>\\S+)\\s*$"
     },
     {
-      "description": "将当前消息或引用消息中的图片上传到画廊",
+      "description": "上传图片到画廊：gallery upload <name> / 上传 <name>",
       "handler": "HandleUpload",
       "id": "cmd.gallery-upload",
       "match_raw": false,
       "name": "gallery-upload",
-      "pattern": "(?i)^上传(?P<tag>.+)$"
+      "pattern": "(?i)^(?:gallery\\s+upload|上传)\\s+(?P<gallery_name>\\S+)\\s*$"
     },
     {
-      "description": "按图片 ID 或标签查看画廊中的图片",
+      "description": "查看图片：看 <uuid|画廊名> 或 看 <画廊名>*N",
       "handler": "HandleView",
       "id": "cmd.gallery-view",
       "match_raw": false,
       "name": "gallery-view",
-      "pattern": "(?i)^看(?P<input>.+)$"
+      "pattern": "(?i)^看\\s+(?P<input>\\S+?)(?:\\s*\\*\\s*(?P<num>\\d+))?\\s*$"
     }
   ],
   "config": {
     "default": {
       "amiabot_pages": "",
-      "gallery_read_token": "",
-      "gallery_server": "http://127.0.0.1:25006",
-      "gallery_write_token": ""
+      "gallery_server": "http://127.0.0.1:3000"
     },
     "description": "Amiabot Gallery 插件配置",
     "schema": {
       "additionalProperties": true,
       "properties": {
         "amiabot_pages": {
-          "description": "Amiabot Pages 地址，用于生成重复图片对比卡",
-          "type": "string"
-        },
-        "gallery_read_token": {
-          "description": "Gallery Server 读令牌",
+          "description": "Amiabot Pages 地址（可选，用于重复图对比卡）",
           "type": "string"
         },
         "gallery_server": {
-          "description": "Gallery Server 的 API / Render 地址，默认 http://127.0.0.1:25006",
-          "type": "string"
-        },
-        "gallery_write_token": {
-          "description": "Gallery Server 写令牌",
+          "description": "Gallery Server 地址，默认 http://127.0.0.1:3000",
           "type": "string"
         }
       },
@@ -63,7 +53,7 @@
     "external.screenshot",
     "external.blobserver"
   ],
-  "description": "画廊插件，支持创建标签、上传图片，以及按图片 ID 或标签查看图片",
+  "description": "画廊插件：创建画廊、上传图片、按 UUID 或画廊名查看",
   "events": [],
   "exports": [],
   "name": "Amiabot Gallery",
