@@ -280,6 +280,7 @@ impl Plugin for Plug {
                             trace_id,
                         )
                         .await;
+                        return Ok(HandleResult::handled());
                     }
                     Err(err) => {
                         let _ = send_text(
@@ -289,6 +290,7 @@ impl Plugin for Plug {
                             trace_id,
                         )
                         .await;
+                        return Ok(HandleResult::handled());
                     }
                 }
             }
@@ -322,7 +324,6 @@ impl Plugin for Plug {
                         return Ok(HandleResult::ignored());
                     }
                 };
-                mark_command_effective(&mut host, trace_id).await;
 
                 let self_id = event_self_id(&event_raw);
                 let (images, source_label) = match message::extract_images_from_event(
@@ -355,6 +356,7 @@ impl Plugin for Plug {
                     .await;
                     return Ok(HandleResult::ignored());
                 }
+                mark_command_effective(&mut host, trace_id).await;
                 let source_label = if source_label.is_empty() {
                     "当前消息"
                 } else {
@@ -473,6 +475,7 @@ impl Plugin for Plug {
                     trace_id,
                 )
                 .await;
+                return Ok(HandleResult::handled());
             }
 
             "cmd.gallery-view" => {
@@ -488,12 +491,12 @@ impl Plugin for Plug {
                     .await;
                     return Ok(HandleResult::ignored());
                 }
-                mark_command_effective(&mut host, trace_id).await;
 
                 // UUID path: ignore *N.
                 if let Some(id) = parse_image_uuid(&input) {
                     match client.get_image(id).await {
                         Ok(image) => {
+                            mark_command_effective(&mut host, trace_id).await;
                             if let Err(err) =
                                 send_gallery_image(&mut host, &event_raw, &client, &image, trace_id)
                                     .await
@@ -505,7 +508,7 @@ impl Plugin for Plug {
                                     trace_id,
                                 )
                                 .await;
-                                return Ok(HandleResult::ignored());
+                                return Ok(HandleResult::handled());
                             }
                             let _ = send_text(
                                 &mut host,
@@ -514,6 +517,7 @@ impl Plugin for Plug {
                                 trace_id,
                             )
                             .await;
+                            return Ok(HandleResult::handled());
                         }
                         Err(err) if err.status_code == 404 => {
                             let _ = send_text(
@@ -523,6 +527,7 @@ impl Plugin for Plug {
                                 trace_id,
                             )
                             .await;
+                            return Ok(HandleResult::ignored());
                         }
                         Err(err) => {
                             let _ = send_text(
@@ -532,9 +537,9 @@ impl Plugin for Plug {
                                 trace_id,
                             )
                             .await;
+                            return Ok(HandleResult::ignored());
                         }
                     }
-                    return Ok(HandleResult::ignored());
                 }
 
                 // Gallery-name path: honor *N (clamped).
@@ -587,6 +592,7 @@ impl Plugin for Plug {
                     return Ok(HandleResult::ignored());
                 }
 
+                mark_command_effective(&mut host, trace_id).await;
                 let picked = sample_random(&images, count as usize);
                 for image in &picked {
                     if let Err(err) =
@@ -609,11 +615,11 @@ impl Plugin for Plug {
                     )
                     .await;
                 }
+                return Ok(HandleResult::handled());
             }
 
-            _ => {}
+            _ => return Ok(HandleResult::ignored()),
         }
-        Ok(HandleResult::handled())
     }
 
     async fn status(&self) -> Result<String, StructuredError> {

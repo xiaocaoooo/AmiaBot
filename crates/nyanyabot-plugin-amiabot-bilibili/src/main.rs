@@ -315,7 +315,6 @@ impl Plugin for Plug {
         }
         let cfg = self.cfg.read().clone();
         let id = pick_video_id(&aid, &bvid);
-        mark_command_effective(&mut host, trace_id).await;
 
         // Screenshot via pages + screenshot/blob plugins (silent if pages empty).
         let mut screenshot_url = String::new();
@@ -357,6 +356,7 @@ impl Plugin for Plug {
             let _ = first_match_group(&match_data);
             return Ok(HandleResult::ignored());
         }
+        mark_command_effective(&mut host, trace_id).await;
 
         if !screenshot_url.is_empty() {
             let _ = send_image(&mut host, &event_raw, &screenshot_url, trace_id).await;
