@@ -144,7 +144,10 @@ impl Plugin for Plug {
             if id.is_empty() { "latest" } else { &id },
             now_unix()
         );
-        match screenshot_and_upload(&mut host, &page_url, &blob_id, json!({})).await {
+        match screenshot_and_upload(&mut host, &page_url, &blob_id, json!({
+            "selector": "#screenshot-wrapper",
+            "transparent": true
+        })).await {
             Ok(url) => {
                 let _ = send_image(&mut host, &event_raw, &url, trace_id).await;
             }

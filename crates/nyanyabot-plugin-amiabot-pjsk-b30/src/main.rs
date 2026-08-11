@@ -230,7 +230,10 @@ impl Plugin for Plug {
                 q.insert("id".into(), acc.game_id.clone());
                 let page_url = build_pages_url(&pages, "/pjsk/b30", &q);
                 let blob_id = format!("pjsk-b30-{}-{}-{}", acc.server, acc.game_id, now_unix());
-                match screenshot_and_upload(&mut host, &page_url, &blob_id, json!({})).await {
+                match screenshot_and_upload(&mut host, &page_url, &blob_id, json!({
+                    "selector": "#screenshot-wrapper",
+                    "transparent": true
+                })).await {
                     Ok(url) => {
                         let _ = send_image(&mut host, &event_raw, &url, trace_id).await;
                     }

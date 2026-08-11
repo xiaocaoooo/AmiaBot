@@ -331,7 +331,10 @@ impl Plugin for Plug {
                 &mut host,
                 &page,
                 &format!("{id_for_blob}-image-{}", chrono_like_unix()),
-                json!({}),
+                json!({
+                    "selector": "#screenshot-wrapper",
+                    "transparent": true
+                }),
             )
             .await
             {

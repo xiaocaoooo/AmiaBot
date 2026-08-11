@@ -404,7 +404,10 @@ impl Plugin for Plug {
                                     &mut host,
                                     &page,
                                     &format!("gallery-dup-{dup_id}"),
-                                    json!({}),
+                                    json!({
+                    "selector": "#screenshot-wrapper",
+                    "transparent": true
+                }),
                                 )
                                 .await
                                 {

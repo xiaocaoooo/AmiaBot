@@ -177,7 +177,10 @@ impl Plugin for Plug {
                     .unwrap_or_default()
                     .as_secs()
             ),
-            json!({}),
+            json!({
+                    "selector": "#screenshot-wrapper",
+                    "transparent": true
+                }),
         )
         .await
         {

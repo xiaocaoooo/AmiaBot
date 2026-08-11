@@ -907,7 +907,10 @@ impl Plugin for Plug {
                         .unwrap_or_default()
                         .as_secs()
                 );
-                match screenshot_and_upload(&mut host, &page, &blob, json!({})).await {
+                match screenshot_and_upload(&mut host, &page, &blob, json!({
+                    "selector": "#screenshot-wrapper",
+                    "transparent": true
+                })).await {
                     Ok(url) => {
                         let _ = send_image(&mut host, &event_raw, &url, trace_id).await;
                     }
@@ -961,7 +964,10 @@ impl Plugin for Plug {
                         .unwrap_or_default()
                         .as_secs()
                 );
-                match screenshot_and_upload(&mut host, &page, &blob, json!({})).await {
+                match screenshot_and_upload(&mut host, &page, &blob, json!({
+                    "selector": "#screenshot-wrapper",
+                    "transparent": true
+                })).await {
                     Ok(url) => {
                         let _ = send_image(&mut host, &event_raw, &url, trace_id).await;
                     }

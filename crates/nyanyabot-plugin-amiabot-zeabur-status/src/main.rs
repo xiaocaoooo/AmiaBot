@@ -96,7 +96,10 @@ impl Plugin for Plug {
             &mut host,
             &page_url,
             &blob_id,
-            serde_json::json!({}),
+            serde_json::json!({
+                "selector": "#screenshot-wrapper",
+                "transparent": true
+            }),
         )
         .await
         {
