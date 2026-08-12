@@ -1,0 +1,127 @@
+{
+  "author": "nyanyabot",
+  "commands": [],
+  "config": {
+    "default": {
+      "downstream_rules": [],
+      "upstream_rules": [],
+      "ws_token": "",
+      "ws_url": ""
+    },
+    "description": "OneBot WebSocket Client 插件配置",
+    "schema": {
+      "additionalProperties": true,
+      "properties": {
+        "access_token": {
+          "description": "兼容旧字段",
+          "type": "string"
+        },
+        "downstream_rules": {
+          "description": "下游消息（下游 WS 动作请求 -> NyaNyaBot）的过滤规则列表。按顺序匹配，首个匹配的规则生效。若无规则匹配，默认透传。",
+          "items": {
+            "properties": {
+              "action": {
+                "enum": [
+                  "passthrough",
+                  "reject",
+                  "match"
+                ],
+                "type": "string"
+              },
+              "expression": {
+                "type": "string"
+              },
+              "reply_json": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "expression",
+              "action"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "event_filter": {
+          "description": "兼容旧版单过滤器；若 upstream_rules 为空则作为透传表达式",
+          "type": "string"
+        },
+        "upstream_rules": {
+          "description": "上游消息（NyaNyaBot 事件 -> 下游 WS）的过滤规则列表。按顺序匹配，首个匹配的规则生效。若无规则匹配，默认透传。",
+          "items": {
+            "properties": {
+              "action": {
+                "enum": [
+                  "passthrough",
+                  "reject"
+                ],
+                "type": "string"
+              },
+              "expression": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "expression",
+              "action"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "url": {
+          "description": "下游 OneBot WS URL（兼容字段）",
+          "type": "string"
+        },
+        "ws_token": {
+          "description": "下游 WebSocket 连接所需的 Access Token / Authorization Bearer",
+          "type": "string"
+        },
+        "ws_url": {
+          "description": "下游 WebSocket 服务端 URL，例如 ws://127.0.0.1:8080/onebot",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "version": "1"
+  },
+  "crons": [],
+  "dependencies": [],
+  "description": "OneBot WebSocket 客户端插件，实现上游 NyaNyaBot 事件与下游 WebSocket 消息的双向过滤与透传。",
+  "events": [
+    {
+      "description": "捕获所有上游 message 消息事件",
+      "event": "message",
+      "handler": "Handle",
+      "id": "evt.onebot-ws.message",
+      "name": "ws-client-message"
+    },
+    {
+      "description": "捕获所有上游 notice 通知事件",
+      "event": "notice",
+      "handler": "Handle",
+      "id": "evt.onebot-ws.notice",
+      "name": "ws-client-notice"
+    },
+    {
+      "description": "捕获所有上游 request 请求事件",
+      "event": "request",
+      "handler": "Handle",
+      "id": "evt.onebot-ws.request",
+      "name": "ws-client-request"
+    },
+    {
+      "description": "捕获所有上游 meta_event 元事件",
+      "event": "meta_event",
+      "handler": "Handle",
+      "id": "evt.onebot-ws.meta_event",
+      "name": "ws-client-meta"
+    }
+  ],
+  "exports": [],
+  "name": "OneBot WebSocket Client",
+  "plugin_id": "external.amiabot-onebot-websocket-client",
+  "version": "0.1.0"
+}

@@ -1,0 +1,56 @@
+{
+  "name": "Amiabot PJSK Bind",
+  "plugin_id": "external.amiabot-pjsk-bind",
+  "version": "0.1.0",
+  "author": "amiabot",
+  "description": "PJSK 账户绑定插件，提供绑定和查询 ID 的功能",
+  "dependencies": [
+    "external.amiabot-pjsk-account"
+  ],
+  "exports": [],
+  "config": {
+    "version": "1",
+    "description": "config",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "amiabot_pages": {
+          "description": "Amiabot Pages 域名/地址；用于获取 profile 用户名",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "default": {
+      "amiabot_pages": ""
+    }
+  },
+  "commands": [
+    {
+      "name": "pjsk-bind",
+      "id": "cmd.profile-bind",
+      "description": "绑定 PJSK 游戏账号（如 绑定12345, jp绑定12345）",
+      "pattern": "^(?i)(?:(?P<server>cn|jp|tw|en|kr))?绑定(?P<id>\\d+)$",
+      "match_raw": false,
+      "handler": "Handle"
+    },
+    {
+      "name": "pjsk-id",
+      "id": "cmd.profile-id",
+      "description": "查询已绑定的游戏 ID（如 id, jpid, 烤id）",
+      "pattern": "^(?:(?P<server>cn|jp|tw|en|kr)|(?:烤))id$",
+      "match_raw": false,
+      "handler": "Handle"
+    },
+    {
+      "name": "pjsk-set-default-server",
+      "id": "cmd.set-default-server",
+      "description": "设置默认服务器（如 serverjp, 默认服务器cn）",
+      "pattern": "^(?:默认服务器|server)(?P<server>cn|jp|tw|en|kr)$",
+      "match_raw": false,
+      "handler": "Handle"
+    }
+  ],
+  "events": [],
+  "crons": []
+}

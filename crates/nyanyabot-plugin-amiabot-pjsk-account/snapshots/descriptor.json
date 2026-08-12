@@ -1,0 +1,132 @@
+{
+  "author": "nyanyabot",
+  "commands": [],
+  "config": {
+    "default": {
+      "database_url": "",
+      "default_server": "jp"
+    },
+    "description": "Amiabot PJSK Account plugin config",
+    "schema": {
+      "additionalProperties": false,
+      "properties": {
+        "database_url": {
+          "type": "string"
+        },
+        "default_server": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "database_url"
+      ],
+      "type": "object"
+    },
+    "version": "1"
+  },
+  "crons": [],
+  "dependencies": [],
+  "description": "PJSK 游戏账户管理插件，提供账户的添加、获取、设置启用状态等功能，供其他插件调用",
+  "events": [],
+  "exports": [
+    {
+      "description": "添加账户，如果已存在则设为启用",
+      "name": "account.add",
+      "params_schema": {
+        "properties": {
+          "game_id": {
+            "type": "string"
+          },
+          "game_server": {
+            "type": "string"
+          },
+          "qq_id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "qq_id",
+          "game_server",
+          "game_id"
+        ],
+        "type": "object"
+      },
+      "result_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "description": "获取单个账户",
+      "name": "account.get",
+      "params_schema": {
+        "type": "object"
+      },
+      "result_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "description": "根据 QQ 号获取所有账户",
+      "name": "account.list_by_qq",
+      "params_schema": {
+        "type": "object"
+      },
+      "result_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "description": "根据游戏 ID 获取所有账户",
+      "name": "account.list_by_game_id",
+      "params_schema": {
+        "type": "object"
+      },
+      "result_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "description": "设置账户启用状态",
+      "name": "account.set_enabled",
+      "params_schema": {
+        "type": "object"
+      },
+      "result_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "description": "删除账户",
+      "name": "account.remove",
+      "params_schema": {
+        "type": "object"
+      },
+      "result_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "description": "获取用户默认服务器",
+      "name": "account.get_preferred_server",
+      "params_schema": {
+        "type": "object"
+      },
+      "result_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "description": "设置用户默认服务器",
+      "name": "account.set_preferred_server",
+      "params_schema": {
+        "type": "object"
+      },
+      "result_schema": {
+        "type": "object"
+      }
+    }
+  ],
+  "name": "Amiabot PJSK Account",
+  "plugin_id": "external.amiabot-pjsk-account",
+  "version": "0.1.0"
+}

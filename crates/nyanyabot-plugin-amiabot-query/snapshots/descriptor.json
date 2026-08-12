@@ -1,0 +1,48 @@
+{
+  "author": "amiabot",
+  "commands": [
+    {
+      "description": "查询用户资料卡（支持 query/资料卡/用户资料，可 @ 或指定对象）",
+      "handler": "HandleQueryUser",
+      "id": "cmd.query-user",
+      "match_raw": false,
+      "name": "query-user",
+      "pattern": "^(?:query|资料卡|用户资料)(?:\\s+.*|\\[CQ:at,[^\\]]+\\].*)?$"
+    },
+    {
+      "description": "查询当前群资料卡（如 group、群资料卡、群信息）",
+      "handler": "HandleQueryGroup",
+      "id": "cmd.query-group",
+      "match_raw": false,
+      "name": "query-group",
+      "pattern": "^(?:group|群资料卡|群信息)$"
+    }
+  ],
+  "config": {
+    "default": {
+      "amiabot_pages": ""
+    },
+    "description": "Query 插件配置",
+    "schema": {
+      "additionalProperties": true,
+      "properties": {
+        "amiabot_pages": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "version": "1"
+  },
+  "crons": [],
+  "dependencies": [
+    "external.screenshot",
+    "external.blobserver"
+  ],
+  "description": "用户/群资料卡查询",
+  "events": [],
+  "exports": [],
+  "name": "Amiabot Query",
+  "plugin_id": "external.amiabot-query",
+  "version": "0.1.0"
+}

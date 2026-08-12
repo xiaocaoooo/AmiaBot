@@ -1,0 +1,56 @@
+{
+  "name": "BlobServer",
+  "plugin_id": "external.blobserver",
+  "version": "0.1.0",
+  "author": "nyanyabot",
+  "description": "Blob upload helper plugin",
+  "dependencies": [],
+  "exports": [
+    {
+      "name": "blob.upload_remote",
+      "description": "下载远程文件并上传到 Blob Server，返回 Blob URL 与 OneBot URL",
+      "params_schema": {
+        "required": [
+          "download_url",
+          "blob_id"
+        ],
+        "type": "object"
+      },
+      "result_schema": {
+        "required": [
+          "blob_url",
+          "onebot_url"
+        ],
+        "type": "object"
+      }
+    }
+  ],
+  "config": {
+    "version": "1",
+    "description": "Blob plugin config",
+    "schema": {
+      "properties": {
+        "blob_onebot_url": {
+          "description": "发送给 OneBot 的 Blob URL 前缀",
+          "type": "string"
+        },
+        "blob_server": {
+          "description": "Blob Server 域名/地址",
+          "type": "string"
+        },
+        "blob_token": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "default": {
+      "blob_onebot_url": "",
+      "blob_server": "",
+      "blob_token": ""
+    }
+  },
+  "commands": [],
+  "events": [],
+  "crons": []
+}

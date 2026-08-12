@@ -1,0 +1,62 @@
+{
+  "author": "nyanyabot",
+  "commands": [
+    {
+      "description": "创建画廊：gallery open <name>",
+      "handler": "HandleOpen",
+      "id": "cmd.gallery-open",
+      "match_raw": false,
+      "name": "gallery-open",
+      "pattern": "(?i)^gallery\\s+open\\s+(?P<gallery_name>\\S+)\\s*$"
+    },
+    {
+      "description": "上传图片到画廊：gallery upload <name> / 上传 <name>",
+      "handler": "HandleUpload",
+      "id": "cmd.gallery-upload",
+      "match_raw": false,
+      "name": "gallery-upload",
+      "pattern": "(?i)^(?:gallery\\s+upload|上传)\\s+(?P<gallery_name>\\S+)\\s*$"
+    },
+    {
+      "description": "查看图片：看 <uuid|画廊名> 或 看 <画廊名>*N",
+      "handler": "HandleView",
+      "id": "cmd.gallery-view",
+      "match_raw": false,
+      "name": "gallery-view",
+      "pattern": "(?i)^看\\s+(?P<input>\\S+?)(?:\\s*\\*\\s*(?P<num>\\d+))?\\s*$"
+    }
+  ],
+  "config": {
+    "default": {
+      "amiabot_pages": "",
+      "gallery_server": "http://127.0.0.1:3000"
+    },
+    "description": "Amiabot Gallery 插件配置",
+    "schema": {
+      "additionalProperties": true,
+      "properties": {
+        "amiabot_pages": {
+          "description": "Amiabot Pages 地址（可选，用于重复图对比卡）",
+          "type": "string"
+        },
+        "gallery_server": {
+          "description": "Gallery Server 地址，默认 http://127.0.0.1:3000",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "version": "1"
+  },
+  "crons": [],
+  "dependencies": [
+    "external.screenshot",
+    "external.blobserver"
+  ],
+  "description": "画廊插件：创建画廊、上传图片、按 UUID 或画廊名查看",
+  "events": [],
+  "exports": [],
+  "name": "Amiabot Gallery",
+  "plugin_id": "external.amiabot-gallery",
+  "version": "0.1.0"
+}

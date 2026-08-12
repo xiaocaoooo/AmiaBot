@@ -1,0 +1,44 @@
+{
+  "author": "amiabot",
+  "commands": [
+    {
+      "description": "解析 pixiv artwork 链接",
+      "handler": "Handle",
+      "id": "cmd.pixiv-artwork",
+      "match_raw": false,
+      "name": "pixiv-artwork",
+      "pattern": "(?i)\\b(?:https?://)?(?:www\\.)?pixiv\\.net/(?:[a-z]{2}/)?artworks/(\\d+)(?:[?#/][^\\s]*)?"
+    }
+  ],
+  "config": {
+    "default": {
+      "amiabot_pages": "",
+      "amiabot_pages_download_base": ""
+    },
+    "description": "Pixiv 插件配置",
+    "schema": {
+      "additionalProperties": true,
+      "properties": {
+        "amiabot_pages": {
+          "type": "string"
+        },
+        "amiabot_pages_download_base": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "version": "1"
+  },
+  "crons": [],
+  "dependencies": [
+    "external.screenshot",
+    "external.blobserver"
+  ],
+  "description": "Pixiv 作品卡片与原图",
+  "events": [],
+  "exports": [],
+  "name": "Amiabot Pixiv",
+  "plugin_id": "external.amiabot-pixiv",
+  "version": "0.1.0"
+}

@@ -1,0 +1,47 @@
+{
+  "name": "Amiabot PJSK B30",
+  "plugin_id": "external.amiabot-pjsk-b30",
+  "version": "0.1.0",
+  "author": "nyanyabot",
+  "description": "PJSK B30 查询插件，发送 b30 截图",
+  "dependencies": [
+    "external.amiabot-pjsk-account",
+    "external.screenshot",
+    "external.blobserver"
+  ],
+  "exports": [],
+  "config": {
+    "version": "1",
+    "description": "Amiabot PJSK B30 plugin config",
+    "schema": {
+      "additionalProperties": true,
+      "properties": {
+        "amiabot_pages": {
+          "description": "Amiabot Pages 域名/地址；为空则无法生成截图 URL",
+          "type": "string"
+        },
+        "default_server": {
+          "description": "默认服务器 (jp/cn/en/tw/kr)，不填时为 jp",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "default": {
+      "amiabot_pages": "",
+      "default_server": "jp"
+    }
+  },
+  "commands": [
+    {
+      "name": "pjsk-b30",
+      "id": "cmd.pjsk-b30",
+      "description": "查看 PJSK B30（如 b30, cnb30）",
+      "pattern": "^(?:(?P<server>cn|jp|tw|en|kr))?b30$",
+      "match_raw": false,
+      "handler": "Handle"
+    }
+  ],
+  "events": [],
+  "crons": []
+}

@@ -1,0 +1,34 @@
+{
+  "name": "Amiabot Zeabur Status",
+  "plugin_id": "external.amiabot-zeabur-status",
+  "version": "0.1.0",
+  "author": "amiabot",
+  "description": "Zeabur 状态截图",
+  "dependencies": [
+    "external.screenshot",
+    "external.blobserver"
+  ],
+  "exports": [],
+  "config": {
+    "version": "1",
+    "description": "config",
+    "schema": {
+      "type": "object"
+    },
+    "default": {
+      "amiabot_pages": ""
+    }
+  },
+  "commands": [
+    {
+      "name": "cmd.zeabur-status",
+      "id": "cmd.zeabur-status",
+      "description": "Zeabur 状态截图",
+      "pattern": "(?i)^(status|状态)$",
+      "match_raw": false,
+      "handler": "Handle"
+    }
+  ],
+  "events": [],
+  "crons": []
+}
